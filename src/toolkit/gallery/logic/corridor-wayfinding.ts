@@ -1,4 +1,9 @@
-import { CORRIDOR_DOORS, MAIN_CORRIDOR, corridorWalls } from './main-corridor';
+import {
+  CORRIDOR_DOORS,
+  CORRIDOR_LIFT,
+  MAIN_CORRIDOR,
+  corridorWalls,
+} from './main-corridor';
 import type { CorridorWall } from './main-corridor';
 
 /**
@@ -8,8 +13,10 @@ import type { CorridorWall } from './main-corridor';
  * meet there, near the corner, facing into the corridor: an arrow along
  * its side of the ring, away from the corner, then every room whose doors
  * are on that side (its outside wall and the inside wall opposite),
- * nearest first, then the rooms round the next corner. Derived from the
- * corridor's door list, so it stays right when rooms move. Pure: the
+ * nearest first, then the rooms round the next corner. The service lift
+ * (`freight_lift`, its landing `CORRIDOR_LIFT`) is listed as a room
+ * (the owner, 2026-10-30). Derived from the corridor's door list and the
+ * lift's landing, so it stays right when rooms move. Pure: the
  * corridor's frame (`main-corridor.ts`), x east, z south.
  */
 
@@ -59,9 +66,12 @@ export interface WayfindingSign {
 
 /** The rooms whose doors are on side `side`, ordered from `from` (0 or the side's length). */
 function roomsAlong(side: Side, from: number): string[] {
-  const doors = CORRIDOR_DOORS.filter(
-    (d) => d.wall === side || d.wall === INNER[side],
-  ).sort((a, b) => Math.abs(a.at - from) - Math.abs(b.at - from));
+  const doors = [
+    ...CORRIDOR_DOORS,
+    { wall: CORRIDOR_LIFT.wall, at: CORRIDOR_LIFT.at, to: 'freight_lift' },
+  ]
+    .filter((d) => d.wall === side || d.wall === INNER[side])
+    .sort((a, b) => Math.abs(a.at - from) - Math.abs(b.at - from));
   const seen: string[] = [];
   for (const d of doors) if (!seen.includes(d.to)) seen.push(d.to);
   return seen;

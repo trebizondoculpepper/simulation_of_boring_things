@@ -4,6 +4,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- The main corridor's wayfinding signs show the way to the service lift (the owner, 2026-10-30): the freight lift's B2 landing is listed as SERVICE LIFT in its place along the north side (between Plant Room 2 and the engineer's office) and, on the east and west sides' signs, round the corner; derived from its landing (`CORRIDOR_LIFT`), as the rooms are from their doors.
 - The freight lift's ride (the owner, 2026-10-30): the car now speeds up and slows down (a half-cosine ramp of 1.2 s at either end of its run, `runProfile`), and its vibration is the effects lab's lost precision (every vertex snapped to a fine grid and trembling), as strong as the car's acceleration: hard as it sets off and comes in to a floor, still while it runs at speed or stands, in place of the old 4 mm bob of the car's body. The car and its landings draw the lift between the world's steps (`liftBetweenSteps`), so the doors (already eased) and the shaft move smoothly every frame, not ten times a second. The shaft wall seen through the car's door ran the wrong way (going up, it rose with the car); it now falls past as the car rises. `window.liftCar.press` presses a car button in development.
 
 ## [0.7.0] - 2026-10-30

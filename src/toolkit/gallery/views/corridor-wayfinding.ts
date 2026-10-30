@@ -26,11 +26,13 @@ import type { RoomId } from '../logic/dev-room-links';
 const WIDTH = 0.6;
 const PX = 1000; // canvas pixels per metre
 
-/** A room's name as the signs give it: the wet hall's and the plant rooms' shortened. */
+/** A room's name as the signs give it: the wet hall's and the plant rooms' shortened, the freight lift the service lift. */
 const nameOf = (room: string) =>
   (room === 'bridge'
     ? 'CONTROL ROOM'
-    : (DEV_ROOM_NAMES[room as RoomId] ?? room.toUpperCase())
+    : room === 'freight_lift'
+      ? 'SERVICE LIFT'
+      : (DEV_ROOM_NAMES[room as RoomId] ?? room.toUpperCase())
   )
     .replace(/^WET HALL · .*/, 'WET HALL')
     // Plant rooms by number alone (the owner, 2026-10-26).
