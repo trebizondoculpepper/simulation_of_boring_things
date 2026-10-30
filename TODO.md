@@ -314,6 +314,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ## Housekeeping
 
+- [x] **One filter model for every filter** (the owner, 2026-10-30; done 2026-10-30): the ideal filter's ports (`FilterPorts`, `filterActivity`, `stepFilter`) drive the lounge's, the Olympic's, the jacuzzi's and the footbath's filters and their status words. Left: the world still keeps each installation's beds in its own shape (arrays per battery); folding them into one `IdealFilterState[]` would need a WORLD_VERSION bump and was not needed for the shared model.
 - [x] **Chemical bund rim z-fighting** (2026-10-27; `f9285e3`): lower the black walls beneath separate red/yellow caps and fit the cap corners without overlapping faces.
 
 - [x] Mission archive policy and review (2026-10-26; `1e2d855`): review all 85 prompts; file mostly completed missions under done, retain explicit remaining scope and unchecked follow-ups, and repair archive links.
