@@ -51,7 +51,7 @@ export const MUSEUM_EXHIBITION: MuseumBrand = {
   strapline: PLANTROOMS.tagline,
   subtitle: 'How a swimming pool really works',
   tagline: 'Can YOU find the plant room?',
-  hashtag: '#FindThePlantRoom',
+  hashtag: '#ThePlantRooms',
   wink: 'Unlike the Poolrooms, every room here is real, and every machine in it works.',
   colours: {
     main: PLANTROOMS.colours[0],

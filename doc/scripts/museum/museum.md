@@ -22,7 +22,7 @@ Source: `toolkit/gallery/views/museum-hall.ts:1073` (`paintTitleWall`); brand wo
 
 - Wordmark (one letter to a tile): PLANTROOMS (`brands.ts` `wordmark`)
 - Strapline: The real backrooms of the Poolrooms (`brands.ts` `tagline`)
-- Tagline and hashtag: Can YOU find the plant room? #FindThePlantRoom (`MUSEUM_EXHIBITION.tagline`, `.hashtag`)
+- Tagline and hashtag: Can YOU find the plant room? #ThePlantRooms (`MUSEUM_EXHIBITION.tagline`, `.hashtag`)
 - Paragraph 1 (`museum-hall.ts:1090`): There is almost nothing we take for granted more than a swimming pool. Its user interface is the simplest there could be: dive in, and the water is simply there, clean, clear and warm.
 - Paragraph 2 (`museum-hall.ts:1091`): Behind the tiles lives a world of complexity: pumps, filters, boilers and careful chemistry, working all day and all night to keep it that simple. Come and see it.
 - Footer, left (`MUSEUM_EXHIBITION.museum`, `.museumLine`, upper-cased): THE DYEHOUSE · MUSEUM OF SCIENCE AND WORK
@@ -33,7 +33,7 @@ Source: `toolkit/gallery/views/museum-hall.ts:1073` (`paintTitleWall`); brand wo
 Source: `toolkit/gallery/views/museum-hall.ts:1176` (`paintBanner`)
 
 - Running up the banner: PLANTROOMS
-- At its foot: #FindThePlantRoom
+- At its foot: #ThePlantRooms
 
 ### Welcome panel (free-standing, by the doorway into Hall 1)
 
@@ -1238,7 +1238,7 @@ Source: `toolkit/gallery/views/museum-hall.ts:1203` (`paintEndWall`)
 - Heading: Thank you for visiting
 - Under it: PLANTROOMS: how a swimming pool really works (`MUSEUM_EXHIBITION.name` and `.subtitle`, lower-cased)
 - Body: Now you’ve seen it, now you understand how a swimming pool works, you probably won’t take it for granted anymore, will you? The way out is straight on, into the welcome hall.
-- Hashtag: #FindThePlantRoom
+- Hashtag: #ThePlantRooms
 
 ## Shared across halls
 

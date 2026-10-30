@@ -163,7 +163,7 @@ Way on: Thank you for visiting PLANTROOMS. You found the plant room. The way out
 
 Wink: Unlike the Poolrooms, every room here was real, and every machine in it worked.
 
-Hashtag: #FindThePlantRoom
+Hashtag: #ThePlantRooms
 
 ## Notices
 
