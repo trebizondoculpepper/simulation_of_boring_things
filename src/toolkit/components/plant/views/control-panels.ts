@@ -1,3 +1,4 @@
+import type { OperatorColour } from '../../industrial-control/views/industrial-controls';
 import { panelMakerMark } from '../../core/views/panel-maker-mark';
 import { Group } from 'three';
 import type { Mesh, Object3D } from 'three';
@@ -125,7 +126,7 @@ export function createAnnunciatorAssembly(
   };
   const button = (
     legend: string,
-    colour: 'black' | 'white' | 'red' | 'green',
+    colour: OperatorColour,
     x: number,
     action: () => void,
   ) => {
@@ -136,18 +137,18 @@ export function createAnnunciatorAssembly(
     parts.add(part);
     return part;
   };
-  button('ACCEPT', 'black', -0.27, () => {
+  button('ACCEPT', 'yellow', -0.27, () => {
     const flashing = logic.states.flatMap((s, i) =>
       s === 'flashing' ? [i] : [],
     );
     logic.acknowledge();
     for (const i of flashing) view.onEvent('accept', ANNUNCIATOR_ALARMS[i]);
   });
-  button('RESET', 'black', -0.09, () => logic.reset());
+  button('RESET', 'grey', -0.09, () => logic.reset());
   let testUntil = 0;
   let now = 0;
   button('LAMP TEST', 'white', 0.09, () => (testUntil = now + 2));
-  button('MUTE', 'red', 0.27, () => view.onEvent('accept', null));
+  button('MUTE', 'blue', 0.27, () => view.onEvent('accept', null));
   const horn = t.paint('#c8261c', 0.45);
   t.cyl(group, horn, 0.05, 0.06, 0, 0.47, 0.06, 'z', 20);
   t.cyl(group, t.paint('#2a2b2c', 0.5), 0.03, 0.02, 0, 0.47, 0.1, 'z', 20);

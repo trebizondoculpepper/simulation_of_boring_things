@@ -141,21 +141,34 @@ export function loungeValveFlows(
     ),
   );
   const dump = f.map((x) => 5 * x.inlet * x.backwash * discharge * waste);
+  // Rinsed (the owner, 2026-10-30): its inlet and drain open and its
+  // outlet shut, the pumps' water runs in at the top, down through the
+  // bed and out of its drain to waste, at up to its service flow. With no
+  // inlet open its drain only drains it down (3 m³/h).
+  const rinse = f.map(
+    (x) =>
+      LOUNGE_FILTER_FLOW *
+      Math.min(x.inlet, x.drain) *
+      (1 - x.outlet) *
+      discharge *
+      waste,
+  );
+  const drains = f.map((x, i) => Math.max(rinse[i], 3 * x.drain * waste));
   const tankDrain = at('PL1-T1-DV1') * 5;
   const toWaste =
     tankDrain +
-    f.reduce(
-      (sum, x, i) => sum + backwash[i] + dump[i] + 3 * x.drain * waste,
-      0,
-    );
+    f.reduce((sum, _x, i) => sum + backwash[i] + dump[i] + drains[i], 0);
   return {
     toPool: Math.max(0, service[0] + service[1] - backwash[0] - backwash[1]),
     toWaste,
     tankDrain,
-    filters: [service[0] - backwash[0], service[1] - backwash[1]],
+    filters: [
+      service[0] - backwash[0] + rinse[0],
+      service[1] - backwash[1] + rinse[1],
+    ],
     backwash: [backwash[0], backwash[1]],
     dumps: [dump[0], dump[1]],
-    drains: [3 * f[0].drain * waste, 3 * f[1].drain * waste],
+    drains: [drains[0], drains[1]],
   };
 }
 

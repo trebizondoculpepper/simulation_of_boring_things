@@ -391,7 +391,10 @@ export function pushButton(
   a.object.add(view.group);
   if (props.symbol) {
     // Dark on a light cap, light on a dark one.
-    const light = props.colour === 'white' || props.colour === 'yellow';
+    const light =
+      props.colour === 'white' ||
+      props.colour === 'yellow' ||
+      props.colour === 'grey';
     const symbol = createMicroLabel(kit, props.symbol, {
       height: 0.014,
       ink: light ? '#1b1f20' : '#f1ecdc',

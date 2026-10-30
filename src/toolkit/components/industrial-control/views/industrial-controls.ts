@@ -80,6 +80,8 @@ export const OPERATOR_COLOURS = {
   blue: '#1d4f9e',
   white: '#e9e6dc',
   yellow: '#e8c215',
+  /** Light grey, for RESET and CLEAR on an annunciator. */
+  grey: '#a9aba6',
 } as const;
 export type OperatorColour = keyof typeof OPERATOR_COLOURS;
 

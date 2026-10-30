@@ -1,3 +1,4 @@
+import type { OperatorColour } from '../../components/industrial-control/views/industrial-controls';
 import { Group } from 'three';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { createMicroLabel } from '../../components/core/views/eighties-controls';
@@ -111,7 +112,7 @@ export function createAnnunciatorBoard(
   let flashingCount = 0;
   const button = (
     legend: string,
-    colour: 'black' | 'white' | 'red',
+    colour: OperatorColour,
     x: number,
     action: () => void,
   ) => {
@@ -121,10 +122,10 @@ export function createAnnunciatorBoard(
     group.add(part.object);
     parts.add(part);
   };
-  button('ACCEPT', 'black', -0.27, source.accept);
-  button('RESET', 'black', -0.09, source.reset);
+  button('ACCEPT', 'yellow', -0.27, source.accept);
+  button('RESET', 'grey', -0.09, source.reset);
   button('LAMP TEST', 'white', 0.09, () => (testUntil = now + 2));
-  button('MUTE', 'red', 0.27, () => (mutedAt = flashingCount));
+  button('MUTE', 'blue', 0.27, () => (mutedAt = flashingCount));
   // The horn on top.
   const hornX = W / 2 - 0.13;
   const hornY = H / 2 + 0.05;

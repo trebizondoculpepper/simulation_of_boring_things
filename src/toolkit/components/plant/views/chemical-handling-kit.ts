@@ -1,3 +1,4 @@
+import type { OperatorColour } from '../../industrial-control/views/industrial-controls';
 import {
   CylinderGeometry,
   DoubleSide,
@@ -1157,7 +1158,7 @@ export function createStoreHandlingPanel(kit: PanelKit, chemical: Chemical) {
   let testing = -1;
   const button = (
     legend: string,
-    colour: 'black' | 'white' | 'red',
+    colour: OperatorColour,
     x: number,
     action: () => void,
   ) => {
@@ -1167,8 +1168,8 @@ export function createStoreHandlingPanel(kit: PanelKit, chemical: Chemical) {
     group.add(p.object);
     parts.add(p);
   };
-  button('ACCEPT', 'black', -0.24, () => logic.acknowledge());
-  button('RESET', 'black', -0.08, () => logic.reset());
+  button('ACCEPT', 'yellow', -0.24, () => logic.acknowledge());
+  button('RESET', 'grey', -0.08, () => logic.reset());
   let lampTest = 0;
   button('LAMP TEST', 'white', 0.08, () => (lampTest = 2));
   button('TEST NEXT', 'red', 0.24, () => {
@@ -1706,8 +1707,8 @@ export function createDistributionPanel(
   let lampTest = 0;
   (
     [
-      ['ACCEPT', 'black', () => logic.acknowledge()],
-      ['RESET', 'black', () => logic.reset()],
+      ['ACCEPT', 'yellow', () => logic.acknowledge()],
+      ['RESET', 'grey', () => logic.reset()],
       ['LAMP TEST', 'white', () => (lampTest = 2)],
     ] as const
   ).forEach(([legend, colour, action], i) => {

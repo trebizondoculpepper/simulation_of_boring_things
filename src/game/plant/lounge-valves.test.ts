@@ -80,6 +80,23 @@ describe('lounge pool solenoid valves', () => {
     expect(loungeValveFlows(positions, false).filters).toEqual([0, 0]);
   });
 
+  it('rinses a filter down through its bed to drain, inlet and drain open, outlet shut', () => {
+    const positions = newWorld().loungeValvePositions;
+    const tag = (t: string) => LOUNGE_VALVES.find((v) => v.tag === t)!.assetId;
+    const set = (t: string, open: number) => (positions[tag(t)] = open);
+    set('PL1-F2-IV2', 0);
+    set('PL1-F2-DV1', 1);
+    const rinsing = loungeValveFlows(positions, true);
+    expect(rinsing.filters).toEqual([45, 45]);
+    expect(rinsing.drains[1]).toBe(45);
+    expect(rinsing.toPool).toBe(45);
+    // Its inlet shut too: only drained down, standing.
+    set('PL1-F2-IV1', 0);
+    const draining = loungeValveFlows(positions, true);
+    expect(draining.filters[1]).toBe(0);
+    expect(draining.drains[1]).toBe(3);
+  });
+
   it('gives the lounge’s two flowmeters each filter’s signed flow, as the world runs', () => {
     let w = stepWorld(newWorld(), 5);
     expect(loungeMeterReadings(loungeFlowsOf(w))).toEqual({
