@@ -185,7 +185,7 @@ In all, about three to four weeks of work, and several weeks of calendar time fo
 ## Decisions for the owner
 
 1. **Which platforms first**: Windows and macOS, with the Deck on Proton (recommended), or also native Linux from the start?
-2. **Individual or company**: whether to publish as the owner or through a limited company. It decides the Steamworks partner, the tax form and which Windows signing routes are open (Artifact Signing is open to UK companies, not UK individuals).
+2. **Individual or company**: decided (the owner, 2026-10-30): published through the owner's company, Team Rocket Limited (UK). The Steamworks partner is the company, its tax form is the W-8BEN-E, and Microsoft's Artifact Signing is open to it for Windows.
 3. **Windows signing**: Artifact Signing (via a company), an OV certificate, or unsigned at first.
 4. **The licence and the Steamworks SDK**: the game is GPL-3.0-or-later, and the Steamworks SDK is proprietary. As sole copyright holder the owner may ship a Steam build linked to it, but any GPL code from others in the game would need an exception; the owner should decide whether to add a linking exception for the Steamworks SDK, or keep Steam support in a separately licensed part.
 5. **Price, or free**: the price (or free to play), regional pricing, and whether the web version stays free on GitHub Pages and itch.io alongside a paid Steam version.
