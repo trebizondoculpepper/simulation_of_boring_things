@@ -23,14 +23,13 @@ const act = (s: Hall6State, ...a: Hall6Action[]) => a.reduce(actOnHall6, s);
 
 describe('Hall 6’s schematic', () => {
   it('derives its tags, room code M6', () => {
-    expect(TAGS['p9']).toBe('M6-P9');
-    expect(TAGS['p9.suction.iso']).toBe('M6-P9-V1');
-    expect(TAGS['p9.nrv']).toBe('M6-P9-NRV1');
-    expect(TAGS['p9.discharge.iso']).toBe('M6-P9-V2');
-    expect(TAGS['p9.cv']).toBe('M6-P9-V3');
-    expect(TAGS['p6.discharge.iso']).toBe('M6-P6-V1');
+    expect(TAGS['p6']).toBe('M6-P6');
+    expect(TAGS['p6.suction.iso']).toBe('M6-P6-V1');
+    expect(TAGS['p6.nrv']).toBe('M6-P6-NRV1');
+    expect(TAGS['p6.discharge.iso']).toBe('M6-P6-V2');
+    expect(TAGS['p6.cv']).toBe('M6-P6-V3');
     expect(TAGS['p1.fi']).toBe('M6-FI1');
-    expect(TAGS['p11.fi']).toBe('M6-FI11');
+    expect(TAGS['p8.fi']).toBe('M6-FI8');
     expect(TAGS['tank.drain.mv']).toBe('M6-TK1-V1');
     expect(TAGS['tank.lsh']).toBe('M6-LSH1');
     expect(TAGS['tank.li']).toBe('M6-LI1');
@@ -64,34 +63,34 @@ describe('Hall 6’s pumps', () => {
     expect(friendlyDuration(fillSeconds(2))).toBe('5.6 days');
     expect(friendlyDuration(fillSeconds(4))).toBe('33 hours');
     expect(friendlyDuration(fillSeconds(5))).toBe('10 minutes');
-    expect(friendlyDuration(fillSeconds(9))).toBe('23 seconds');
-    expect(friendlyDuration(fillSeconds(10))).toBe('12 seconds');
-    expect(friendlyDuration(fillSeconds(11))).toBe('5.8 seconds');
-    expect(fillSentence(11)).toBe(
+    expect(friendlyDuration(fillSeconds(6))).toBe('23 seconds');
+    expect(friendlyDuration(fillSeconds(7))).toBe('12 seconds');
+    expect(friendlyDuration(fillSeconds(8))).toBe('5.8 seconds');
+    expect(fillSentence(8)).toBe(
       'At this rate it would take 5.8 seconds to fill the tank.',
     );
-    expect(fillSeconds(1) / fillSeconds(11)).toBeGreaterThan(250000);
+    expect(fillSeconds(1) / fillSeconds(8)).toBeGreaterThan(250000);
   });
 
   it('adds pumps run together, each a little less than alone', () => {
-    const q = deliveries((n) => n === 10 || n === 11);
-    expect(q[10]).toBeLessThan(300);
-    expect(q[11]).toBeLessThan(625);
-    expect(q[10] + q[11]).toBeGreaterThan(625);
+    const q = deliveries((n) => n === 7 || n === 8);
+    expect(q[7]).toBeLessThan(300);
+    expect(q[8]).toBeLessThan(625);
+    expect(q[7] + q[8]).toBeGreaterThan(625);
   });
 
   it('throttles a big pump by its butterfly', () => {
-    let s = act(newHall6(), { type: 'run', no: 9 });
-    const open = hall6Readings(s).flow[9];
-    s = act(s, { type: 'notch', id: 'p9.discharge.iso', by: -3 });
-    expect(hall6Readings(s).flow[9]).toBeLessThan(open);
-    expect(fillSeconds(9)).toBeCloseTo(3600 / 160, 6);
+    let s = act(newHall6(), { type: 'run', no: 6 });
+    const open = hall6Readings(s).flow[6];
+    s = act(s, { type: 'notch', id: 'p6.discharge.iso', by: -3 });
+    expect(hall6Readings(s).flow[6]).toBeLessThan(open);
+    expect(fillSeconds(6)).toBeCloseTo(3600 / 160, 6);
   });
 });
 
 describe('Hall 6’s RUN buttons', () => {
   it('run one pump at a time: starting one stops the last', () => {
-    let s = act(newHall6(), { type: 'run', no: 9 });
+    let s = act(newHall6(), { type: 'run', no: 6 });
     s = act(s, { type: 'run', no: 1 });
     expect(PUMP_NOS.filter((n) => s.running[n])).toEqual([1]);
     s = act(s, { type: 'run', no: 1 });
@@ -101,7 +100,7 @@ describe('Hall 6’s RUN buttons', () => {
 
 describe('Hall 6’s tank', () => {
   it('fills from the showpiece in about six seconds, then trips every pump', () => {
-    let s = act(newHall6(), { type: 'run', no: 11 });
+    let s = act(newHall6(), { type: 'run', no: 8 });
     s = runHall6(s, 5);
     expect(s.tripped).toBe(false);
     s = runHall6(s, 1.5);
@@ -115,16 +114,16 @@ describe('Hall 6’s tank', () => {
   });
 
   it('keeps one level, cumulative', () => {
-    let s = runHall6(act(newHall6(), { type: 'run', no: 7 }), 60);
+    let s = runHall6(act(newHall6(), { type: 'run', no: 5 }), 60);
     const after = s.litres;
-    expect(after).toBeCloseTo((7000 / 3600) * 60, 0);
-    s = act(s, { type: 'run', no: 7 }, { type: 'run', no: 9 });
+    expect(after).toBeCloseTo((6000 / 3600) * 60, 0);
+    s = act(s, { type: 'run', no: 5 }, { type: 'run', no: 6 });
     s = runHall6(s, 1);
     expect(s.litres).toBeGreaterThan(after + 40);
   });
 
   it('overflows to the drain if the switch fails', () => {
-    let s = act(newHall6(), { type: 'fail-switch' }, { type: 'run', no: 11 });
+    let s = act(newHall6(), { type: 'fail-switch' }, { type: 'run', no: 8 });
     s = runHall6(s, 10);
     expect(s.tripped).toBe(false);
     expect(s.litres).toBeCloseTo(OVERFLOW_L, 6);
@@ -132,7 +131,7 @@ describe('Hall 6’s tank', () => {
   });
 
   it('RESET drains it through the IBC’s outlet in under a minute and ends where entry starts', () => {
-    let s = runHall6(act(newHall6(), { type: 'run', no: 11 }), 8);
+    let s = runHall6(act(newHall6(), { type: 'run', no: 8 }), 8);
     s = act(s, { type: 'reset' });
     expect(s.draining).toBe(true);
     expect(s.tripped).toBe(false);

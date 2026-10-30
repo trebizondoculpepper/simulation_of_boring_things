@@ -9,7 +9,7 @@ import { IBC } from '../../toolkit/components/plant/logic/ibc';
 
 /**
  * Hall 6 of the museum, "Grundflow's Amazing World of Pumps" (107j; the
- * owner, 2026-10-28: "Pumps for every occasion"). Eleven of the game's
+ * owner, 2026-10-28: "Pumps for every occasion"). Eight of the game's
  * pumps, from a 2 l/h solenoid dosing pump to a 45 kW split-case pump,
  * each draw from an ideal clean-water reservoir (CW1) and fill one
  * 1,000-litre test tank (TK1) through their own fill lines and a shared
@@ -34,8 +34,8 @@ import { IBC } from '../../toolkit/components/plant/logic/ibc';
 /** The hall's room code: its number (107-0). */
 export const ROOM_CODE = 'M6';
 
-export type PumpNo = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
-export const PUMP_NOS: readonly PumpNo[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+export type PumpNo = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export const PUMP_NOS: readonly PumpNo[] = [1, 2, 3, 4, 5, 6, 7, 8];
 
 export type PumpFamily = 'displacement' | 'centrifugal';
 
@@ -89,7 +89,7 @@ const curve = (
 });
 
 /**
- * The eleven, smallest to largest (107j's table, its research's figures;
+ * The eight, smallest to largest (107j's table, its research's figures;
  * where the brief and the game's own models disagree, the game's win).
  */
 export const PUMPS: readonly HallPump[] = [
@@ -161,48 +161,6 @@ export const PUMPS: readonly HallPump[] = [
   {
     no: 6,
     family: 'centrifugal',
-    model: 'Grundflow Unilift 12',
-    kind: 'submersible sump pump',
-    node: 'submersible-pump',
-    job: 'emptying a plant room’s sump',
-    kW: 1.5,
-    ...curve(9, 10.8, 5),
-    throttle: false,
-    submersible: true,
-    source:
-      'Grundfos Unilift AP12 class, indicative; its power the game’s pit pump’s (site-intake.ts)',
-    dn: 40,
-  },
-  {
-    no: 7,
-    family: 'centrifugal',
-    model: 'Grundflow SPA 7',
-    kind: 'self-priming spa pump',
-    node: 'spa-pump',
-    job: 'a spa’s circulation',
-    kW: 0.3,
-    ...curve(11, 7, 8),
-    throttle: false,
-    source: 'the game’s spa pump (after Speck BADU Prime 7: 7 m³/h, 0.3 kW)',
-    dn: 40,
-  },
-  {
-    no: 8,
-    family: 'centrifugal',
-    model: 'Grundflow MAGNA D 65-120',
-    kind: 'twin-head in-line circulator',
-    node: 'twin-head-pump',
-    job: 'a boiler’s heating circuit',
-    kW: 1.1,
-    ...curve(12.5, 30, 10),
-    throttle: false,
-    source:
-      'the game’s twin-head circulator (after Grundfos MAGNA3 D 65-120 F), one head, indicative',
-    dn: 65,
-  },
-  {
-    no: 9,
-    family: 'centrifugal',
     model: 'Grundflow NKC 125-250',
     kind: 'end-suction centrifugal pump',
     node: 'end-suction-pump',
@@ -214,7 +172,7 @@ export const PUMPS: readonly HallPump[] = [
     dn: 150,
   },
   {
-    no: 10,
+    no: 7,
     family: 'centrifugal',
     model: 'Grundflow NKC 150-315',
     kind: 'end-suction centrifugal pump',
@@ -227,7 +185,7 @@ export const PUMPS: readonly HallPump[] = [
     dn: 200,
   },
   {
-    no: 11,
+    no: 8,
     family: 'centrifugal',
     model: 'Grundflow HSC 250-500',
     kind: 'horizontal split-case pump',

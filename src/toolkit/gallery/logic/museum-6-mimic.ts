@@ -18,7 +18,7 @@ import type { Hall6State, PumpNo } from '../../../game/plant/museum-6-pumps';
 
 /**
  * Hall 6's mimic (107j): a Penfold board in the sponsor's colours. The
- * ideal reservoir along the bottom, the eleven pumps in a row above it
+ * ideal reservoir along the bottom, the eight pumps in a row above it
  * with their RUN lamps, each line chasing while its pump delivers, the
  * header along the top into the tank; the tank's level as a column of
  * lamps, LSH1 and TANK FULL · PUMPS LOCKED OUT, the overflow and the
@@ -91,7 +91,7 @@ export const HALL6_MIMIC: MimicSpec = {
     {
       colour: WATER,
       points: [
-        [x(11), HEADER_Y],
+        [x(8), HEADER_Y],
         [TANK_AT[0], HEADER_Y],
         [TANK_AT[0], TANK_AT[1] + 0.16],
       ],
@@ -213,7 +213,7 @@ export function hall6Flows(s: Hall6State): Record<string, FlowState> {
     flows[`suction${n}`] = shown(r.flow[n]);
     flows[`delivery${n}`] = shown(r.flow[n]);
     before += r.flow[n];
-    if (n < 11) flows[`header${n}`] = shown(before);
+    if (n < 8) flows[`header${n}`] = shown(before);
   }
   flows.fill = shown(r.total);
   flows.drain = flowState(r.drainLps * 3.6);

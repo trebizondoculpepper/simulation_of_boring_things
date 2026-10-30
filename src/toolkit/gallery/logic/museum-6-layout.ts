@@ -29,7 +29,7 @@ import { hallColumns, hallInterior, hallOrigin } from './museum-plan';
 
 /**
  * Hall 6's plant, laid out (107j). The ideal reservoir CW1 is a long
- * trough against the street (east) wall; the eleven pumps stand in a row
+ * trough against the street (east) wall; the eight pumps stand in a row
  * in front of it, smallest at the north (where the visitor comes in) to
  * the split-case showpiece at the south, each drawing straight from the
  * trough; each fill line rises from its pump to the overhead inlet header
@@ -291,8 +291,8 @@ export const BOXES: Record<MachineId, { min: Vec3; max: Vec3 }> = {
   drain: { min: [0, 0, 0], max: [0, 0, 0] },
 };
 
-/** Not obstacles to route round: the gully in the floor, the sump pump in the trough. */
-export const POINTS: readonly MachineId[] = ['drain', 'p6'];
+/** Not obstacles to route round: the gully in the floor. */
+export const POINTS: readonly MachineId[] = ['drain'];
 
 const round = (v: number) => Math.round(v * 1e4) / 1e4;
 const turn = ([x, y, z]: Vec3, yaw: number): Vec3 => [
@@ -449,10 +449,7 @@ export function lowPipeFootprints(lines: readonly HallLine[], below = 2.0) {
  */
 export function standOf(no: PumpNo): { x: number; z: number } {
   const b = boxInHall(pumpId(no));
-  const x = Math.min(
-    (no === 6 ? TROUGH_FACE : b.min[0]) - 0.55,
-    TROUGH_FACE - 0.55,
-  );
+  const x = Math.min(b.min[0] - 0.55, TROUGH_FACE - 0.55);
   const columnZ = hallColumns('museum6').map((c) => c.z);
   const clearance = (z: number) =>
     Math.min(...columnZ.map((c) => Math.abs(z - c)));

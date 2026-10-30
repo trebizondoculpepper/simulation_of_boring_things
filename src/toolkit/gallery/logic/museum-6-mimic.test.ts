@@ -16,13 +16,13 @@ describe('Hall 6’s mimic', () => {
   });
 
   it('lights a running pump, the level, and the lock-out at full', () => {
-    const s = runHall6(actOnHall6(newHall6(), { type: 'run', no: 9 }), 10);
+    const s = runHall6(actOnHall6(newHall6(), { type: 'run', no: 6 }), 10);
     const m = hall6MimicState(s);
-    expect(m.lamps['run-9']).toBe(true);
+    expect(m.lamps['run-6']).toBe(true);
     expect(m.lamps['level-1']).toBe(true);
     expect(m.lamps.locked).toBe(false);
     const full = hall6MimicState(runHall6(s, 30));
-    expect(full.lamps['run-9']).toBe(false);
+    expect(full.lamps['run-6']).toBe(false);
     expect(full.lamps.locked).toBe(true);
     expect(full.lamps.lsh).toBe(true);
     expect(full.readouts['tank.lt'].live.value).toBe(1000);
@@ -38,7 +38,7 @@ describe('Hall 6’s mimic', () => {
     expect(f.suction1).toBe('forward');
     expect(f.delivery1).toBe('forward');
     expect(f.delivery2).toBe('still');
-    for (let k = 1; k <= 10; k++) expect(f[`header${k}`]).toBe('forward');
+    for (let k = 1; k <= 7; k++) expect(f[`header${k}`]).toBe('forward');
     expect(f.fill).toBe('forward');
     expect(f.drain).toBe('still');
     const g = hall6Flows(actOnHall6(newHall6(), { type: 'run', no: 6 }));
@@ -47,13 +47,13 @@ describe('Hall 6’s mimic', () => {
       'forward',
       'still',
     ]);
-    expect([g.header5, g.header6, g.header10]).toEqual([
+    expect([g.header5, g.header6, g.header7]).toEqual([
       'still',
       'forward',
       'forward',
     ]);
     // Run a while, then drain.
-    const full = runHall6(actOnHall6(newHall6(), { type: 'run', no: 11 }), 4);
+    const full = runHall6(actOnHall6(newHall6(), { type: 'run', no: 8 }), 4);
     const d = hall6Flows(actOnHall6(full, { type: 'reset' }));
     expect(d.drain).toBe('forward');
     expect(d.fill).toBe('still');

@@ -855,7 +855,7 @@ Source: `toolkit/gallery/logic/museum-6-placards.ts:116` (`hall6Entrance`); draw
 - Title: Grundflow’s Amazing World of Pumps
 - Subtitle: Hall 6: pumps for every occasion
 - Introduction: A swimming pool needs pumps of every size, from one that pushes out a few drops a minute to one that could empty a swimming pool in an afternoon. Press any pump’s button and watch the tank. Each sign tells you how long that pump would take to fill it. The biggest pump here moves water about 300,000 times faster than the smallest. When the tank is full, the pumps stop: press RESET to empty it. (300,000 computed by `hall6Facts()`, rounded to 10,000)
-- Route (model name without "Grundflow", and its kind): 1 DMX 1602, solenoid diaphragm dosing pump · 2 DDS 7.5-16, stepper diaphragm dosing pump · 3 DMH 21-10, motor-driven diaphragm dosing pump · 4 PERI 30, peristaltic dosing pump · 5 MX 6, magnetic-drive centrifugal pump · 6 Unilift 12, submersible sump pump · 7 SPA 7, self-priming spa pump · 8 MAGNA D 65-120, twin-head in-line circulator · 9 NKC 125-250, end-suction centrifugal pump · 10 NKC 150-315, end-suction centrifugal pump · 11 HSC 250-500, horizontal split-case pump
+- Route (model name without "Grundflow", and its kind): 1 DMX 1602, solenoid diaphragm dosing pump · 2 DDS 7.5-16, stepper diaphragm dosing pump · 3 DMH 21-10, motor-driven diaphragm dosing pump · 4 PERI 30, peristaltic dosing pump · 5 MX 6, magnetic-drive centrifugal pump · 6 NKC 125-250, end-suction centrifugal pump · 7 NKC 150-315, end-suction centrifugal pump · 8 HSC 250-500, horizontal split-case pump
 - Reset: Can’t break it: the big red RESET SIMULATION button empties the tank and puts everything back to the start.
 
 ### Exhibit (not yet installed): RESET sign and clock badge
@@ -926,59 +926,29 @@ Source: `museum-6-placards.ts:40` (`WORDS[5]`)
 
 #### Plaque 6
 
-Source: `museum-6-placards.ts:44` (`WORDS[6]`)
+Source: `museum-6-placards.ts:56` (`WORDS[6]`)
 
-- Title: 6. Grundflow Unilift 12 · M6-P6
-- Headline: At this rate it would take 5.6 minutes to fill the tank.
-- Body: Centrifugal: submersible sump pump. A sealed motor and impeller that live under the water they pump. In a pool: emptying a plant room’s sump. 1.5 kW; here it delivers 11 m³ an hour.
-- Fact: It lives underwater and only wakes when its float says so.
-- Try it: Press RUN. Grundflow: under pressure since 1952.
-
-#### Plaque 7
-
-Source: `museum-6-placards.ts:48` (`WORDS[7]`)
-
-- Title: 7. Grundflow SPA 7 · M6-P7
-- Headline: At this rate it would take 8.6 minutes to fill the tank.
-- Body: Centrifugal: self-priming spa pump. An impeller throws water outward; a strainer pot in front catches hair and leaves. In a pool: a spa’s circulation. 300 W; here it delivers 7 m³ an hour.
-- Fact: Self-priming: it can suck the air out of its own pipe to get started.
-- Try it: Press RUN. Grundflow: we’ve got your back-pressure.
-
-#### Plaque 8
-
-Source: `museum-6-placards.ts:52` (`WORDS[8]`)
-
-- Title: 8. Grundflow MAGNA D 65-120 · M6-P8
-- Headline: At this rate it would take 2 minutes to fill the tank.
-- Body: Centrifugal: twin-head in-line circulator. Two impellers and motors in one body, set straight into the pipe. In a pool: a boiler’s heating circuit. 1.1 kW; here it delivers 30 m³ an hour.
-- Fact: Two pumps in one: one works, one waits, and they swap so both wear evenly.
-- Try it: Press RUN. Grundflow: every drop counts.
-
-#### Plaque 9
-
-Source: `museum-6-placards.ts:56` (`WORDS[9]`)
-
-- Title: 9. Grundflow NKC 125-250 · M6-P9
+- Title: 6. Grundflow NKC 125-250 · M6-P6
 - Headline: At this rate it would take 23 seconds to fill the tank.
 - Body: Centrifugal: end-suction centrifugal pump. Water enters the eye of the impeller and is flung out round the spiral casing. In a pool: a 25 m pool’s circulation. 7.5 kW; here it delivers 160 m³ an hour.
 - Fact: This one turns over a 25 m pool’s water every few hours, all day, every day.
 - Try it: Press RUN. Grundflow: under pressure since 1952.
 
-#### Plaque 10
+#### Plaque 7
 
-Source: `museum-6-placards.ts:60` (`WORDS[10]`)
+Source: `museum-6-placards.ts:60` (`WORDS[7]`)
 
-- Title: 10. Grundflow NKC 150-315 · M6-P10
+- Title: 7. Grundflow NKC 150-315 · M6-P7
 - Headline: At this rate it would take 12 seconds to fill the tank.
 - Body: Centrifugal: end-suction centrifugal pump. A bigger impeller, a bigger motor: the same idea, scaled up. In a pool: a big pool’s circulation. 22 kW; here it delivers 300 m³ an hour.
 - Fact: Its impeller is 315 mm across: the number in its name.
 - Try it: Press RUN. Grundflow: we’ve got your back-pressure.
 
-#### Plaque 11
+#### Plaque 8
 
-Source: `museum-6-placards.ts:64` (`WORDS[11]`)
+Source: `museum-6-placards.ts:64` (`WORDS[8]`)
 
-- Title: 11. Grundflow HSC 250-500 · M6-P11
+- Title: 8. Grundflow HSC 250-500 · M6-P8
 - Headline: At this rate it would take 5.8 seconds to fill the tank.
 - Body: Centrifugal: horizontal split-case pump. Water enters both sides of one impeller at once; the casing splits along the shaft, so the top lifts off for maintenance. In a pool: an Olympic pool’s circulation. 45 kW; here it delivers 625 m³ an hour.
 - Fact: This is the size of pump that keeps an Olympic pool moving: its whole 2,500 cubic metres through the filters every four hours.
@@ -990,7 +960,7 @@ Source: `toolkit/gallery/logic/museum-6-placards.ts:134` (`FAMILIES`), drawn at 
 
 - Headline: Two families of pump
 - Positive displacement: Push a fixed amount each stroke or turn, almost whatever the pressure. That is why they dose: count the strokes, and you know how much went in. Pumps 1 to 4.
-- Centrifugal: A spinning impeller throws the water outward. How much flows depends on what it pushes against: its curve meets the system’s. Close a valve and the flow falls. Pumps 5 to 11.
+- Centrifugal: A spinning impeller throws the water outward. How much flows depends on what it pushes against: its curve meets the system’s. Close a valve and the flow falls. Pumps 5 to 8.
 
 ### Exhibit (not yet installed): captions, legends and displays
 

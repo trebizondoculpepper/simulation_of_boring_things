@@ -42,26 +42,14 @@ const WORDS: Record<PumpNo, { how: string; fact: string }> = {
     fact: 'No shaft seal: the chemical cannot leak out along the shaft.',
   },
   6: {
-    how: 'A sealed motor and impeller that live under the water they pump.',
-    fact: 'It lives underwater and only wakes when its float says so.',
-  },
-  7: {
-    how: 'An impeller throws water outward; a strainer pot in front catches hair and leaves.',
-    fact: 'Self-priming: it can suck the air out of its own pipe to get started.',
-  },
-  8: {
-    how: 'Two impellers and motors in one body, set straight into the pipe.',
-    fact: 'Two pumps in one: one works, one waits, and they swap so both wear evenly.',
-  },
-  9: {
     how: 'Water enters the eye of the impeller and is flung out round the spiral casing.',
     fact: 'This one turns over a 25 m pool’s water every few hours, all day, every day.',
   },
-  10: {
+  7: {
     how: 'A bigger impeller, a bigger motor: the same idea, scaled up.',
     fact: 'Its impeller is 315 mm across: the number in its name.',
   },
-  11: {
+  8: {
     how: 'Water enters both sides of one impeller at once; the casing splits along the shaft, so the top lifts off for maintenance.',
     fact: 'This is the size of pump that keeps an Olympic pool moving: its whole 2,500 cubic metres through the filters every four hours.',
   },
@@ -74,9 +62,6 @@ const SLOGANS = [
   'Grundflow: small strokes, big impression.',
   'Grundflow: we squeeze so you don’t have to.',
   'Grundflow: magnetically attracted to your business.',
-  'Grundflow: always there when things go down the drain.',
-  'Grundflow: the spa-tacular choice.',
-  'Grundflow: two heads are better than one.',
   'Grundflow: we never lose our head.',
   'Grundflow: under pressure since 1952.',
   'Grundflow: splitting the difference since forever.',
@@ -116,7 +101,7 @@ export const hall6Plaques = () => PUMPS.map((p) => pumpPlaque(p.no));
 /** The hall's figures, from the model. */
 export function hall6Facts() {
   const slowest = fillSeconds(1);
-  const fastest = fillSeconds(11);
+  const fastest = fillSeconds(8);
   return { ratio: slowest / fastest, slowest, fastest };
 }
 
@@ -147,6 +132,6 @@ export const FAMILIES = {
   },
   centrifugal: {
     title: 'Centrifugal',
-    body: 'A spinning impeller throws the water outward. How much flows depends on what it pushes against: its curve meets the system’s. Close a valve and the flow falls. Pumps 5 to 11.',
+    body: 'A spinning impeller throws the water outward. How much flows depends on what it pushes against: its curve meets the system’s. Close a valve and the flow falls. Pumps 5 to 8.',
   },
 } as const;

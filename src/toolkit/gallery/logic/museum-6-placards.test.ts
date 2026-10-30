@@ -5,9 +5,9 @@ import { fillSentence } from '../../../game/plant/museum-6-pumps';
 describe('Hall 6’s words', () => {
   it('gives each pump its fill time from the model', () => {
     const plaques = hall6Plaques();
-    expect(plaques).toHaveLength(11);
+    expect(plaques).toHaveLength(8);
     expect(plaques[0].headline).toBe(fillSentence(1));
-    expect(plaques[10].headline).toContain('seconds');
+    expect(plaques[7].headline).toContain('seconds');
     expect(plaques[0].headline).toContain('days');
   });
 

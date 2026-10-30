@@ -37,8 +37,6 @@ const louder =
     return recipe(context, gain);
   };
 import { createEndSuctionPump } from '../../../components/plant/views/pumps-plant';
-import { createTwinHeadPump } from '../../../components/plant/views/boiler-plant';
-import { createSpaPump } from '../../../components/plant/views/spa-pack-parts';
 import { createDiaphragmPump } from '../../../components/plant/views/diaphragm-pump';
 import { createMotorDosingPump } from '../../../components/plant/views/motor-dosing-pump';
 import {
@@ -64,7 +62,6 @@ import {
   createMagDrivePump,
   createRunStand,
   createSplitCasePump,
-  createSubmersiblePump,
   createTankInstruments,
 } from '../../../components/plant/views/museum-pump-parts';
 import { createIbc } from '../../../components/plant/views/chemicals-storage';
@@ -139,7 +136,7 @@ import type { MimicState } from '../../../components/industrial-control/logic/mi
 import type { HallExhibit } from './exhibits';
 
 /**
- * Hall 6, "Grundflow's Amazing World of Pumps" (107j): eleven pumps,
+ * Hall 6, "Grundflow's Amazing World of Pumps" (107j): eight pumps,
  * smallest at the north to the split-case showpiece at the south, in a
  * row along the street (east) wall in front of the ideal reservoir's
  * trough, each filling the 1,000-litre test tank in the hall's middle
@@ -363,24 +360,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       const pump = createMagDrivePump(kit);
       object.add(describePump(still(atMachine(pump.group, pumpId(no))), no));
       updates.push((delta) => pump.update(delta, on()));
-    } else if (no === 6) {
-      const pump = createSubmersiblePump(kit, TROUGH.h + 0.25);
-      object.add(describePump(still(atMachine(pump.group, pumpId(no))), no));
-    } else if (no === 7) {
-      const pump = createSpaPump(kit);
-      const g = new Group();
-      pump.group.rotation.y = Math.PI;
-      g.add(pump.group);
-      object.add(describePump(still(atMachine(g, pumpId(no))), no));
-      updates.push((delta) => pump.update(delta, on()));
-    } else if (no === 8) {
-      const pump = createTwinHeadPump(kit);
-      object.add(describePump(still(atMachine(pump, pumpId(no))), no));
-      let shown: boolean | null = null;
-      updates.push(() => {
-        if (on() !== shown) pump.show((shown = on()));
-      });
-    } else if (no === 9 || no === 10) {
+    } else if (no === 6 || no === 7) {
       const pump = createEndSuctionPump(kit);
       object.add(describePump(still(atMachine(pump, pumpId(no))), no));
       const g = (
@@ -402,7 +382,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     } else {
       const pump = createSplitCasePump(kit, {
         axis: SPLIT.axis,
-        label: PUMPS[10].model.replace('Grundflow ', ''),
+        label: PUMPS[7].model.replace('Grundflow ', ''),
       });
       // Lit: a plinth lamp's glow on its base.
       object.add(describePump(still(atMachine(pump.group, pumpId(no))), no));
@@ -584,7 +564,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   );
   strap.position.set(ix, 0, iz);
   object.add(still(strap));
-  const outflow = createOutflow(fill.od * 0.9, deliveryAlone(11));
+  const outflow = createOutflow(fill.od * 0.9, deliveryAlone(8));
   outflow.group.position.set(ix, MOUTH_Y, iz);
   object.add(outflow.group);
   updates.push((delta) => {
