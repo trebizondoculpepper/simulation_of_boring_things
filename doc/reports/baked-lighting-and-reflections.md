@@ -1,12 +1,16 @@
 # Baked ambient occlusion and pre-computed reflections
 
-Research and recommendation, 2026-10-30. No game code was changed. A throwaway bake prototype was run in the session scratchpad (described under Measurements).
+Research and recommendation, 2026-10-30, revised the same day after the owner's decisions and a request to evaluate xatlas lightmaps in depth. No game code was changed. The prototypes ran in the session scratchpad on a real pool hall and a synthetic plant room (see Measurements).
 
 ## Contents
 
 - Summary
+- The owner's decisions (2026-10-30)
 - What the game does now
 - 1. Pre-computed ambient occlusion
+- 1a. Lightmaps with xatlas: a full evaluation
+- 1b. The cache
+- 1c. Baking ahead
 - 2. Pre-computed reflections
 - Graphics presets
 - Measurements
@@ -17,132 +21,253 @@ Research and recommendation, 2026-10-30. No game code was changed. A throwaway b
 
 ## Summary
 
-Bake ambient occlusion in the player's browser when a room loads, on the CPU in a Web Worker with three-mesh-bvh, stored per vertex, cached in IndexedDB (files in the Electron build) under a hash of the room's static geometry. Do not commit baked assets and do not bake in CI: the rooms are procedural and change often, so committed bakes would be stale on most commits, and a CPU bake is fast enough (about 0.7 million rays a second on one core here) that a typical dev or plant room bakes in one to three seconds on a worker, with the existing GTAO running until it lands. Keep GTAO, at fewer samples and half resolution, only on High, for the small contact shadows of moving and small parts the bake leaves out; Low and Medium use the bake alone. Lightmaps with xatlas unwrapping are not worth it yet: the boxy shells would need subdivision for per-vertex AO, but that is cheap, and a lightmap pipeline adds UV2 on every merged mesh, a texture per room and seams to fix.
+Bake ambient occlusion in the player's browser, in one low-priority Web Worker, with three-mesh-bvh on the CPU; cache every bake persistently (IndexedDB on the web, files on the desktop build) under a hash of the room's static geometry, so a room, above all a corridor visited again and again, is baked once; and bake ahead the rooms the walker is likely to enter next, so that most rooms are baked before they are seen. A room whose bake is not ready shows no ambient occlusion (the owner's decision) and the baked AO fades in when it lands. Committed bakes and CI bakes are not recommended: the rooms are generated in code and change often.
 
-For reflections, extend what the pool rooms already do (`pool-room.ts` captures the room into a cube map once, and again only when the lights change) to every room with water or shiny surfaces: one or two capture points per room at load, PMREM-filtered for `scene.environment` in place of the neutral `RoomEnvironment` studio, and box-projected (parallax-corrected) for the rectangular rooms, by a small shader patch, so that tiles and stainless steel reflect the walls in the right place. The water keeps its ripples and caustics because they are computed in its own shader and only the static room it reflects comes from the capture. Re-capture on light-state changes, spread over a few frames. The saving is not mostly frame time, since the game already avoids per-frame reflection renders outside the dev water room; it is correctness (the room seen in steel and tile instead of a studio) at near-zero per-frame cost, plus dropping the vendored per-frame water passes wherever that simulation is used in the game.
+On storage, the prototype on a real pool hall (Lounge pool, 134 thousand triangles in 488 meshes) changes the earlier recommendation in detail but not in direction. A whole-room xatlas unwrap took 14.5 s single-threaded, had to skip a mesh of 88 thousand vertices (xatlas.js uses 16-bit indices), and left 88 % of the hall's triangles too small to own a single texel at 10 cm; a lightmap only pays where per-vertex fails, on big flat surfaces. Build first: per-vertex AO for equipment, fittings and tiles (dense already), plus simple planar-projected lightmaps for the large flat shell surfaces (walls, floors, ceilings, pool tanks), whose UVs the builders can compute exactly with no unwrapper. xatlas stays a tool for the odd curved or irregular shell (the rotunda, arched rooms), unwrapped once per shape and cached with the bake.
+
+Reflections: extend the pool room's existing capture-on-light-change to every room with water or shiny surfaces, PMREM-filtered and box-projected in rectangular rooms, in place of the neutral studio environment. The water keeps its ripples and caustics; per-frame cost stays near zero.
+
+## The owner's decisions (2026-10-30)
+
+1. No live ambient occlusion while a bake is pending: live AO (GTAO) is too slow. A room shows no AO until its bake finishes in the background, then the baked AO fades in (about half a second).
+2. Bakes are cached persistently (IndexedDB on the web, files on the desktop), keyed by the geometry hash; returning to a room never re-bakes unless its geometry changed.
+3. A background worker bakes ahead the rooms the walker is likely to enter next: in the museum the adjacent halls; elsewhere the rooms beyond the current room's doorways; during a freight-lift ride, the destination floor.
 
 ## What the game does now
 
-Ambient occlusion: `GTAOPass` (three.js addon) in 13 room builders (for example `src/toolkit/gallery/rooms/pool-room.ts` 1028, `shell-room.ts`, `museum-hall-room.ts`), samples from `ambientOcclusionAt` in `src/toolkit/settings/logic/graphics.ts` (12 a pixel in most rooms, 6 on the bridge, 3 in the museum; Low a third, Medium a half, never fewer than 4), applied through `src/toolkit/components/core/parts/render-style.ts` around line 190. GTAO renders the scene again into a normal buffer, so it roughly doubles draw calls: on the bridge 815 against 398 for one scene render, and dropping from 12 to 6 samples moved the bridge from about 47 to 58 fps at 2560 × 1426 on an Apple M5 ([bridge report](bridge-render-performance-2026-10-28.md)). It is the single largest measured cost.
+Ambient occlusion: `GTAOPass` (three.js addon) in 13 room builders (for example `src/toolkit/gallery/rooms/pool-room.ts` 1028, `shell-room.ts`, `museum-hall-room.ts`), samples from `ambientOcclusionAt` in `src/toolkit/settings/logic/graphics.ts` (12 a pixel in most rooms, 6 on the bridge, 3 in the museum), applied through `src/toolkit/components/core/parts/render-style.ts` around line 190. GTAO renders the scene again into a normal buffer, so it roughly doubles draw calls: on the bridge 815 against 398 for one scene render, and dropping from 12 to 6 samples moved it from about 47 to 58 fps at 2560 × 1426 on an Apple M5 ([bridge report](bridge-render-performance-2026-10-28.md)); with GTAO off, 60 fps. It is the single largest measured cost.
 
 Reflections and environment:
 
-- `useEnvironment` (`render-style.ts` ~456) gives 24 rooms a PMREM of three.js's `RoomEnvironment` studio as `scene.environment`: cheap, built once, but the steel and tiles reflect a studio, not the room.
-- The pool rooms (`pool-room.ts` ~843) already do the recommended thing for water: a 256 px `CubeCamera` from just above the water into the `room` sampler of the water shader (`src/toolkit/components/pool/views/pool-surfaces.ts` ~445 and 554, `textureCube(room, reflect(-v, n))`), and two PMREM passes of the lit room as `scene.environment` for bounce, taken again when the light changes, not each frame. Its lookup is not box-projected, so the reflection is right only near the probe.
-- `attachRoomReflection` (`src/toolkit/components/core/views/room-reflection.ts`) takes one 40 px capture a few frames after a room is built, for sight glasses; used twice.
-- Under water, `src/toolkit/components/pool/views/pool-refraction.ts` warps the already-drawn image (a full-screen pass, no second scene render). Caustics and ripples are analytic in the pool shaders (`pool-ripples.ts`).
-- The vendored simulation `src/toolkit/vendor/threejs-water/` (dev room `water-room.ts` only) renders height field, caustics and object textures every frame; it is the one per-frame reflection cost, and it is not in the game's rooms.
+- `useEnvironment` (`render-style.ts` ~456) gives 24 rooms a PMREM of three.js's `RoomEnvironment` studio as `scene.environment`: cheap, but steel and tiles reflect a studio, not the room.
+- The pool rooms (`pool-room.ts` ~843) already capture the room into a 256 px `CubeCamera` for the water shader's `room` sampler (`src/toolkit/components/pool/views/pool-surfaces.ts` ~445 and 554) and two PMREM passes of the lit room as `scene.environment`, again only when the light changes. The lookup is not box-projected.
+- `attachRoomReflection` (`src/toolkit/components/core/views/room-reflection.ts`): one 40 px capture a few frames after build, for sight glasses.
+- Under water, `src/toolkit/components/pool/views/pool-refraction.ts` warps the drawn image; caustics and ripples are analytic in the pool shaders (`pool-ripples.ts`).
+- The vendored `src/toolkit/vendor/threejs-water/` (dev `water-room.ts` only) renders its textures every frame; it is not in the game's rooms.
 
-Geometry: rooms are built procedurally in code; static set pieces are merged by material within 3 m cells (`src/toolkit/components/core/views/merge-static.ts`), moving and clickable parts kept apart; shells are mostly boxes and planes with few segments (a 12 m wall is often two triangles); `InstancedMesh` in about 8 files (gratings, drops, beads). Existing UVs are for tile textures (repeated, overlapping), so no mesh has a unique UV layout a lightmap could use.
+Geometry: rooms are built in code; static set pieces are merged by material within 3 m cells (`src/toolkit/components/core/views/merge-static.ts`), moving and clickable parts kept apart; instanced meshes in about 8 files. The real Lounge pool hall (`createPoolHall`, `src/toolkit/gallery/views/pool-hall.ts`) builds 488 meshes, 134,195 triangles and 155 thousand unique vertices, its largest single mesh 88 thousand vertices; 485 of its meshes carry tile UVs (repeating, overlapping), none a unique layout a lightmap could use.
 
 ## 1. Pre-computed ambient occlusion
 
 ### When to bake
 
-(a) At room load in the browser, cached. Recommended. The rooms are built in code from `facility-plan.ts` and the room builders, so the geometry exists only after the builder runs; baking right there needs no new build pipeline and is never stale. Hash the merged static geometry (positions and indices of the meshes that `mergeStatic` produced, quantised to millimetres, plus the bake settings and a bake version number) with a fast hash (FNV-1a or xxhash-wasm, a few milliseconds for a few hundred thousand floats). On a hit, read the AO arrays from IndexedDB (browser) or a file under `app.getPath('userData')` (Electron) and apply them before the first frame. On a miss, show the room at once with GTAO as now, transfer the geometry to a Web Worker, bake there, apply the result when it lands (fading in over half a second), store it, and switch GTAO down. Never recompute while in the room. The cost on a miss is one to a few seconds of a background core; on a Steam Deck (Zen 2, four cores) expect perhaps two to three times this machine's single-core time, so bake on two workers and cap rays on big halls.
+(a) In the player's browser, cached, and ahead of need. Recommended. The geometry exists only after a builder runs, so baking there needs no new pipeline and is never stale. A bake runs in one worker; the room shows no AO until it lands, then fades it in (the owner's decision). With the cache (1b) and baking ahead (1c), most rooms are baked before the walker reaches them, so the no-AO interval is seen mainly on a first visit to a room reached faster than its bake.
 
-(b) Developer task committing baked assets. Not recommended as the main path. Rooms change often and are generated, so a committed bake goes stale on every geometry change, nothing in CI could tell (the hash would simply miss and fall back to a), and the repository would carry binary churn. Useful only as a pre-warm for the release builds (below).
+(b) A developer task committing baked assets. Not recommended: rooms change often, a committed bake goes stale on every geometry change, and the repository would carry binary churn.
 
-(c) A CI build step. Possible but not needed. three-mesh-bvh runs in Node without a GPU (the prototype below ran in Node), but the room builders use DOM canvases for labels and textures and would need a headless browser to run; headless Chrome with SwiftShader works but is slow and brittle. Since (a) is fast enough, CI only adds risk.
+(c) A CI build step. Possible (three-mesh-bvh runs in Node; the prototype below ran the real pool hall builder in Node with a stubbed canvas), but unnecessary given (a), and brittle as builders change.
 
-Hybrid (recommended later): (a) for everyone, plus, for releases only, a `npm run bake:prewarm` script that walks every room in headless Chrome and writes the cache files into the Electron build (and optionally a static `baked/` folder on itch.io and Pages), so a player's first visit to a room hits the cache. The hash makes it safe: a stale pre-baked file just never matches.
+Hybrid, later: a release-only `bake:prewarm` that walks every room and writes cache files into the desktop build, so even a first visit hits. The hash makes it safe: a stale file just never matches.
 
 ### How to store it
 
-Per vertex. Recommended. One byte (or a half float) per vertex in an `aoVertex` attribute, multiplied into the material's ambient and indirect light by a small `onBeforeCompile` patch shared by the room materials (the patch multiplies `material.aoMapIntensity`-style into `reflectedLight.indirectDiffuse` and `indirectSpecular`, as three's own `aomap_fragment` does, so direct light is untouched, which is physically right and keeps the lamps' highlights). It needs no UVs and survives `mergeStatic` (the attribute is merged with the rest). The cost is subdivision: big flat walls, floors and ceilings must be split to about 0.25 m near edges and corners to show the corner darkening, and can stay coarse in the middle. An adaptive split (subdivide only triangles within 1 m of other geometry, or a fixed 0.25 m border strip along each wall's edges) keeps a 12 × 8 × 4 m room to roughly 10–20 thousand extra vertices. Equipment meshes (pumps, tanks, pipes) are already dense enough. Memory: about 4 bytes a vertex in an IndexedDB record and on the GPU; a room of 200 thousand vertices is under 1 MB.
+Per vertex, for everything dense: one byte a vertex in an `aoVertex` attribute, multiplied into indirect diffuse and specular light by a shared `onBeforeCompile` patch (as three's `aomap_fragment` does), so direct light and highlights are untouched. It needs no UVs, survives `mergeStatic`, and costs under 1 MB a room. Its weakness is big flat surfaces with few vertices, which would need subdivision.
 
-Lightmaps with UV2. Not recommended now. xatlas (via `xatlas-three` in a worker) gives good unique UVs for anything, but it is slow on hundreds of thousands of triangles (seconds to tens of seconds), changes vertex counts (it splits at seams), and would have to run on every merged mesh at every load on a cache miss. Box or planar projection would work for the shells alone (each wall a rectangle in an atlas, trivial to compute in the builders), which gives sharper corners than vertex AO at 5–10 cm texels (about 45 thousand texels for the 12 × 8 × 4 m room, a 256² texture). Worth considering only if vertex AO on the shells looks blotchy; it could then be a shell-only lightmap with equipment staying per vertex.
+Planar lightmaps, for the big flat surfaces: see 1a. The combination avoids subdividing shells and avoids unwrapping equipment.
 
 ### What to leave out of the bake
 
-- Moving and clickable parts (doors, valve handwheels, the lift car, float switches, people, water surfaces): exclude them as occluders and as receivers, which `mergeStatic`'s `keep` set and `targets` already identify. A door's leaf therefore leaves no baked shadow in its frame; High's reduced GTAO covers it.
-- Water surfaces and light shafts are not occluders (as `pool-room.ts` already hides them from GTAO).
-- Instanced meshes (gratings) are occluders (one BVH over their instances, or an approximating box) but not receivers, or receive at the instance's origin only.
-- Lights: AO here is ambient occlusion only, independent of which lamps are on, so switching hall lights or emergency lighting does not invalidate the bake; it scales indirect light, which is what dims when lights are off. Only a baked direct lightmap would need re-baking per lighting state, and that is not proposed.
+- Moving and clickable parts (doors, valve handwheels, the lift car, float switches, water surfaces): neither occluders nor receivers; `mergeStatic`'s `keep` set and `targets` identify them.
+- Water surfaces and light shafts are not occluders.
+- Instanced meshes (gratings) are occluders but not receivers.
+- Canvas-textured displays (LCDs, mimics) are not receivers, so readouts are not darkened.
+- Lights: this is ambient occlusion only, independent of which lamps are on, so switching hall lights or emergency lighting never invalidates a bake.
+
+### Live GTAO on High: should it stay?
+
+The earlier draft kept half-resolution GTAO on High for the contact shadows of moving parts. Reconsidered in light of the owner's ruling that live AO is too slow: recommend dropping GTAO from every preset once baking is in. What it would add is small (a door leaf's shadow on its frame, a handwheel's on its valve body), these parts are few and mostly small on screen, and even half-resolution GTAO still renders the scene a second time for normals, which is where most of its cost lies (the bridge's 815 against 398 draw calls). Where a moving part needs grounding, bake its AO into the part itself in its rest pose (its own crevices, which do not change as it moves), and give the few large movers (doors, the lift car) a cheap blob or contact-shadow decal if anything looks floating. The owner should decide whether High keeps GTAO at all, or whether it becomes an "Ultra" option off by default for players with fast GPUs (question 1).
 
 ### How it combines with materials and post effects
 
-Multiply into indirect diffuse and specular only (as above). Tone mapping, bloom, film and the pool refraction pass are unaffected. Where High keeps GTAO, set its radius small (about 0.3 m) so it adds contact shadows and does not double the baked room-scale darkening; or, simpler, keep its present settings at a lower intensity (`blendIntensity` about 0.5) and accept a little doubling. Canvas-textured displays (LCDs, mimics) should be excluded from receiving AO so readouts are not darkened.
+Multiply into indirect light only. Tone mapping, bloom, film and the pool refraction pass are unaffected. With GTAO gone there is no double-darkening to tune.
+
+## 1a. Lightmaps with xatlas: a full evaluation
+
+The owner prefers the lightmap route: automatic UV2 unwrapping with xatlas (xatlas.js, WebAssembly, in the browser), then baked AO lightmaps. It was prototyped on the real Lounge pool hall (built in Node by `createPoolHall` with a stubbed canvas, world-space geometry exported, then unwrapped with xatlasjs 0.2.0 and baked with three-mesh-bvh 0.9) and on a synthetic 12 × 8 × 4 m plant room.
+
+### Unwrap time per room
+
+| Room                               | Triangles | Meshes            | Unwrap (one thread) |
+| ---------------------------------- | --------- | ----------------- | ------------------- |
+| Synthetic plant room               | 19,060    | 91 (or 1 merged)  | 0.20 s              |
+| Synthetic plant room, 200 fittings | 80,500    | 1 merged          | 0.85 s              |
+| Lounge pool hall (real)            | 134,195   | 487 (one skipped) | 14.5 s              |
+
+Unwrap time is not linear in triangles: the real hall's many curved fittings, coves and tiles make many small charts, and chart packing dominates. Merging or not made no difference to the synthetic room. 14.5 s on an M5 core is perhaps 30–45 s on a Steam Deck core, before any ray is cast; it can be cached with the bake, but it doubles or triples a first visit's wait, and the cache key must then cover the unwrap.
+
+### Atlas size and texel density
+
+At 10 texels a metre (10 cm texels) the synthetic room packed into 440 × 441 (87,551 texels used, 45 % fill) and the real hall into 949 × 950 (490 thousand texels, 54 %); at 20 texels a metre the synthetic room needed 760 × 754. One-byte (R8) atlases cost 0.2–0.9 MB of GPU memory a room, fine. But 10 cm texels are coarse for corners of a coved hall and for fittings, and 5 cm texels quadruple texels, bake time and memory.
+
+### Seams and bleeding
+
+With 2 texels of padding, 26–71 thousand empty texels border filled ones and must be dilated (filled from their neighbours) after the bake, or bilinear filtering pulls black into the seams; every chart edge is a potential visible seam where AO differs across it. xatlas's charting also splits vertices along seams: the synthetic room grew from 11,010 to 14,048 vertices. That is manageable work (a dilation pass is a few lines) but it is extra work vertex AO does not need.
+
+### How it handles our merged procedural meshes
+
+Badly in two respects. First, xatlas.js passes indices as 16-bit (`HEAPU16`), so any mesh over 65,535 vertices must be split before unwrapping; the real hall's largest merged mesh (88 thousand vertices) was skipped. Second, and more serious, small triangles: at 10 cm texels, 79,247 of the hall's 90,215 unwrapped triangles (88 %) contain no texel centre at all; at 5 cm, 92 %. Tiles, gutters, grating bars, ladders and fittings are smaller than a texel, so they read the AO of whatever texel they fall on, which may belong to a neighbouring chart; conservative rasterisation helps only a little, because the texel is still shared. Those same triangles already have vertices close together, which is exactly where per-vertex AO is accurate. Merged meshes also mix big flat pieces and tiny ones in one chart set, so the packer cannot give each its own density.
+
+### Comparison with per-vertex AO
+
+|                                     | Per-vertex                      | xatlas lightmap                                     |
+| ----------------------------------- | ------------------------------- | --------------------------------------------------- |
+| Preparation                         | none                            | unwrap: 0.2 s synthetic, 14.5 s real hall           |
+| Bake, real hall, 32 rays            | 26 s (155 thousand vertices)    | 22.6 s at 10 cm (490 thousand texels); 6 s at 20 cm |
+| Big flat walls and floors           | blotchy unless subdivided       | good                                                |
+| Small dense parts (tiles, fittings) | good                            | poor: 88 % of triangles own no texel                |
+| Seams and bleeding                  | none                            | padding plus dilation                               |
+| Storage                             | 1 byte a vertex                 | R8 atlas plus a UV2 attribute (8 bytes a vertex)    |
+| Fits `mergeStatic`                  | yes                             | needs split under 65,535 vertices, and UV2 merged   |
+| Moving parts                        | per-part, carried with the part | need their own atlas or none                        |
+
+Neither alone fits the game. The two are complementary: lightmaps where surfaces are large and flat, vertices where they are small and dense.
+
+### Recommended hybrid: planar shell lightmaps plus per-vertex AO
+
+The shells are rectangles built by known code (walls, floors, ceilings, pool tanks, corridor kit). Each builder (or one helper they share) can give each large flat face exact UV2 by planar projection into a simple shelf-packed atlas at 5 cm texels, no unwrapper, no seams within a face, padding 2 texels and a dilation pass. A 28 × 20 × 7 m hall's shell is about 1,500 m², 600 thousand texels at 5 cm (an 800 × 800 R8 texture, 0.6 MB). Everything else gets per-vertex AO. The bake casts rays for shell texels and for equipment vertices into one BVH. Coves (quarter-round fillets) get cylindrical projection along their length, also exact. xatlas is kept for irregular shells (the rotunda, arched rooms, the donut pool), unwrapped once per shape hash and cached.
+
+### AO rays: three-mesh-bvh on the CPU, or the GPU
+
+CPU in a worker (three-mesh-bvh `raycastFirst`): measured 0.6–0.75 million rays a second on one M5 core; predictable, does not touch the GPU, runs while the game draws. three-mesh-bvh also offers a GPU path (the BVH packed into textures and traced in a fragment shader, as in its examples and three-gpu-pathtracer), typically one or two orders of magnitude faster, so a hall would bake in well under a second. But on the Steam Deck the GPU is the bottleneck while the game runs, and GPU work cannot be pre-empted per frame except by slicing it into tiny chunks; baking ahead in the background is exactly when the GPU is busy drawing. Recommend the CPU worker in the game; the GPU path for the release pre-warm tool and for a "bake now" on loading screens (the lift ride, where the GPU is idle behind a closed car) if CPU bakes prove too slow.
+
+### Recommendation: what to build first
+
+Per-vertex AO first, on equipment and everything dense, since it is the simplest, has no seams, and its machinery (worker, BVH, hash, cache, bake-ahead queue, fade-in) is shared by everything after. Then planar shell lightmaps, which fix the flat surfaces per-vertex cannot. xatlas only if irregular shells look poor. This order gives a visible result soonest and never builds the part (whole-room automatic unwrapping) the prototype shows to fit the game worst.
+
+## 1b. The cache
+
+- Key: a hash (FNV-1a or xxhash-wasm, a few milliseconds) of the room's baked inputs: the static meshes' quantised positions, indices and normals, the shell faces' UV2 layout, the bake settings (rays, distance, texel size) and a bake version number bumped whenever the baker changes.
+- Value: the per-vertex AO arrays (one byte a vertex, per mesh, in the order the builder makes them) and the shell atlas (R8, compressed with deflate via `CompressionStream`), plus the room id, size and a last-used time. A typical room is 0.2–1.5 MB.
+- Where: IndexedDB on the web (one object store, keyed by hash, with an index on room id and last used); on the desktop build, files under Electron's `app.getPath('userData')/ao-cache/`, with a small JSON index.
+- Size limit: 200 MB by default (enough for about 200–400 rooms). On the web check `navigator.storage.estimate()` and keep under a tenth of the quota; ask for `navigator.storage.persist()` so the browser does not evict it under pressure.
+- Eviction: least recently used, by room, when over the limit, never evicting rooms marked as hubs (the main corridor, the corridors of the pool loop, the plant corridor, the lift lobbies, the control rooms), which are pinned. When a room's geometry changes, its old entries (same room id, other hash) are deleted at once.
+- When storage is unavailable (private windows, blocked site data, quota exceeded, IndexedDB throwing): every access in try/catch; bakes are kept in memory for the session (an LRU of perhaps 30 rooms), so revisits in that session still do not re-bake; the game works as before, only rebaking after a reload.
+
+## 1c. Baking ahead
+
+A background baker with one worker and a priority queue bakes the rooms the walker is likely to enter next.
+
+### Which rooms
+
+- The museum: the halls adjacent to the current one (the museum already builds both neighbours' full copies while a hall is shown, `museum-hall-room.ts` ~105–153, so their geometry exists).
+- Elsewhere: the rooms beyond the current room's doorways, from `facility-plan.ts`, nearest door first; in the pool loop, the next room along.
+- A freight-lift ride: the destination floor's room, which `prepareRoom` (`src/toolkit/gallery/logic/room-readiness.ts`, mission 108) already builds and warms unseen; the bake joins that preparation, and the lift's travel time is the best moment to bake, with the GPU path if it is used at all.
+
+### Building their static geometry without showing them
+
+Bake from the pure layout, not from a shown scene: the same builder run off screen, its group never added to the scene and never drawn, with only its static meshes' geometry extracted (world-space positions, normals, indices, and shell face rectangles) and transferred to the worker as transferable `ArrayBuffer`s. The museum's neighbour copies and the lift's warmed rooms provide this for free. For doorway neighbours, building a room synchronously can pause a frame (the TODO's "Incremental room preparation" records that speculative construction caused pauses); so build ahead only during calm moments, one room at a time, and, as that TODO proposes, split builders into bounded jobs or move their pure layout work into the worker. When the walker does enter the room, its real build reuses the same meshes in the same order, so the hash matches and the cached bake applies at once.
+
+### Prioritise and cancel
+
+Priority: the current room first (if unbaked), then the room the walker is facing or walking towards (the doorway nearest their heading), then the other neighbours, then second-order rooms. The baker works in slices of about 2,000 rays and checks the queue between slices, so a re-prioritised job starts within milliseconds. When the walker turns back, the half-done job is cancelled only if it is no longer in the top few; otherwise it is paused, its partial results kept in memory, and resumed. Rooms already cached are skipped by hash before any work.
+
+### Keeping the worker off the frame on the Steam Deck
+
+- One worker only (the Deck has four cores and eight threads; the main thread, audio and the browser need the rest).
+- A low-priority queue: the worker runs slices only when the main thread reports the last frames within budget; the main thread posts a frame-time summary twice a second.
+- Paused during heavy moments: room hand-overs, the first seconds in a new room (shader compiles and uploads), lift arrivals, saving, and whenever frame time exceeds budget; resumed after a calm second.
+- Slices sized to about 5 ms of work, so a pause takes effect within a frame.
+- The Deck's power: bake ahead is cheap enough (a few seconds of one core per room) to leave on; a setting can turn baking ahead off on battery.
 
 ## 2. Pre-computed reflections
 
 ### Per-room capture at load
 
-In each room, after it is built and before the first visible frame (or a few frames in, as `attachRoomReflection` does), render a `CubeCamera` capture of the static room (water, people, moving parts hidden) at 128–256 px, half float, and feed it to `PMREMGenerator.fromCubemap` to get the prefiltered roughness mips that `MeshStandardMaterial` needs. Set it as `scene.environment` in place of `RoomEnvironment` (keeping `environmentIntensity` as tuned). Cost: six scene renders plus PMREM's blur chain, about 10–40 ms once on this machine depending on the room's draw calls; spread across frames (one face a frame) if a hitch shows. Memory: a 256 px half-float PMREM is about 3 MB of GPU memory per probe.
+After a room is built and before its first visible frame (or a few frames in, as `attachRoomReflection` does), render a `CubeCamera` capture of the static room (water, people and moving parts hidden) at 128–256 px, half float, through `PMREMGenerator.fromCubemap`, and set it as `scene.environment` in place of `RoomEnvironment`. About 10–40 ms once; spread one face a frame if it hitches. A 256 px half-float PMREM is about 3 MB of GPU memory.
 
 ### Box projection
 
-Rectangular rooms (all plant rooms, dev rooms, corridors, the halls) suit box projection: correct the reflection vector against the room's axis-aligned box before the cube lookup, so a tiled floor reflects the far wall where it is, not where it would be from the probe. three.js removed its old box-projected example in r132; current options are a community GLSL chunk patch (Martin Schütz's write-up, gists updated for r137) and the WebGPU renderer's TSL `getParallaxCorrectNormal` (r184), which this WebGLRenderer game cannot use directly. For PBR materials the patch must apply inside `envmap_physical_pars_fragment` (the `getIBLRadiance` path that samples PMREM's CubeUV format), which is a few lines in `onBeforeCompile`; the water shader samples its own `samplerCube room` and is easier still: correct `reflect(-v, n)` against the pool hall's box in `pool-surfaces.ts` before `textureCube`. Pass the box (min, max) and the probe position as uniforms.
+Rectangular rooms suit box projection: correct the reflection vector against the room's box before the lookup. three.js removed its box-projected example in r132; options are a community GLSL chunk patch (Martin Schütz's method, gists updated for r137) and the WebGPU renderer's TSL `getParallaxCorrectNormal` (r184), which this WebGLRenderer game cannot use directly. For PBR materials the patch goes in `envmap_physical_pars_fragment` via `onBeforeCompile`; the water shader's own `samplerCube room` lookup in `pool-surfaces.ts` is easier still.
 
 ### Where to put capture points
 
-One per room at the room's centre, at about 1.6 m (eye height), for walls and equipment. Pool halls: a second, water-only probe at the water's centre about 1–1.5 m above the surface (as now), box-projected against the hall. Long rooms (corridors, the main corridor, the museum's long halls): one probe per 10–15 m segment, each with its own box, materials taking the nearest (by mesh centre) at build time; no blending. Tanks and balance tanks: the tank room's probe serves; a tank's interior water, if visible, takes a probe inside the tank volume.
+One per room at the centre at about 1.6 m. Pool halls: a second, water-only probe 1–1.5 m above the water's centre, as now, box-projected against the hall. Long rooms (corridors, the museum's halls): one probe per 10–15 m, each with its own box, nearest by mesh centre at build time. Tank rooms: the room's probe; a tank interior, if visible, its own.
 
 ### When to re-capture
 
-On any change that alters what is seen: room light state (hall lights, emergency lighting, the light switches in `architectural-room.ts`), and a door opening onto a bright neighbour only if it is obvious. Drive it from the world state's light-change events, as `pool-room.ts` already does; debounce (half a second), spread the six faces over six frames, and swap atomically. Do not re-capture for moving parts. Captures need not be cached between sessions: they are cheap and depend on the lights.
+On light-state changes (hall lights, emergency lighting, light switches in `architectural-room.ts`), as `pool-room.ts` already does: debounce half a second, spread six faces over six frames, swap atomically. Not for moving parts. Not cached between sessions: cheap and light-dependent.
 
 ### The water keeps its ripples and caustics
 
-The ripples perturb the normal in the water shader (`pool-ripples.ts`) and that normal drives the reflection lookup, so the static capture still shimmers. Caustics are analytic projections on the pool floor and walls in their own shaders, not part of the reflection, and should be hidden from the capture (as `pool-room.ts` does, so the room is not tinted green). Refraction stays the screen-space warp. In the dev water room the vendored simulation's per-frame object and reflection textures could be replaced by the room probe if that simulation is ever used in the game.
+Ripples perturb the water's normal in its shader, and that normal drives the lookup, so a static capture still shimmers. Caustics are analytic in their own shaders and hidden from the capture (as `pool-room.ts` does). Refraction stays the screen-space warp.
 
 ### Which rooms and materials benefit
 
-Most: the pool halls and the Olympic and lounge halls (water, glazed tiles, stainless rails and ladders), the balance tank and tank rooms, the dev water rooms, plant rooms with stainless pipework, filters and tanks, and the bridge (glossy consoles). Little: corridors and dry rooms with matte paint (keep the cheap studio or the room capture at 64 px). Expected savings: per-frame cost stays near zero (one extra texture fetch and a few ALU ops for box projection); the gain is visual. Where the vendored water simulation or any per-frame `CubeCamera` would be used, a static probe removes six scene renders a frame.
+Most: the pool halls (water, glazed tiles, stainless rails and ladders), balance-tank and tank rooms, plant rooms with stainless pipework and tanks, the bridge. Little: matte corridors and dry rooms (64 px or the studio). Per-frame cost stays near zero; the gain is visual, plus six scene renders a frame saved wherever a per-frame cube camera would otherwise be used.
 
 ## Graphics presets
 
-| Technique                      | Low                                    | Medium                | High                                              |
-| ------------------------------ | -------------------------------------- | --------------------- | ------------------------------------------------- |
-| Baked vertex AO                | on (32 rays)                           | on (32 rays)          | on (64 rays, finer border split)                  |
-| Live GTAO                      | off                                    | off                   | on, half resolution, 4–6 samples, small radius    |
-| Room probe (PMREM environment) | 64 px, one per room, no box projection | 128 px, box-projected | 256 px, box-projected, extra probes in long rooms |
-| Water reflection probe         | 64 px                                  | 128 px                | 256 px                                            |
-| Re-capture on light change     | yes, over 6 frames                     | yes                   | yes                                               |
+| Technique                                 | Low                           | Medium                | High                                              |
+| ----------------------------------------- | ----------------------------- | --------------------- | ------------------------------------------------- |
+| Baked AO (per vertex and shell lightmaps) | on                            | on                    | on                                                |
+| Live GTAO                                 | off                           | off                   | off (recommended; owner to decide, question 1)    |
+| Room probe (PMREM environment)            | 64 px, no box projection      | 128 px, box-projected | 256 px, box-projected, extra probes in long rooms |
+| Water reflection probe                    | 64 px                         | 128 px                | 256 px                                            |
+| Bake ahead                                | on (off on battery if chosen) | on                    | on                                                |
 
-A bake's quality setting is part of the cache key, so changing preset may trigger a bake; to avoid that, bake one quality (64 rays) for everyone and vary only GTAO and probe sizes by preset.
+Bake settings are the same on every preset (32 rays, 5 cm shell texels), so changing preset never triggers a re-bake.
 
 ## Measurements
 
-Prototype: `bake.mjs` in the session scratchpad (Node 26, three 0.180, three-mesh-bvh 0.9, one core of an Apple M5). Scene: a 12 × 8 × 4 m dev-room-like shell, walls subdivided uniformly to the given size, with 30 boxes (equipment), 12 overhead pipes and 8 cylindrical tanks; per-vertex cosine-weighted hemisphere rays to 1.5 m, `raycastFirst` against one BVH, non-indexed geometry (so vertex counts are about three times an indexed mesh's).
+All on one core of an Apple M5, Node 26, three 0.180, three-mesh-bvh 0.9, xatlasjs 0.2.0; cosine-weighted hemisphere rays to 1.5 m. Scripts `bake.mjs`, `lm.mjs`, `real.ts` and `lmreal.mjs` in the session scratchpad. Rays ran at 0.6–0.75 million a second throughout.
 
-| Wall subdivision | Rays per vertex | Triangles | Vertices | BVH build | Bake   |
-| ---------------- | --------------- | --------- | -------- | --------- | ------ |
-| 0.5 m            | 16              | 7,584     | 22,752   | 6 ms      | 0.64 s |
-| 0.25 m           | 32              | 16,032    | 48,096   | 7 ms      | 2.4 s  |
-| 0.25 m           | 64              | 16,032    | 48,096   | 7 ms      | 4.8 s  |
-| 0.1 m            | 32              | 75,168    | 225,504  | 16 ms     | 9.7 s  |
+Per-vertex, synthetic 12 × 8 × 4 m room, walls subdivided uniformly (non-indexed, so vertex counts about three times an indexed mesh's):
 
-Throughput was steady at 0.6–0.75 million rays a second on one core. Indexed geometry and an adaptive border split instead of a uniform one would cut the vertex count by about four, so a real room at 0.25 m borders and 32 rays should bake in about 0.5–1 s on one core here, perhaps 1.5–3 s on a Steam Deck core, less on two workers. A large pool hall (say 50 × 25 m with 300 thousand vertices of equipment and tiles) would be 10–15 s on one core: acceptable in the background with GTAO meanwhile, and cached thereafter. The stored result is one byte a vertex (under 1 MB a room). Not measured: the real rooms (their builders need the DOM, so a real-room bake needs a browser harness, stage 1 below), and frame-time gains, which the bridge report already bounds (GTAO off: about 47 to 60 fps there).
+| Subdivision | Rays | Vertices | Bake   |
+| ----------- | ---- | -------- | ------ |
+| 0.5 m       | 16   | 22,752   | 0.64 s |
+| 0.25 m      | 32   | 48,096   | 2.4 s  |
+| 0.25 m      | 64   | 48,096   | 4.8 s  |
+| 0.1 m       | 32   | 225,504  | 9.7 s  |
+
+Lightmap, synthetic room (xatlas, padding 2):
+
+| Texels a metre | Rays | Triangles | Unwrap | Atlas     | Texels used    | Bake   |
+| -------------- | ---- | --------- | ------ | --------- | -------------- | ------ |
+| 10             | 32   | 19,060    | 0.20 s | 440 × 441 | 87,551 (45 %)  | 4.4 s  |
+| 10             | 64   | 19,060    | 0.21 s | 440 × 441 | 87,551         | 8.4 s  |
+| 20             | 32   | 19,060    | 0.22 s | 760 × 754 | 333,152 (58 %) | 15.6 s |
+| 20             | 32   | 80,500    | 0.85 s | 793 × 794 | 340,435 (54 %) | 17.3 s |
+
+The real Lounge pool hall (`createPoolHall(POOL_HALLS.pool_01, 1)`, built in Node in 138 ms; 488 meshes, 134,195 triangles, 155,409 unique vertices, BVH built in 39 ms):
+
+| Method                      | Preparation   | Bake (32 rays) | Notes                                                                                                                |
+| --------------------------- | ------------- | -------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Per vertex                  | none          | 26.2 s         | every vertex, no subdivision                                                                                         |
+| xatlas at 5 texels a metre  | 14.6 s unwrap | 6.1 s          | 627 × 627; 92 % of triangles own no texel                                                                            |
+| xatlas at 10 texels a metre | 14.5 s unwrap | 22.6 s         | 949 × 950, 490 thousand texels; 88 % own no texel; 71 thousand texels to dilate; one 88-thousand-vertex mesh skipped |
+
+Estimates: the Steam Deck's Zen 2 core is perhaps two to three times slower, so the real hall's per-vertex bake is about one minute, and a typical dev or plant room 2–10 s. Halving rays to 16 halves this with little visible noise once filtered; skipping vertices of tiles that lie flat on a shell face (they take the shell lightmap instead) should cut the hall's vertex count substantially. With baking ahead, these are background seconds, not waits. Not measured: frame-time gains (the bridge report bounds them: GTAO off took the bridge from about 47 to 60 fps), and the Deck itself.
 
 ## Risks
 
-- Vertex AO on coarse shells looks wrong or blotchy until shells are subdivided at their borders; subdividing touches many builders (mitigate: one helper applied centrally to merged shells, not per builder).
-- Cache-key drift: any non-determinism in a builder (random placement without a seed) makes every load a miss. Seeded randomness is needed; the hash will reveal misses in a dev counter.
-- IndexedDB may be cleared or blocked (private windows); the fallback is GTAO, so this only costs performance.
-- Merged meshes spanning moving parts: if a moving part is merged by mistake, its baked shadow stays when it moves. `mergeStatic`'s `keep` lists are the guard.
-- Box projection is wrong for non-rectangular rooms (the rotunda, arched rooms, the donut pool); use plain (infinite-distance) lookups there.
-- The PMREM shader patch depends on three's internal chunk names, which change between versions; pin and test on upgrade.
-- Re-capture hitches when lights switch (six scene renders); spread over frames.
-- Combined GTAO plus bake on High may over-darken; needs a visual check.
+- Large dense rooms bake slowly on the Deck (about a minute for the pool hall at 32 rays); mitigated by baking ahead, 16 rays, and the shell lightmap taking over flat tiles. The no-AO interval on a first visit may be noticed in the biggest halls.
+- Cache-key drift: unseeded randomness in a builder makes every load a miss; seeded randomness is needed, and a dev counter should report misses.
+- Building rooms ahead can pause frames (already recorded in the TODO's incremental preparation item); bake ahead from the museum's and lift's existing off-screen builds first.
+- Storage may be unavailable or evicted; the in-memory fallback keeps a session working.
+- A moving part merged by mistake keeps its baked shadow when it moves; `mergeStatic`'s `keep` lists are the guard.
+- xatlas.js's 16-bit indices and slow packing on many small charts, if it is used for irregular shells.
+- Box projection is wrong in non-rectangular rooms; use plain lookups there.
+- The PMREM shader patch depends on three's chunk names; pin and test on upgrade.
 
 ## Staged plan
 
-1. A bake harness in a dev room (dev14-style): a `logic/` pure module for the hemisphere sampling and hashing (tested in Node), a worker running three-mesh-bvh, applied to one plant-room shell and one museum hall, with a toggle to compare against GTAO. Measure bake time in Chrome and on the Steam Deck. About 2 days.
-2. The shared AO material patch and the border-subdivision helper in `merge-static.ts`'s path; exclusion of moving, clickable, instanced and display meshes. About 2 days.
-3. Cache in IndexedDB and the Electron file store, keyed by hash; fade-in on bake completion; dev counter for misses. About 1–2 days.
-4. Presets: GTAO off on Low and Medium where a bake exists, reduced on High; frame-time comparison on the bridge and one pool hall. About 1 day.
-5. Room probes: generalise `pool-room.ts`'s capture into a `room-probe` view (capture, PMREM, re-capture on light change over six frames), replacing `useEnvironment`'s studio in rooms with shiny surfaces. About 2 days.
-6. Box projection: the PMREM chunk patch and the water shader's corrected lookup, with per-room boxes from `facility-plan.ts`. About 2 days.
-7. Optional: release pre-warm of the AO cache via headless Chrome. About 1–2 days.
+1. Bake harness in a dev room: a pure `logic/` module for hemisphere sampling and hashing (tested), a worker running three-mesh-bvh, per-vertex AO applied to one plant room and one museum hall through a shared material patch, with the fade-in and no AO while pending. Measure in Chrome and on the Steam Deck. About 3 days.
+2. Exclusions (moving, clickable, instanced, displays) and wiring through `mergeStatic`; drop GTAO in baked rooms on every preset (pending question 1). About 2 days.
+3. The persistent cache: IndexedDB and desktop files, size limit, LRU eviction with pinned hubs, in-memory fallback, dev miss counter. About 2–3 days.
+4. Baking ahead: the priority queue and sliced worker, frame-budget throttling and pauses; sources in order of ease: the lift's `prepareRoom`, the museum's neighbour halls, then doorway neighbours (which depend on the incremental room preparation work). About 3–4 days, plus the doorway part's share of incremental preparation.
+5. Planar shell lightmaps: UV2 and atlas packing for walls, floors, ceilings, pool tanks and coves in the shell builders; shell texels in the same bake; dilation. About 3–4 days.
+6. Room probes: generalise `pool-room.ts`'s capture into a `room-probe` view, replacing the studio in rooms with shiny surfaces. About 2 days.
+7. Box projection in the PMREM patch and the water shader. About 2 days.
+8. Optional: xatlas for irregular shells, cached per shape; and a release pre-warm of the AO cache. About 2–3 days.
 
-Total about 11–13 days, with stages 1–4 (AO) and 5–6 (reflections) independent.
+Total about 19–23 days. The AO stages (1–5) and reflection stages (6–7) are independent.
 
 ## Questions for the owner
 
-1. Is it acceptable for a room to show live GTAO for the first one to fifteen seconds of a player's first visit while its occlusion bakes, before it settles into the baked look?
-2. Should High keep a reduced live GTAO on top of the bake for contact shadows of doors and small parts, or should every preset drop GTAO once a room is baked?
-3. Should rooms' shiny surfaces reflect the room itself (a captured probe) in place of the present neutral studio, accepting that dark rooms then reflect less?
+1. Should High keep any live ambient occlusion for moving parts once rooms are baked? Recommended: no, on every preset; at most an Ultra option, off by default, for fast GPUs.
+2. Should rooms' shiny surfaces reflect the room itself (a captured probe) in place of the present neutral studio, accepting that dark rooms then reflect less?
+3. Is per-vertex AO first, then planar shell lightmaps (with xatlas only for irregular shells), acceptable in place of whole-room xatlas lightmaps, given the prototype's 14.5 s unwrap and untexelled small triangles?
 
 ## Sources
 
@@ -154,4 +279,4 @@ Total about 11–13 days, with stages 1–4 (AO) and 5–6 (reflections) indepen
 - Box-projected env map shader patch for three.js r137: https://gist.github.com/0beqz/8d51b4ae16d68021a09fb504af708fca
 - three.js forum, parallax correction and the r132 removal: https://discourse.threejs.org/t/parallax-correction-from-environment-maps/32692
 - three.js r184 TSL `getParallaxCorrectNormal`: https://app.unpkg.com/three@0.184.0/files/src/nodes/functions/material/getParallaxCorrectNormal.js
-- This repository: [bridge render performance](bridge-render-performance-2026-10-28.md), [graphics quality presets](../research/graphics-quality-presets.md).
+- This repository: [bridge render performance](bridge-render-performance-2026-10-28.md), [graphics quality presets](../research/graphics-quality-presets.md), `src/toolkit/gallery/logic/room-readiness.ts`, `src/toolkit/gallery/rooms/museum-hall-room.ts`.
