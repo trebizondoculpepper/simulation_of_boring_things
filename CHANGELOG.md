@@ -4,6 +4,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum corridors: no second pendant beyond the hand-over (the owner, 2026-10-30: "a weird extra reflection of a light on the most distant corridor wall"). Each hall split its copy of an L-shaped corridor the other way round (its own leg took the corner) and hung a lamp and a services ceiling over each leg, so the hall beyond, drawn through the hand-over at reduced resolution, showed its lamp where this hall had none. Both halls now cut every corridor into the same pieces (`corridorPieces`): the corner, and each arm without it, a pendant over each arm, the services seeded by the pair of halls.
 - Ambient occlusion: the development note "AO BAKING" shows only for BAKED (the slow ray-traced bake), never for SIMPLE (the owner, 2026-10-30).
 
 - Museum, Hall 6 rearranged for layout C (112; the owner, 2026-10-30: "swap things around so they're on the opposite wall"): the whole plant, trough, pumps, header, tank and their pipes, stands turned half round, the trough against the west wall, so the east side is a clear walk between its two archways; the split-case showpiece now greets the visitor by the way in. In the walkway test.

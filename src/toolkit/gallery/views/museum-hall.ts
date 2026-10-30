@@ -65,6 +65,7 @@ import {
   wallWindows,
 } from '../logic/museum-plan';
 import type {
+  HallCorridor,
   HallWall,
   MuseumArch,
   MuseumHallId,
@@ -824,6 +825,57 @@ function openingsOn(
         frame: { x: 0, z: 0, yaw: 0 },
       },
     },
+  ];
+}
+
+/** A corridor's floor rectangle, in the museum's coordinates. */
+type Rect = HallCorridor['floor'][number];
+
+/**
+ * A corridor cut into the same pieces by both the halls it joins: its
+ * corner, and each arm without it, a pendant over each arm. Each hall
+ * splits its L the other way round (its own leg takes the corner), and
+ * the hall beyond is drawn through the hand-over, so lamps and services
+ * placed by leg stood in different places in the two copies: a second
+ * lamp floated beyond the hand-over (the owner, 2026-10-30).
+ */
+function corridorPieces(
+  id: MuseumHallId,
+  c: HallCorridor,
+): { rect: Rect; seed: number; lamp: boolean }[] {
+  const pair = [id, c.to].sort();
+  const base =
+    MUSEUM_EXHIBITS.indexOf(pair[0]) * 7 +
+    MUSEUM_EXHIBITS.indexOf(pair[1]) * 3 +
+    101;
+  if (c.floor.length !== 2)
+    return c.floor.map((rect, k) => ({ rect, seed: base + k, lamp: true }));
+  const [own, onward] = c.floor;
+  const eps = 1e-6;
+  // The onward leg meets the hall's own across z (it runs along x) or across x.
+  const acrossZ =
+    Math.abs(onward.minZ - own.maxZ) < eps ||
+    Math.abs(onward.maxZ - own.minZ) < eps;
+  let corner: Rect;
+  let arm: Rect;
+  if (acrossZ) {
+    corner = { ...own, minX: onward.minX, maxX: onward.maxX };
+    arm =
+      onward.minX <= own.minX + eps
+        ? { ...own, minX: onward.maxX }
+        : { ...own, maxX: onward.minX };
+  } else {
+    corner = { ...own, minZ: onward.minZ, maxZ: onward.maxZ };
+    arm =
+      onward.minZ <= own.minZ + eps
+        ? { ...own, minZ: onward.maxZ }
+        : { ...own, maxZ: onward.minZ };
+  }
+  const armSeed = (hall: MuseumHallId) => base + (hall === pair[0] ? 1 : 2);
+  return [
+    { rect: corner, seed: base, lamp: false },
+    { rect: arm, seed: armSeed(id), lamp: true },
+    { rect: onward, seed: armSeed(c.to), lamp: true },
   ];
 }
 
@@ -1648,19 +1700,16 @@ export function createMuseumHall(
       for (const g of bars) g.dispose();
     }
 
-    // The halls' roof deck and beams over each leg, the corner under the
-    // first, its services sparse.
-    c.floor.forEach((f, k) => {
+    // The halls' roof deck and beams over the corner and each arm, its
+    // services sparse, the same from both halls (`corridorPieces`).
+    const pieces = corridorPieces(id, c);
+    for (const piece of pieces) {
       const { group: ceiling } = createServiceCeiling(
-        { ...f, deckY: H },
-        {
-          seed: MUSEUM_EXHIBITS.indexOf(id) * 7 + k + 101,
-          density: 0.35,
-          beamEvery: 3,
-        },
+        { ...piece.rect, deckY: H },
+        { seed: piece.seed, density: 0.35, beamEvery: 3 },
       );
       run.add(ceiling);
-    });
+    }
     const floors = c.floor.map((f) => {
       const g = new PlaneGeometry(f.maxX - f.minX, f.maxZ - f.minZ);
       g.rotateX(-Math.PI / 2);
@@ -1681,13 +1730,15 @@ export function createMuseumHall(
     // A pendant in each leg (the owner, 2026-10-30: "a pair of industrial
     // lights in each, one in each leg"), the Encabulator's, on its chain
     // from the ceiling, each with a warm light of short reach.
-    const places = c.floor.map((f) => ({
-      x: (f.minX + f.maxX) / 2,
-      z: (f.minZ + f.maxZ) / 2,
-      y: CORRIDOR_LAMP.rim,
-      top: H - BEAM_DEPTH,
-      size: CORRIDOR_LAMP.size,
-    }));
+    const places = pieces
+      .filter((piece) => piece.lamp)
+      .map(({ rect: f }) => ({
+        x: (f.minX + f.maxX) / 2,
+        z: (f.minZ + f.maxZ) / 2,
+        y: CORRIDOR_LAMP.rim,
+        top: H - BEAM_DEPTH,
+        size: CORRIDOR_LAMP.size,
+      }));
     const lamps = createPendantLamps(places, corridorBulb);
     run.add(lamps.group);
     pendantSets.push(lamps);
