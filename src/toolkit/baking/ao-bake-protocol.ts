@@ -46,7 +46,7 @@ export interface PackedGeometries {
 }
 export const GEOMETRY_STRIDE = 5;
 
-/** Every mesh packed likewise: its geometry, flags (1 receiver, 2 subdivide, 4 seen from both sides) and world matrix (16 floats). */
+/** Every mesh packed likewise: its geometry, flags (1 receiver, 2 subdivide, 4 seen from both sides, 8 never a SIMPLE occluder) and world matrix (16 floats). */
 export interface PackedMeshes {
   geometry: Int32Array;
   flags: Uint8Array;
@@ -152,5 +152,7 @@ export type BakeReply =
       cached: boolean;
       meshes: BakedMesh[];
       timings: BakeTimings;
+      /** A SIMPLE bake's boxes, world units, six numbers each (for `?aodebug=1`). */
+      boxes?: { interiors: number[]; occluders: number[] };
     }
   | { type: 'error'; id: number; message: string };

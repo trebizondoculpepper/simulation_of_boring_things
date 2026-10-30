@@ -24,7 +24,9 @@
  * blackout.
  */
 import {
+  RepeatWrapping,
   Box3,
+  Box3Helper,
   BufferAttribute,
   BufferGeometry,
   DoubleSide,
@@ -388,7 +390,10 @@ function staticKind(
     return 'skip:see-through';
   // Displays drawn on a canvas are not darkened: their readouts stay as lit.
   const map = (material as MeshStandardMaterial).map;
-  if (map && 'isCanvasTexture' in map) return 'occluder:display';
+  // (A canvas tiled across a surface, as the museum's floors are, is a
+  // finish, not a display: it repeats.)
+  if (map && 'isCanvasTexture' in map && map.wrapS !== RepeatWrapping)
+    return 'occluder:display';
   if (material.transparent || material.userData.live || !PATCHABLE(material))
     return `occluder:${material.transparent ? 'transparent' : material.userData.live ? 'live' : material.type}`;
   return 'receiver';
@@ -419,6 +424,10 @@ const FRAGMENT_APPLY = `{
   reflectedLight.directDiffuse *= mix( 1.0, bakedAo, bakedAoDirect );
 }
 #include <aomap_fragment>`;
+/** `?aodebug=1`: every baked surface shows its raw bake as grey, nothing else. */
+const AO_DEBUG =
+  new URLSearchParams(globalThis.location?.search ?? '').get('aodebug') === '1';
+const FRAGMENT_DEBUG = '\tgl_FragColor = vec4( vec3( vBakedAo ), 1.0 );\n}';
 
 /**
  * A copy of `material` that multiplies its indirect light by the vertex
@@ -455,8 +464,15 @@ function bakedAoMaterial(
         '#include <aomap_fragment>',
         FRAGMENT_APPLY,
       );
+    // The debug grey written last of all, over every other patch.
+    if (AO_DEBUG) {
+      const end = shader.fragmentShader.lastIndexOf('}');
+      shader.fragmentShader =
+        shader.fragmentShader.slice(0, end) + FRAGMENT_DEBUG;
+    }
   };
-  copy.customProgramCacheKey = () => `${ownKey()}|baked-ao-v1`;
+  copy.customProgramCacheKey = () =>
+    `${ownKey()}|baked-ao-v1${AO_DEBUG ? '|debug' : ''}`;
   return copy;
 }
 
@@ -487,6 +503,45 @@ export interface BakedAoOptions {
 }
 
 export type BakeStat = (typeof bakeStats)[number];
+
+/**
+ * Whether a mesh must never be a SIMPLE occluder (the owner, 2026-10-30):
+ * cables, wires, conduits, trays, signs, labels, plates, decals, tags,
+ * by its or an ancestor's name, or `userData.aoOccluder === false`.
+ */
+const NEVER_OCCLUDES =
+  /\b(cables?|wires?|wiring|conduits?|trays?|signs?|signage|labels?|plates?|decals?|stickers?|tags?|posters?|notices?|placards?)\b/i;
+function neverOccludes(mesh: Object3D) {
+  for (let o: Object3D | null = mesh; o; o = o.parent) {
+    if (o.userData.aoOccluder === false) return true;
+    if (o.name && NEVER_OCCLUDES.test(o.name)) return true;
+  }
+  return false;
+}
+
+/** `?aodebug=1`: a SIMPLE bake's boxes drawn as outlines, its interiors red, its occluders yellow. */
+function showBoxes(
+  root: Object3D,
+  boxes: { interiors: number[]; occluders: number[] },
+) {
+  let top = root;
+  while (top.parent) top = top.parent;
+  const draw = (list: number[], colour: number) => {
+    for (let i = 0; i + 5 < list.length; i += 6)
+      top.add(
+        new Box3Helper(
+          new Box3(
+            new Vector3(list[i], list[i + 1], list[i + 2]),
+            new Vector3(list[i + 3], list[i + 4], list[i + 5]),
+          ),
+          colour,
+        ),
+      );
+  };
+  Object.assign(globalThis, { simpleAoBoxes: boxes });
+  draw(boxes.interiors, 0xff2020);
+  draw(boxes.occluders, 0xffd000);
+}
 
 /** Boxes in `root`'s frame as world boxes, six numbers each. */
 function worldInteriors(root: Object3D, boxes: readonly Box[]) {
@@ -782,6 +837,7 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
           later(() => {
             applied = true;
             startFade();
+            if (AO_DEBUG && reply.boxes) showBoxes(root, reply.boxes);
             const stat: BakeStat = {
               ...reply.timings,
               roomId,
@@ -885,7 +941,8 @@ export function bakeRoomAo(root: Object3D, options: BakedAoOptions) {
       flags[i] =
         (receiver ? 1 : 0) |
         (receiver && subdividable(g) ? 2 : 0) |
-        ((mesh.material as Material).side === DoubleSide ? 4 : 0);
+        ((mesh.material as Material).side === DoubleSide ? 4 : 0) |
+        (neverOccludes(mesh) ? 8 : 0);
       matrices.set(mesh.matrixWorld.elements, i * 16);
     });
     const message: Extract<BakeRequest, { type: 'prepare' }> = {

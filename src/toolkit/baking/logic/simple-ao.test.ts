@@ -65,13 +65,41 @@ describe('SIMPLE ambient occlusion', () => {
     expect(floorAt(4.95, 4.95, dark)).toBeLessThan(floorAt(4.95, 4.95, lit));
   });
 
-  it('keeps machines and drops the shell, the small, and the contained', () => {
+  it('keeps big solid things only', () => {
     const wall: Box = [4.9, 0, -5, 5, 3, 5];
+    const cable: Box = [-4, 2, 0, 4, 2.05, 0.05];
     const bolt: Box = [0, 0.9, 0, 0.2, 1, 0.2];
-    const crumb: Box = [3, 0, 3, 3.01, 0.01, 3.01];
-    expect(chooseOccluders([wall, bolt, plinth, crumb], [room], 0.1)).toEqual([
-      plinth,
-    ]);
+    const pipeRun: Box = [-1, 0, 2, 1, 2, 2.5];
+    const sign: Box = [2, 1, 4.8, 2.6, 1.6, 4.9];
+    const pump: Box = [2, 0, -2, 3, 1, -1.5];
+    expect(
+      chooseOccluders(
+        [
+          { box: wall },
+          { box: cable },
+          { box: bolt },
+          { box: pipeRun, fill: 0.2 },
+          { box: sign },
+          { box: plinth, fill: 1.2 },
+          { box: pump, excluded: true },
+        ],
+        [room],
+        1,
+      ),
+    ).toEqual([plinth]);
+  });
+
+  it('darkens a wall’s foot within about 0.6 m, not beyond', () => {
+    const plant = scene({ look: { ...SIMPLE_AO_LOOKS.plant }, occluders: [] });
+    const wallAt = (y: number) => simpleOcclusion(5, y, 0, -1, 0, 0, plant);
+    expect(wallAt(0.05)).toBeLessThan(0.85);
+    expect(wallAt(0.7)).toBe(1);
+  });
+
+  it('counts a wall a little off the plan’s line as the plan’s wall', () => {
+    const s2 = scene({ occluders: [] });
+    // A wall face 4 cm outside the plan, near the floor: still darkened.
+    expect(simpleOcclusion(5.04, 0.05, 0, -1, 0, 0, s2)).toBeLessThan(0.9);
   });
 
   it('gives a byte a vertex, 255 open', () => {

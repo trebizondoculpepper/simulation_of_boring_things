@@ -42,30 +42,30 @@ export interface SimpleAoLook {
  */
 export const SIMPLE_AO_LOOKS = {
   museum: {
-    radius: 1.2,
+    radius: 0.6,
     strength: 0.25,
     farBoost: 0,
     farFrom: 0,
     farTo: 1,
-    maxEdge: 0.5,
+    maxEdge: 0.4,
     floor: 0.6,
   },
   standard: {
-    radius: 1,
+    radius: 0.6,
     strength: 0.25,
     farBoost: 0,
     farFrom: 0,
     farTo: 1,
-    maxEdge: 0.5,
+    maxEdge: 0.4,
     floor: 0.55,
   },
   plant: {
-    radius: 1,
+    radius: 0.6,
     strength: 0.35,
     farBoost: 0.8,
     farFrom: 1.5,
     farTo: 5,
-    maxEdge: 0.5,
+    maxEdge: 0.4,
     floor: 0.4,
   },
 } as const satisfies Record<string, SimpleAoLook>;
@@ -98,36 +98,66 @@ export function boundsOf(boxes: readonly Box[]): Box | null {
   return b as unknown as Box;
 }
 
+/** A mesh offered as an occluder: its world bounds and what is known of its shape. */
+export interface OccluderCandidate {
+  box: Box;
+  /**
+   * Its surface area over its box's (1 or more for a solid block; a long
+   * L of pipe or a run of cable fills its box far less).
+   */
+  fill?: number;
+  /** Marked as never occluding (cables, conduits, signs, labels, decals). */
+  excluded?: boolean;
+}
+
+/** What makes an occluder: big and solid (the owner, 2026-10-30). Metres. */
+export const OCCLUDER_RULES = {
+  /** Its smallest side at least this, so thin things, however long, are not. */
+  minThickness: 0.2,
+  /** Its volume at least this, cubic metres. */
+  minVolume: 0.05,
+  /** Its surface at least this share of its box's: a solid, not a sprawl. */
+  minFill: 0.5,
+  /** Never spanning more than this share of the room along any axis. */
+  maxSpan: 0.5,
+} as const;
+
 /**
- * The occluders worth weighing: meshes' bounds, less the room's own shell
- * (spanning most of an interior across two axes: a wall, floor or ceiling
- * slab), less anything whose longest side is under `minSize`, less
- * anything already inside a chosen one, biggest first, at most `max`.
+ * The occluders worth weighing, biggest first, at most `max`: only big,
+ * solid things (machines, tanks, plinths, cabinets, large pipes and
+ * ducts). Refused: anything marked excluded; anything whose smallest side
+ * is under `minThickness` or volume under `minVolume`; a sprawl that fills
+ * little of its box (a run of pipe, a merged tangle); anything spanning
+ * much of the room (a wall, floor or ceiling slab, a merged mesh across
+ * it); anything already inside a chosen one. `unit` is scene units a metre.
  */
 export function chooseOccluders(
-  boxes: readonly Box[],
+  candidates: readonly OccluderCandidate[],
   interiors: readonly Box[],
-  minSize: number,
+  unit: number,
   max = MAX_OCCLUDERS,
+  rules = OCCLUDER_RULES,
 ): Box[] {
-  const shell = (b: Box) =>
+  const spansRoom = (b: Box) =>
     interiors.some((r) => {
-      let spans = 0;
       for (let i = 0; i < 3; i++)
-        if (extent(b, i) >= 0.6 * extent(r, i)) spans++;
-      return spans >= 2;
+        if (extent(b, i) > rules.maxSpan * extent(r, i)) return true;
+      return false;
     });
-  const candidates = boxes
-    .filter(
-      (b) =>
-        Math.max(extent(b, 0), extent(b, 1), extent(b, 2)) >= minSize &&
-        !shell(b),
-    )
+  const solid = candidates
+    .filter(({ box: b, fill = 1, excluded }) => {
+      if (excluded || fill < rules.minFill) return false;
+      const thin = Math.min(extent(b, 0), extent(b, 1), extent(b, 2));
+      if (thin < rules.minThickness * unit) return false;
+      if (volume(b) < rules.minVolume * unit ** 3) return false;
+      return !spansRoom(b);
+    })
+    .map((c) => c.box)
     .sort((a, b) => volume(b) - volume(a));
   const chosen: Box[] = [];
-  for (const b of candidates) {
+  for (const b of solid) {
     if (chosen.length >= max) break;
-    if (chosen.some((c) => contains(c, b, minSize * 0.1))) continue;
+    if (chosen.some((c) => contains(c, b, 0.02 * unit))) continue;
     chosen.push(b);
   }
   return chosen;
@@ -191,10 +221,13 @@ export function simpleOcclusion(
 ) {
   const radius = scene.look.radius * scene.unit;
   const own = radius * 0.02;
+  // How far a surface may stand off the plan's planes and still be one of
+  // them (a wall's face a little outside or inside the plan's line).
+  const slack = 0.3 * scene.unit;
   let occ = 0;
   // The interior it is in (the deepest, where several overlap).
   let room: Box | null = null;
-  let deepest = -own;
+  let deepest = -slack;
   for (const r of scene.interiors) {
     const f = -boxDistance(px, py, pz, r);
     if (f >= deepest) {
@@ -209,9 +242,9 @@ export function simpleOcclusion(
     for (let i = 0; i < 3; i++) {
       // Its two planes on this axis, each a solid of its own: the one the
       // point lies on is never reached by moving off it along the normal.
-      if (n[i] < 0.999 || p[i] - r[i] > own)
+      if (n[i] < 0.9 || p[i] - r[i] > slack)
         occ += taps(radius, (h) => p[i] + n[i] * h - r[i]);
-      if (n[i] > -0.999 || r[i + 3] - p[i] > own)
+      if (n[i] > -0.9 || r[i + 3] - p[i] > slack)
         occ += taps(radius, (h) => r[i + 3] - (p[i] + n[i] * h));
     }
   }
