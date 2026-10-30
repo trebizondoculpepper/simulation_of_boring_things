@@ -77,7 +77,7 @@ describe('the museum’s safety and services layer', () => {
     }
   });
 
-  it('puts a call point at 1.4 m by every room’s way out, and fire points in every other hall', () => {
+  it('puts a call point at 1.4 m by every room’s way out, and no fire points', () => {
     for (const id of ALL_SAFETY_ROOMS) {
       const layer = safetyLayer(id);
       const calls = layer.filter((f) => f.kind === 'call-point');
@@ -87,12 +87,8 @@ describe('the museum’s safety and services layer', () => {
         FIRE_POINT_HALLS.includes(id),
       );
     }
-    expect(FIRE_POINT_HALLS).toEqual([
-      'museum1',
-      'museum3',
-      'museum5',
-      'museum9',
-    ]);
+    // None: the owner took the fire points out of every museum room.
+    expect(FIRE_POINT_HALLS).toEqual([]);
   });
 
   it('fits sockets at 450 mm, within Approved Document M’s 400 to 1,000 mm, never in a window', () => {

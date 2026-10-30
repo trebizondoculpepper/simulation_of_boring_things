@@ -9,7 +9,6 @@ import {
   hallAxes,
   hallOrigin,
   hallSize,
-  hallNumber,
   hallWalls,
   isBlackBox,
   nextHall,
@@ -40,10 +39,9 @@ import type { HallWall, MuseumArch, MuseumHallId } from './museum-plan';
  *   1.4 m beside every room's way out (at every storey and final exit), a
  *   sounder-beacon in each room at 2.4 m; smoke detectors and sprinkler
  *   heads come with the services ceiling (Hall 0 has its own).
- * - **Fire points** (BS 5306-8), in every other hall (the odd-numbered, the
- *   owner's "every other hall"), on a free-standing board (no drilling of
- *   heritage brick): water and CO₂, their ID signs, the fire action
- *   notice.
+ * - **Fire points** (BS 5306-8): none (the owner, 2026-10-30, took them
+ *   out of every museum room); the board and its placing are kept for a
+ *   hall listed in `FIRE_POINT_HALLS`.
  * - **Power** (BS 1363, Approved Document M: 400–1,000 mm): white twin
  *   switched sockets at 450 mm on the walls, and floor boxes where the
  *   exhibits' plinths will stand.
@@ -295,10 +293,11 @@ function wallOf(id: MuseumHallId, a: MuseumArch) {
 }
 const uOf = (a: MuseumArch) => (a.axis === 'x' ? a.at.x : a.at.z);
 
-/** The halls with a fire point: every other one, the odd-numbered. */
-export const FIRE_POINT_HALLS: readonly MuseumHallId[] = MUSEUM_HALLS.filter(
-  (id) => hallNumber(id) % 2 === 1 && !isBlackBox(id),
-);
+/**
+ * The halls with a fire point: none (the owner, 2026-10-30, took them out
+ * of every museum room; they stood in every other hall, the odd-numbered).
+ */
+export const FIRE_POINT_HALLS: readonly MuseumHallId[] = [];
 
 /** A fire point's board, on its feet against the wall: its footprint out from the wall. */
 export const FIRE_POINT_BOARD = { w: 0.7, depth: 0.45 };
