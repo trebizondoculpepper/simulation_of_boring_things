@@ -1,0 +1,297 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1200" viewBox="0 0 1600 1200">
+<rect width="100%" height="100%" fill="#fff"/>
+<g id="HALL_0" transform="translate(240 920)">
+<title>HALL_0: Welcome</title>
+<line x1="-166.0" y1="146.0" x2="166.0" y2="146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="166.0" y1="146.0" x2="166.0" y2="-146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="166.0" y1="-146.0" x2="-166.0" y2="-146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-166.0" y1="-146.0" x2="-166.0" y2="146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-154.0" y1="134.0" x2="154.0" y2="134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="154.0" y1="134.0" x2="154.0" y2="-134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="154.0" y1="-134.0" x2="-154.0" y2="-134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-154.0" y1="-134.0" x2="-154.0" y2="134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-160.0" y1="140.0" x2="160.0" y2="140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="160.0" y1="140.0" x2="160.0" y2="-140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="160.0" y1="-140.0" x2="-160.0" y2="-140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="-160.0" y1="-140.0" x2="-160.0" y2="140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<text x="-130.0" y="-12.0" font-size="20" font-family="Helvetica, Arial, sans-serif" fill="#333">HALL 0</text>
+<text x="-130.0" y="18.0" font-size="12" font-family="Helvetica, Arial, sans-serif" fill="#333">Welcome</text>
+<text x="-130.0" y="40.0" font-size="10" font-family="Helvetica, Arial, sans-serif" fill="#333">16.0 x 14.0 m (wall lines)</text>
+</g>
+<g id="HALL_1" transform="translate(240 570)">
+<title>HALL_1: Warm water</title>
+<line x1="-166.0" y1="216.0" x2="166.0" y2="216.0" stroke="#222" stroke-width="1.5"/>
+<line x1="166.0" y1="216.0" x2="166.0" y2="-216.0" stroke="#222" stroke-width="1.5"/>
+<line x1="166.0" y1="-216.0" x2="-166.0" y2="-216.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-166.0" y1="-216.0" x2="-166.0" y2="216.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-154.0" y1="204.0" x2="154.0" y2="204.0" stroke="#222" stroke-width="1.5"/>
+<line x1="154.0" y1="204.0" x2="154.0" y2="-204.0" stroke="#222" stroke-width="1.5"/>
+<line x1="154.0" y1="-204.0" x2="-154.0" y2="-204.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-154.0" y1="-204.0" x2="-154.0" y2="204.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-160.0" y1="210.0" x2="160.0" y2="210.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="160.0" y1="210.0" x2="160.0" y2="-210.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="160.0" y1="-210.0" x2="-160.0" y2="-210.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="-160.0" y1="-210.0" x2="-160.0" y2="210.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="-81.4" y1="124.4" x2="-72.6" y2="124.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-72.6" y1="124.4" x2="-72.6" y2="115.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="-72.6" y1="115.6" x2="-81.4" y2="115.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="-81.4" y1="115.6" x2="-81.4" y2="124.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="72.6" y1="124.4" x2="81.4" y2="124.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="81.4" y1="124.4" x2="81.4" y2="115.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="81.4" y1="115.6" x2="72.6" y2="115.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="72.6" y1="115.6" x2="72.6" y2="124.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-81.4" y1="4.4" x2="-72.6" y2="4.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-72.6" y1="4.4" x2="-72.6" y2="-4.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-72.6" y1="-4.4" x2="-81.4" y2="-4.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-81.4" y1="-4.4" x2="-81.4" y2="4.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="72.6" y1="4.4" x2="81.4" y2="4.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="81.4" y1="4.4" x2="81.4" y2="-4.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="81.4" y1="-4.4" x2="72.6" y2="-4.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="72.6" y1="-4.4" x2="72.6" y2="4.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-81.4" y1="-115.6" x2="-72.6" y2="-115.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="-72.6" y1="-115.6" x2="-72.6" y2="-124.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-72.6" y1="-124.4" x2="-81.4" y2="-124.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-81.4" y1="-124.4" x2="-81.4" y2="-115.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="72.6" y1="-115.6" x2="81.4" y2="-115.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="81.4" y1="-115.6" x2="81.4" y2="-124.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="81.4" y1="-124.4" x2="72.6" y2="-124.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="72.6" y1="-124.4" x2="72.6" y2="-115.6" stroke="#c0392b" stroke-width="1"/>
+<text x="-130.0" y="-12.0" font-size="20" font-family="Helvetica, Arial, sans-serif" fill="#333">HALL 1</text>
+<text x="-130.0" y="18.0" font-size="12" font-family="Helvetica, Arial, sans-serif" fill="#333">Warm water</text>
+<text x="-130.0" y="40.0" font-size="10" font-family="Helvetica, Arial, sans-serif" fill="#333">16.0 x 21.0 m (wall lines)</text>
+</g>
+<g id="HALL_2" transform="translate(240 220)">
+<title>HALL_2: Clean water</title>
+<line x1="-166.0" y1="146.0" x2="166.0" y2="146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="166.0" y1="146.0" x2="166.0" y2="-146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="166.0" y1="-146.0" x2="-166.0" y2="-146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-166.0" y1="-146.0" x2="-166.0" y2="146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-154.0" y1="134.0" x2="154.0" y2="134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="154.0" y1="134.0" x2="154.0" y2="-134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="154.0" y1="-134.0" x2="-154.0" y2="-134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-154.0" y1="-134.0" x2="-154.0" y2="134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-160.0" y1="140.0" x2="160.0" y2="140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="160.0" y1="140.0" x2="160.0" y2="-140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="160.0" y1="-140.0" x2="-160.0" y2="-140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="-160.0" y1="-140.0" x2="-160.0" y2="140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<text x="-130.0" y="-12.0" font-size="20" font-family="Helvetica, Arial, sans-serif" fill="#333">HALL 2</text>
+<text x="-130.0" y="18.0" font-size="12" font-family="Helvetica, Arial, sans-serif" fill="#333">Clean water</text>
+<text x="-130.0" y="40.0" font-size="10" font-family="Helvetica, Arial, sans-serif" fill="#333">16.0 x 14.0 m (wall lines)</text>
+</g>
+<g id="HALL_3" transform="translate(640 220)">
+<title>HALL_3: Safe water</title>
+<line x1="-246.0" y1="146.0" x2="246.0" y2="146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="246.0" y1="146.0" x2="246.0" y2="-146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="246.0" y1="-146.0" x2="-246.0" y2="-146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-246.0" y1="-146.0" x2="-246.0" y2="146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-234.0" y1="134.0" x2="234.0" y2="134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="234.0" y1="134.0" x2="234.0" y2="-134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="234.0" y1="-134.0" x2="-234.0" y2="-134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-234.0" y1="-134.0" x2="-234.0" y2="134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-240.0" y1="140.0" x2="240.0" y2="140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="240.0" y1="140.0" x2="240.0" y2="-140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="240.0" y1="-140.0" x2="-240.0" y2="-140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="-240.0" y1="-140.0" x2="-240.0" y2="140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="-124.4" y1="-62.6" x2="-115.6" y2="-62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="-115.6" y1="-62.6" x2="-115.6" y2="-71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-115.6" y1="-71.4" x2="-124.4" y2="-71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-124.4" y1="-71.4" x2="-124.4" y2="-62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="-124.4" y1="71.4" x2="-115.6" y2="71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-115.6" y1="71.4" x2="-115.6" y2="62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="-115.6" y1="62.6" x2="-124.4" y2="62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="-124.4" y1="62.6" x2="-124.4" y2="71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-4.4" y1="-62.6" x2="4.4" y2="-62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="4.4" y1="-62.6" x2="4.4" y2="-71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="4.4" y1="-71.4" x2="-4.4" y2="-71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-4.4" y1="-71.4" x2="-4.4" y2="-62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="-4.4" y1="71.4" x2="4.4" y2="71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="4.4" y1="71.4" x2="4.4" y2="62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="4.4" y1="62.6" x2="-4.4" y2="62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="-4.4" y1="62.6" x2="-4.4" y2="71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="115.6" y1="-62.6" x2="124.4" y2="-62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="124.4" y1="-62.6" x2="124.4" y2="-71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="124.4" y1="-71.4" x2="115.6" y2="-71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="115.6" y1="-71.4" x2="115.6" y2="-62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="115.6" y1="71.4" x2="124.4" y2="71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="124.4" y1="71.4" x2="124.4" y2="62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="124.4" y1="62.6" x2="115.6" y2="62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="115.6" y1="62.6" x2="115.6" y2="71.4" stroke="#c0392b" stroke-width="1"/>
+<text x="-210.0" y="-12.0" font-size="20" font-family="Helvetica, Arial, sans-serif" fill="#333">HALL 3</text>
+<text x="-210.0" y="18.0" font-size="12" font-family="Helvetica, Arial, sans-serif" fill="#333">Safe water</text>
+<text x="-210.0" y="40.0" font-size="10" font-family="Helvetica, Arial, sans-serif" fill="#333">24.0 x 14.0 m (wall lines)</text>
+</g>
+<g id="HALL_4" transform="translate(1040 220)">
+<title>HALL_4: The chemistry of pools</title>
+<line x1="-166.0" y1="146.0" x2="166.0" y2="146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="166.0" y1="146.0" x2="166.0" y2="-146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="166.0" y1="-146.0" x2="-166.0" y2="-146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-166.0" y1="-146.0" x2="-166.0" y2="146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-154.0" y1="134.0" x2="154.0" y2="134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="154.0" y1="134.0" x2="154.0" y2="-134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="154.0" y1="-134.0" x2="-154.0" y2="-134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-154.0" y1="-134.0" x2="-154.0" y2="134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-160.0" y1="140.0" x2="160.0" y2="140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="160.0" y1="140.0" x2="160.0" y2="-140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="160.0" y1="-140.0" x2="-160.0" y2="-140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="-160.0" y1="-140.0" x2="-160.0" y2="140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="-4.4" y1="-62.6" x2="4.4" y2="-62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="4.4" y1="-62.6" x2="4.4" y2="-71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="4.4" y1="-71.4" x2="-4.4" y2="-71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-4.4" y1="-71.4" x2="-4.4" y2="-62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="-4.4" y1="71.4" x2="4.4" y2="71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="4.4" y1="71.4" x2="4.4" y2="62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="4.4" y1="62.6" x2="-4.4" y2="62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="-4.4" y1="62.6" x2="-4.4" y2="71.4" stroke="#c0392b" stroke-width="1"/>
+<text x="-130.0" y="-12.0" font-size="20" font-family="Helvetica, Arial, sans-serif" fill="#333">HALL 4</text>
+<text x="-130.0" y="18.0" font-size="12" font-family="Helvetica, Arial, sans-serif" fill="#333">The chemistry of pools</text>
+<text x="-130.0" y="40.0" font-size="10" font-family="Helvetica, Arial, sans-serif" fill="#333">16.0 x 14.0 m (wall lines)</text>
+</g>
+<g id="HALL_5" transform="translate(1360 220)">
+<title>HALL_5: A Day in the Life</title>
+<line x1="-166.0" y1="146.0" x2="166.0" y2="146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="166.0" y1="146.0" x2="166.0" y2="-146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="166.0" y1="-146.0" x2="-166.0" y2="-146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-166.0" y1="-146.0" x2="-166.0" y2="146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-154.0" y1="134.0" x2="154.0" y2="134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="154.0" y1="134.0" x2="154.0" y2="-134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="154.0" y1="-134.0" x2="-154.0" y2="-134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-154.0" y1="-134.0" x2="-154.0" y2="134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-160.0" y1="140.0" x2="160.0" y2="140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="160.0" y1="140.0" x2="160.0" y2="-140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="160.0" y1="-140.0" x2="-160.0" y2="-140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="-160.0" y1="-140.0" x2="-160.0" y2="140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<text x="-130.0" y="-12.0" font-size="20" font-family="Helvetica, Arial, sans-serif" fill="#333">HALL 5</text>
+<text x="-130.0" y="18.0" font-size="12" font-family="Helvetica, Arial, sans-serif" fill="#333">A Day in the Life</text>
+<text x="-130.0" y="40.0" font-size="10" font-family="Helvetica, Arial, sans-serif" fill="#333">16.0 x 14.0 m (wall lines)</text>
+</g>
+<g id="HALL_6" transform="translate(1360 570)">
+<title>HALL_6: Grundflow’s Amazing World of Pumps</title>
+<line x1="-166.0" y1="216.0" x2="166.0" y2="216.0" stroke="#222" stroke-width="1.5"/>
+<line x1="166.0" y1="216.0" x2="166.0" y2="-216.0" stroke="#222" stroke-width="1.5"/>
+<line x1="166.0" y1="-216.0" x2="-166.0" y2="-216.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-166.0" y1="-216.0" x2="-166.0" y2="216.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-154.0" y1="204.0" x2="154.0" y2="204.0" stroke="#222" stroke-width="1.5"/>
+<line x1="154.0" y1="204.0" x2="154.0" y2="-204.0" stroke="#222" stroke-width="1.5"/>
+<line x1="154.0" y1="-204.0" x2="-154.0" y2="-204.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-154.0" y1="-204.0" x2="-154.0" y2="204.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-160.0" y1="210.0" x2="160.0" y2="210.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="160.0" y1="210.0" x2="160.0" y2="-210.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="160.0" y1="-210.0" x2="-160.0" y2="-210.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="-160.0" y1="-210.0" x2="-160.0" y2="210.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="72.6" y1="-115.6" x2="81.4" y2="-115.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="81.4" y1="-115.6" x2="81.4" y2="-124.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="81.4" y1="-124.4" x2="72.6" y2="-124.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="72.6" y1="-124.4" x2="72.6" y2="-115.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="-81.4" y1="-115.6" x2="-72.6" y2="-115.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="-72.6" y1="-115.6" x2="-72.6" y2="-124.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-72.6" y1="-124.4" x2="-81.4" y2="-124.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-81.4" y1="-124.4" x2="-81.4" y2="-115.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="72.6" y1="4.4" x2="81.4" y2="4.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="81.4" y1="4.4" x2="81.4" y2="-4.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="81.4" y1="-4.4" x2="72.6" y2="-4.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="72.6" y1="-4.4" x2="72.6" y2="4.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-81.4" y1="4.4" x2="-72.6" y2="4.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-72.6" y1="4.4" x2="-72.6" y2="-4.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-72.6" y1="-4.4" x2="-81.4" y2="-4.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-81.4" y1="-4.4" x2="-81.4" y2="4.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="72.6" y1="124.4" x2="81.4" y2="124.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="81.4" y1="124.4" x2="81.4" y2="115.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="81.4" y1="115.6" x2="72.6" y2="115.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="72.6" y1="115.6" x2="72.6" y2="124.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-81.4" y1="124.4" x2="-72.6" y2="124.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-72.6" y1="124.4" x2="-72.6" y2="115.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="-72.6" y1="115.6" x2="-81.4" y2="115.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="-81.4" y1="115.6" x2="-81.4" y2="124.4" stroke="#c0392b" stroke-width="1"/>
+<text x="-130.0" y="-12.0" font-size="20" font-family="Helvetica, Arial, sans-serif" fill="#333">HALL 6</text>
+<text x="-130.0" y="18.0" font-size="12" font-family="Helvetica, Arial, sans-serif" fill="#333">Grundflow’s Amazing World of Pumps</text>
+<text x="-130.0" y="40.0" font-size="10" font-family="Helvetica, Arial, sans-serif" fill="#333">16.0 x 21.0 m (wall lines)</text>
+</g>
+<g id="HALL_7" transform="translate(1360 920)">
+<title>HALL_7: Grout: The Unsung Hero of the Aquatics World</title>
+<line x1="-166.0" y1="146.0" x2="166.0" y2="146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="166.0" y1="146.0" x2="166.0" y2="-146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="166.0" y1="-146.0" x2="-166.0" y2="-146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-166.0" y1="-146.0" x2="-166.0" y2="146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-154.0" y1="134.0" x2="154.0" y2="134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="154.0" y1="134.0" x2="154.0" y2="-134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="154.0" y1="-134.0" x2="-154.0" y2="-134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-154.0" y1="-134.0" x2="-154.0" y2="134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-160.0" y1="140.0" x2="160.0" y2="140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="160.0" y1="140.0" x2="160.0" y2="-140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="160.0" y1="-140.0" x2="-160.0" y2="-140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="-160.0" y1="-140.0" x2="-160.0" y2="140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<text x="-130.0" y="-12.0" font-size="20" font-family="Helvetica, Arial, sans-serif" fill="#333">HALL 7</text>
+<text x="-130.0" y="18.0" font-size="12" font-family="Helvetica, Arial, sans-serif" fill="#333">Grout: The Unsung Hero of the Aquatics World</text>
+<text x="-130.0" y="40.0" font-size="10" font-family="Helvetica, Arial, sans-serif" fill="#333">16.0 x 14.0 m (wall lines)</text>
+</g>
+<g id="HALL_8" transform="translate(1040 920)">
+<title>HALL_8: Never again: putting safety first</title>
+<line x1="-166.0" y1="146.0" x2="166.0" y2="146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="166.0" y1="146.0" x2="166.0" y2="-146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="166.0" y1="-146.0" x2="-166.0" y2="-146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-166.0" y1="-146.0" x2="-166.0" y2="146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-154.0" y1="134.0" x2="154.0" y2="134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="154.0" y1="134.0" x2="154.0" y2="-134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="154.0" y1="-134.0" x2="-154.0" y2="-134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-154.0" y1="-134.0" x2="-154.0" y2="134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-160.0" y1="140.0" x2="160.0" y2="140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="160.0" y1="140.0" x2="160.0" y2="-140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="160.0" y1="-140.0" x2="-160.0" y2="-140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="-160.0" y1="-140.0" x2="-160.0" y2="140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<text x="-130.0" y="-12.0" font-size="20" font-family="Helvetica, Arial, sans-serif" fill="#333">HALL 8</text>
+<text x="-130.0" y="18.0" font-size="12" font-family="Helvetica, Arial, sans-serif" fill="#333">Never again: putting safety first</text>
+<text x="-130.0" y="40.0" font-size="10" font-family="Helvetica, Arial, sans-serif" fill="#333">16.0 x 14.0 m (wall lines)</text>
+</g>
+<g id="HALL_9" transform="translate(640 920)">
+<title>HALL_9: The whole plant</title>
+<line x1="-246.0" y1="146.0" x2="246.0" y2="146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="246.0" y1="146.0" x2="246.0" y2="-146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="246.0" y1="-146.0" x2="-246.0" y2="-146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-246.0" y1="-146.0" x2="-246.0" y2="146.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-234.0" y1="134.0" x2="234.0" y2="134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="234.0" y1="134.0" x2="234.0" y2="-134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="234.0" y1="-134.0" x2="-234.0" y2="-134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-234.0" y1="-134.0" x2="-234.0" y2="134.0" stroke="#222" stroke-width="1.5"/>
+<line x1="-240.0" y1="140.0" x2="240.0" y2="140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="240.0" y1="140.0" x2="240.0" y2="-140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="240.0" y1="-140.0" x2="-240.0" y2="-140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="-240.0" y1="-140.0" x2="-240.0" y2="140.0" stroke="#bbb" stroke-width="1" stroke-dasharray="4 4"/>
+<line x1="115.6" y1="71.4" x2="124.4" y2="71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="124.4" y1="71.4" x2="124.4" y2="62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="124.4" y1="62.6" x2="115.6" y2="62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="115.6" y1="62.6" x2="115.6" y2="71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="115.6" y1="-62.6" x2="124.4" y2="-62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="124.4" y1="-62.6" x2="124.4" y2="-71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="124.4" y1="-71.4" x2="115.6" y2="-71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="115.6" y1="-71.4" x2="115.6" y2="-62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="-4.4" y1="71.4" x2="4.4" y2="71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="4.4" y1="71.4" x2="4.4" y2="62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="4.4" y1="62.6" x2="-4.4" y2="62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="-4.4" y1="62.6" x2="-4.4" y2="71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-4.4" y1="-62.6" x2="4.4" y2="-62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="4.4" y1="-62.6" x2="4.4" y2="-71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="4.4" y1="-71.4" x2="-4.4" y2="-71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-4.4" y1="-71.4" x2="-4.4" y2="-62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="-124.4" y1="71.4" x2="-115.6" y2="71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-115.6" y1="71.4" x2="-115.6" y2="62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="-115.6" y1="62.6" x2="-124.4" y2="62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="-124.4" y1="62.6" x2="-124.4" y2="71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-124.4" y1="-62.6" x2="-115.6" y2="-62.6" stroke="#c0392b" stroke-width="1"/>
+<line x1="-115.6" y1="-62.6" x2="-115.6" y2="-71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-115.6" y1="-71.4" x2="-124.4" y2="-71.4" stroke="#c0392b" stroke-width="1"/>
+<line x1="-124.4" y1="-71.4" x2="-124.4" y2="-62.6" stroke="#c0392b" stroke-width="1"/>
+<text x="-210.0" y="-12.0" font-size="20" font-family="Helvetica, Arial, sans-serif" fill="#333">HALL 9</text>
+<text x="-210.0" y="18.0" font-size="12" font-family="Helvetica, Arial, sans-serif" fill="#333">The whole plant</text>
+<text x="-210.0" y="40.0" font-size="10" font-family="Helvetica, Arial, sans-serif" fill="#333">24.0 x 14.0 m (wall lines)</text>
+</g>
+<g id="COURTYARD" transform="translate(800 570)">
+<title>COURTYARD: Courtyard (sky only)</title>
+<line x1="-400.0" y1="210.0" x2="400.0" y2="210.0" stroke="#2aa6b8" stroke-width="1"/>
+<line x1="400.0" y1="210.0" x2="400.0" y2="-210.0" stroke="#2aa6b8" stroke-width="1"/>
+<line x1="400.0" y1="-210.0" x2="-400.0" y2="-210.0" stroke="#2aa6b8" stroke-width="1"/>
+<line x1="-400.0" y1="-210.0" x2="-400.0" y2="210.0" stroke="#2aa6b8" stroke-width="1"/>
+<text x="-370.0" y="0.0" font-size="20" font-family="Helvetica, Arial, sans-serif" fill="#333">COURTYARD</text>
+</g>
+<text x="80" y="30" font-size="16" font-family="Helvetica, Arial, sans-serif" fill="#333">NORTH UP - 1 unit = 1 m - each room is one block: move it by its insert point</text>
+<text x="80" y="1120" font-size="16" font-family="Helvetica, Arial, sans-serif" fill="#333">STREET (south)</text>
+</svg>

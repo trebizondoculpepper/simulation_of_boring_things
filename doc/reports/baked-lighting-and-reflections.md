@@ -33,6 +33,7 @@ Reflections: extend the pool room's existing capture-on-light-change to every ro
 2. Bakes are cached persistently (IndexedDB on the web, files on the desktop), keyed by the geometry hash; returning to a room never re-bakes unless its geometry changed.
 3. A background worker bakes ahead the rooms the walker is likely to enter next: in the museum the adjacent halls; elsewhere the rooms beyond the current room's doorways; during a freight-lift ride, the destination floor.
 4. Performance comes first: the default for most rooms (pool halls, plant rooms, the museum, corridors) is no AO until the bake is ready, then the baked AO fades in and stays static. No live GTAO in any preset by default, including for moving parts. A room that truly needs an exception is listed for the owner to approve.
+5. The museum's lighting is effectively flat (the owner, 2026-10-30): the white halls are lit by their ambient (the ambient, hemisphere and daylight lights in `museum-hall-room.ts`), and their few small lamps (the four gallery point lights, the exhibits' pilot lights) are insignificant beside it and are treated as if they did not count; a white hall's bake is of that flat light alone. The black boxes (Hall 7, Hall 8; `BLACK_BOX_HALLS`) have next to no ambient and are lit by a couple of spotlights, which are the light that matters there.
 
 ## What the game does now
 
