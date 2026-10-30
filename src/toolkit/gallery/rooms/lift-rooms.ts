@@ -29,6 +29,10 @@ import {
 } from '../../components/core/parts/render-style';
 import { METRE } from '../../components/core/logic/units';
 import {
+  createPs1Material,
+  ps1Uniforms,
+} from '../../components/core/parts/ps1-material';
+import {
   createFirstPerson,
   WALKER_RADIUS_METRES,
 } from '../../controls/input/first-person';
@@ -64,11 +68,12 @@ import {
 import { roomWorld } from '../../save/world-store';
 import {
   carButtonLit,
+  carAcceleration,
   carLevel,
+  liftBetweenSteps,
   closingWarning,
   LIFTS,
   openAt,
-  tripPhase,
 } from '../logic/freight-lift';
 import type { LiftId, LiftState } from '../logic/freight-lift';
 import {
@@ -257,14 +262,27 @@ function certificate(kit: PanelKit, name: string) {
   c.lineWidth = 3;
   c.strokeRect(8, 8, 284, 384);
   kit.textures.push(texture);
-  const material = new MeshBasicMaterial({ map: texture });
+  // PS1, so it trembles with the wall it hangs on; stood clear of its
+  // frame and drawn over it whatever the depth buffer's precision, so the
+  // two never fight, even as the car judders.
+  const material = createPs1Material(
+    {
+      map: texture,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -8,
+    },
+    true,
+  );
   kit.materials.push(material);
   const sheet = new Mesh(new PlaneGeometry(0.21, 0.28), material);
+  sheet.position.z = 0.003;
+  // The frame, 8 mm deep behind the sheet.
   const frame = new Mesh(
-    new BoxGeometry(0.24, 0.31, 0.01),
+    new BoxGeometry(0.24, 0.31, 0.008),
     kitPaint(kit, '#2b2b2b'),
   );
-  frame.position.z = -0.006;
+  frame.position.z = -0.004;
   const g = new Group();
   g.add(frame, sheet);
   return g;
@@ -272,6 +290,8 @@ function certificate(kit: PanelKit, name: string) {
 
 /** How far into the car its front stands behind its sill's edge: the car door's panels run there. */
 const FRONT = 0.12;
+/** The judder's tremble, metres for each level per second squared the car accelerates: about 5 mm at its hardest. */
+const JUDDER = 0.008;
 
 /**
  * A lift's car (`freight_lift`, or the trial lift's `dev54`): a heavy steel
@@ -298,7 +318,7 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
   const { w: W, d: D, h: H } = LIFT_CAR;
   const place: LiftPlace = { x: 0, z: 0, yaw: 0 };
   const doorway = liftDoorway(place);
-  // The car's body, which judders at the start and stop.
+  // The car's body.
   const body = new Group();
   group.add(body);
   const floorMaterial = kitPaint(kit, '#ffffff', 0.5);
@@ -488,7 +508,7 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
   plate.position.set(0, 1.75, 0.002);
   left.add(plate);
   const cert = certificate(kit, spec.name);
-  cert.position.set(0, 1.4, 0.008);
+  cert.position.set(0, 1.4, 0.0035);
   left.add(cert);
 
   // Its side of the doorway, registered to the floor it stands at; while
@@ -588,7 +608,8 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
   const usableAt = aiming(camera, group, parts.uses, metre);
   // In development, a console handle to stand the walker in the car
   // (`window.liftCar.stand(0, 1.6, 0)`: metres, yaw in degrees), for
-  // looking out or at the panel where no mouse can turn the view.
+  // looking out or at the panel where no mouse can turn the view, and to
+  // press its buttons.
   if (import.meta.env.DEV && typeof window !== 'undefined')
     (window as unknown as { liftCar: unknown }).liftCar = {
       stand(x: number, z: number, yaw: number, pitch = 0) {
@@ -599,6 +620,8 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
           (pitch * Math.PI) / 180,
         );
       },
+      /** Presses a car button (`'2'`), for riding without a mouse. */
+      press,
     };
 
   let held = false;
@@ -610,6 +633,7 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
   let visual = true;
   let last = 0;
   let clock = 0;
+  const smooth = liftBetweenSteps(spec.floors);
   r.renderer.setAnimationLoop((time) => {
     if (canvas.parentElement?.hidden) return;
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
@@ -618,23 +642,28 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
     walk.update(delta);
     const l = lift();
     settleJoint(l);
-    // The doors, as the world has them; the shaft going by.
+    // The doors, as the world has them (carried on between its steps, so
+    // they move smoothly); the shaft going by.
+    const v = smooth(l, clock);
     const here = !l.trip;
-    carDoor.setOpen(here ? l.open : 0);
+    const seen = here ? v.open : 0;
+    carDoor.setOpen(seen);
     carDoor.setCurtain(here && l.held && l.doors !== 'shut');
-    landing.setOpen(here ? l.open : 0);
+    landing.setOpen(seen);
     landing.group.visible = here;
     shaft.visible = !here;
-    shaftTex.offset.y = -carLevel(l, spec.floors) * 0.9;
+    // Rising, the wall goes down past the door: the offset grows with the level.
+    shaftTex.offset.y = carLevel(v, spec.floors) * 0.9;
     for (const [f, lit] of lits) lit.value = carButtonLit(l, f);
     const shown = indicatorOf(l, id);
     indicator.show(shown.label, shown.way);
-    // A judder at the start and the stop.
-    const phase = tripPhase(l, spec.floors);
-    body.position.y =
-      phase === 'start' || phase === 'stop'
-        ? Math.sin(clock * 70) * 0.004 * metre
-        : 0;
+    // Vibration: the universe's lost precision (the effects lab's), every
+    // vertex snapped to a fine grid and trembling, by as much as the car
+    // is speeding up or slowing down: hard as it sets off and comes in to
+    // a floor, still while it runs at its speed or stands.
+    const grid = Math.abs(carAcceleration(v, spec.floors)) * JUDDER;
+    ps1Uniforms.time.value = clock;
+    ps1Uniforms.precision.value.set(grid * metre, grid ? 1 : 0, 30);
     parts.update(delta);
     // Only while in charge: not drawn under another room, nor just left.
     if (!walk.following && !leaving) {
@@ -748,7 +777,7 @@ function bigNumber(kit: PanelKit, text: string, ink: string, size: number) {
   c.textBaseline = 'middle';
   c.fillText(text, 128, 138);
   kit.textures.push(texture);
-  const material = new MeshBasicMaterial({ map: texture, transparent: true });
+  const material = createPs1Material({ map: texture, transparent: true }, true);
   kit.materials.push(material);
   return new Mesh(new PlaneGeometry(size, size), material);
 }

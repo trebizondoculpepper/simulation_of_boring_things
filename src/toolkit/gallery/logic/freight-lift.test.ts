@@ -3,6 +3,7 @@ import {
   arrivalArrow,
   callLift,
   callLit,
+  carAcceleration,
   carButtonLit,
   carLevel,
   closingWarning,
@@ -12,12 +13,15 @@ import {
   LIFT_FLOORS,
   LIFT_LEVELS,
   LIFT_TIMING,
+  liftBetweenSteps,
   liftDirection,
   liftReady,
   newLift,
   nextStop,
   openAt,
   pressLift,
+  runProfile,
+  runSeconds,
   stepLift,
   tripPhase,
   tripSeconds,
@@ -174,6 +178,64 @@ describe('a ride', () => {
     expect(carLevel(l)).toBe(0);
     const end = tripSeconds('b2', '4') - 0.1;
     expect(carLevel({ ...l, trip: { ...l.trip!, elapsed: end } })).toBe(6);
+  });
+  it('the car speeds up and slows down smoothly, never going back', () => {
+    for (const span of [5.6, 13.2]) {
+      let last = 0;
+      for (let t = 0; t <= span; t += 0.01) {
+        const { gone } = runProfile(t, span);
+        expect(gone).toBeGreaterThanOrEqual(last - 1e-9);
+        expect(gone - last).toBeLessThan(0.01);
+        last = gone;
+      }
+      expect(runProfile(span, span).gone).toBe(1);
+      // Its acceleration is the slope of its speed.
+      const speed = (t: number) =>
+        (runProfile(t + 1e-4, span).gone - runProfile(t - 1e-4, span).gone) /
+        2e-4;
+      for (const t of [0.3, 0.6, span - 0.5]) {
+        const slope = (speed(t + 1e-3) - speed(t - 1e-3)) / 2e-3;
+        expect(runProfile(t, span).acceleration).toBeCloseTo(slope, 2);
+      }
+    }
+  });
+  it('the judder is the acceleration: at either end of the run, not at rest or at speed', () => {
+    const at = (elapsed: number): LiftState => ({
+      ...newLift(),
+      trip: { from: 'b2', to: '4', elapsed, ready: true },
+    });
+    const start = LIFT_TIMING.start;
+    const run = runSeconds('b2', '4');
+    expect(carAcceleration(newLift())).toBe(0);
+    expect(carAcceleration(at(start / 2))).toBe(0);
+    expect(carAcceleration(at(start + LIFT_TIMING.ramp / 2))).toBeGreaterThan(
+      0,
+    );
+    expect(carAcceleration(at(start + run / 2))).toBe(0);
+    expect(
+      carAcceleration(at(start + run - LIFT_TIMING.ramp / 2)),
+    ).toBeLessThan(0);
+    // Going down, the push is the other way.
+    const down: LiftState = {
+      ...newLift(),
+      floor: '4',
+      trip: { from: '4', to: 'b2', elapsed: start + 0.6, ready: true },
+    };
+    expect(carAcceleration(down)).toBeLessThan(0);
+  });
+  it('a view carries the doors on between the world steps, smoothly', () => {
+    const smooth = liftBetweenSteps();
+    let world: LiftState = { ...newLift(), doors: 'opening', open: 0 };
+    let last = smooth(world, 0).open;
+    // Frames at 60 a second, the world stepping ten times a second.
+    for (let frame = 1; frame <= 60; frame++) {
+      const now = frame / 60;
+      if (frame % 6 === 0) world = stepLift(world, 0.1);
+      const shown = smooth(world, now).open;
+      expect(shown - last).toBeGreaterThan(0);
+      expect(shown - last).toBeCloseTo(1 / 60 / LIFT_TIMING.doors, 3);
+      last = shown;
+    }
   });
   it('a landing call is lit until the car arrives, then its arrow shows the way on', () => {
     let l = callLift({ ...newLift(), floor: '4' }, '3');

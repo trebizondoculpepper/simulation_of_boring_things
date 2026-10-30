@@ -116,6 +116,8 @@ export const LIFT_TIMING = {
   start: 0.8,
   /** The car's travel from one level to the next (in reality 4–8 s). */
   perLevel: 2.2,
+  /** Speeding up at the run's start, and slowing at its end (no more than half the run). */
+  ramp: 1.2,
   /** Levelling in at the floor: the judder at the stop, the brake's clunk at its end. */
   stop: 0.6,
   /** The alarm bell rings this long for each press. */
@@ -233,22 +235,72 @@ export function tripSeconds(from: string, to: string, floors = LIFT_FLOORS) {
 export function holdSeconds(from: string, to: string, floors = LIFT_FLOORS) {
   const levels = tripLevels(from, to, floors);
   const k = levels > 0 ? Math.max(0, 1 - LIFT_TIMING.holdShort / levels) : 0.5;
-  return LIFT_TIMING.start + runSeconds(from, to, floors) * k;
+  // The moment the run has gone `k` of the way, found by halving.
+  const span = runSeconds(from, to, floors);
+  let lo = 0;
+  let hi = span;
+  for (let n = 0; n < 40; n++) {
+    const mid = (lo + hi) / 2;
+    if (runProfile(mid, span).gone < k) lo = mid;
+    else hi = mid;
+  }
+  return LIFT_TIMING.start + lo;
+}
+
+/**
+ * The car's run, `t` seconds into a run of `span`: how far it has gone (0
+ * to 1 of the way) and its acceleration (in ways per second squared). It
+ * speeds up over its first `ramp` seconds, its speed rising as half a
+ * cosine, so the acceleration swells and dies away; it runs at an even
+ * speed; and it slows over its last `ramp` seconds the same way.
+ */
+export function runProfile(t: number, span: number) {
+  const r = Math.min(LIFT_TIMING.ramp, span / 2);
+  // Its top speed: each ramp covers half what the speed would in the time.
+  const top = 1 / (span - r);
+  const ramp = (u: number) => ({
+    gone: top * (u / 2 - (r / (2 * Math.PI)) * Math.sin((Math.PI * u) / r)),
+    acceleration: ((top * Math.PI) / (2 * r)) * Math.sin((Math.PI * u) / r),
+  });
+  if (t <= 0) return { gone: 0, acceleration: 0 };
+  if (t >= span) return { gone: 1, acceleration: 0 };
+  if (t < r) return ramp(t);
+  if (t > span - r) {
+    const end = ramp(span - t);
+    return { gone: 1 - end.gone, acceleration: -end.acceleration };
+  }
+  return { gone: top * (r / 2 + t - r), acceleration: 0 };
+}
+
+/** The car's run so far, by the trip's time. */
+function tripProfile(lift: LiftState, floors: readonly LiftFloor[]) {
+  if (!lift.trip) return { gone: 0, acceleration: 0 };
+  const moving = lift.trip.elapsed - LIFT_TIMING.start;
+  return runProfile(moving, runSeconds(lift.trip.from, lift.trip.to, floors));
 }
 
 /**
  * Where the car is, in levels (0 = B2), as a number: still through the
- * start, then the levels at an even speed, then still through the stop.
+ * start, then speeding up, running and slowing (`runProfile`), then still
+ * through the stop.
  */
 export function carLevel(lift: LiftState, floors = LIFT_FLOORS): number {
   const here = levelIndex(lift.floor, floors);
   if (!lift.trip) return here;
   const a = levelIndex(lift.trip.from, floors);
   const b = levelIndex(lift.trip.to, floors);
-  const moving = lift.trip.elapsed - LIFT_TIMING.start;
-  const span = runSeconds(lift.trip.from, lift.trip.to, floors);
-  const k = Math.min(1, Math.max(0, moving / span));
-  return a + (b - a) * k;
+  return a + (b - a) * tripProfile(lift, floors).gone;
+}
+
+/**
+ * The car's acceleration, in levels per second squared, its sign the
+ * way it pushes; 0 at rest, and while held short of a floor not ready.
+ */
+export function carAcceleration(lift: LiftState, floors = LIFT_FLOORS) {
+  if (!lift.trip || tripPhase(lift, floors) === 'wait') return 0;
+  const way =
+    levelIndex(lift.trip.to, floors) - levelIndex(lift.trip.from, floors);
+  return way * tripProfile(lift, floors).acceleration;
 }
 
 /** What the floor indicator shows: the level the car is nearest. */
@@ -518,4 +570,24 @@ export function stepLift(
     left -= dt;
   }
   return l;
+}
+
+/**
+ * The lift as a view draws it between the world's steps (ten a second):
+ * the world's last state carried on by the time since it came, so the
+ * doors and the car move smoothly every frame, not in tenths of a second;
+ * the next step agrees with it. `now` in seconds; one for each view, as
+ * it remembers the state it last saw. Never longer than `most` on.
+ */
+export function liftBetweenSteps(floors = LIFT_FLOORS, most = 0.12) {
+  let seen: LiftState | null = null;
+  let at = 0;
+  return (lift: LiftState, now: number): LiftState => {
+    if (lift !== seen) {
+      seen = lift;
+      at = now;
+    }
+    const since = Math.min(most, now - at);
+    return since > 0 ? stepLift(lift, since, floors) : lift;
+  };
 }

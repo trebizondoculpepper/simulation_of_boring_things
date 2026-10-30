@@ -33,6 +33,7 @@ import {
   closingWarning,
   indicatorLabel,
   LIFTS,
+  liftBetweenSteps,
   liftDirection,
   openAt,
 } from '../logic/freight-lift';
@@ -201,6 +202,7 @@ export function installLiftLanding(o: LiftLandingOptions) {
   // stainless plate at 1.1 m: on the wall beside the frame, or on the
   // frame's jamb where the wall is narrow.
   const lift = () => store.world.value.lifts[o.lift];
+  const smooth = liftBetweenSteps(LIFTS[o.lift].floors);
   const called = signal(false);
   const callPlate = new Mesh(
     new BoxGeometry(0.1, 0.18, 0.012),
@@ -299,7 +301,8 @@ export function installLiftLanding(o: LiftLandingOptions) {
     update() {
       const l = lift();
       const here = !l.trip && l.floor === o.floor;
-      doors.setOpen(here ? l.open : 0);
+      // Carried on between the world's steps, so the doors move smoothly.
+      doors.setOpen(here ? smooth(l, performance.now() / 1000).open : 0);
       if (seen) doors.leaves.visible = false;
       called.value = callLit(l, o.floor);
       const moving = here && (l.doors === 'opening' || l.doors === 'closing');
