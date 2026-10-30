@@ -1,10 +1,12 @@
 # The museum's words: PLANTROOMS at The Dyehouse
 
+For editing, the owner's text is in the per-hall files beside this one (`hall-0-welcome.md` to `hall-9-the-whole-plant.md`; see `README.md`); this file is the developer reference, with sources.
+
 This file holds every piece of text a visitor can read or hear in the museum (rooms `museum0` to `museum9`), gathered in one place so the owner can edit and rewrite it. It was extracted from the code on 2026-10-28. It is a copy, not the source: the game still reads its words from the code, so every entry names its source (`path:line` and the identifier or field), and an edit made here has to be carried back to that place by hand.
 
 How to read it:
 
-- Paths are relative to `src/` unless they start with `doc/` or `resources/`. A line number points at the start of the entry (its object, its `station:` line or its `fillText` call).
+- Paths are relative to `../../../src` unless they start with `doc/` or `resources/`. A line number points at the start of the entry (its object, its `station:` line or its `fillText` call).
 - Text is given exactly as it is in the code, curly quotes included. Where a value is worked out by the code (a tag, a number from the model, a template), the text is shown as it renders today, and the template is named in brackets. Tags such as `M1-B1`, `FQ1` or `P2-V2` are derived from the model and must not be rewritten by hand: change the wording round them.
 - Placards on lecterns (`createLectern`, `toolkit/gallery/views/museum-exhibit.ts:162`, `paintPlacard`) always print, in this order: the station number, the **Headline**, the **Title** (machine name and tag), **Joins** (Hall 2 only, with a full stop added), the **Body**, then `Did you know? ` followed by the **Fact**, and a box headed `TRY IT` holding the **Try it** text.
 - Entrance panels (`paintEntrance`, `toolkit/gallery/views/museum-exhibit.ts:289`) print a small heading, the **Title**, the **Subtitle**, the **Introduction**, the fixed heading `FOLLOW THE WATER` (in every hall, even where nothing flows), the route (station number, name, and what it is), and the **Reset** line in a red strip.
@@ -787,7 +789,7 @@ Source: `toolkit/gallery/logic/museum-5-gallery.ts:352` (`BIN_SIGN`), drawn at `
 
 ### What’s in the Skimmer? The finds (reveal banner, caption card and voice clip)
 
-Source: `toolkit/gallery/logic/museum-5-skimmer.ts` (`FINDS`). The six come out in this order, every time (the owner, 2026-10-29). Each is revealed in the skimmer's film (`logic/skimmer-cinematic.ts`, tried in dev53): the lid comes off with gold caustics, the camera orbits the skimmer through the suspense, then whips up to the find turning above with the big-item cue or the fanfare by turns (`logic/skimmer-reveal.ts`), and the lid goes back on with the find in hand, to be thrown in the waste bin; the banner reads "You got <Banner>!" over its caption; the caption is also the script for its voice clip `resources/sound/voice/skimmer/<id>.mp3` (none recorded yet; `resources/sound/voice/skimmer/index.md`). The Name column is used in the overlay.
+Source: `toolkit/gallery/logic/museum-5-skimmer.ts` (`FINDS`). The six come out in this order, every time (the owner, 2026-10-29). Each is revealed in the skimmer's film (`logic/skimmer-cinematic.ts`, tried in dev53): the lid comes off with gold caustics, the camera orbits the skimmer through the suspense, then whips up to the find turning above with the big-item cue or the fanfare by turns (`logic/skimmer-reveal.ts`), and the lid goes back on with the find in hand, to be thrown in the waste bin; the banner reads "You got <Banner>!" over its caption; the caption is also the script for its voice clip `resources/sound/voice/skimmer/<id>.mp3` (none recorded yet; `../../../resources/sound/voice/skimmer/index.md`). The Name column is used in the overlay.
 
 | Id         | Name                        | Banner          | Caption                                                                                                |
 | ---------- | --------------------------- | --------------- | ------------------------------------------------------------------------------------------------------ |
@@ -813,7 +815,7 @@ Source: `toolkit/gallery/logic/museum-5-skimmer.ts:324` (`actOnSkimmer`), shown 
 | `:350`                  | The skip takes only what came out of the skimmer. The lid stays here. |
 | `:310` (`CLEARED_LINE`) | SKIMMER CLEARED! You took out 6 things. Lovely.                       |
 
-The voice clip list (`resources/sound/voice/skimmer/index.md`) also names an optional `intro` clip, played the first time the lid is lifted, with no script yet.
+The voice clip list (`../../../resources/sound/voice/skimmer/index.md`) also names an optional `intro` clip, played the first time the lid is lifted, with no script yet.
 
 ### Captions, legends and displays
 
@@ -1061,7 +1063,7 @@ Source: `toolkit/gallery/logic/museum-7-grout.ts:196` (`CLOSING_CARD`), drawn at
 
 ## Hall 8: Never again: putting safety first
 
-Hall 8's exhibit is installed (`toolkit/gallery/rooms/museum/hall-8-never-again.ts`, 107i). The story is fiction; every real-world claim is traced in `doc/research/pool-chlorine-releases.md`.
+Hall 8's exhibit is installed (`toolkit/gallery/rooms/museum/hall-8-never-again.ts`, 107i). The story is fiction; every real-world claim is traced in `../../research/pool-chlorine-releases.md`.
 
 ### Title on the street wall (the hall's brief)
 
@@ -1096,7 +1098,7 @@ Source: `toolkit/gallery/rooms/museum/hall-8-never-again.ts` (the lecterns, one 
 
 ### The chapters round the walls
 
-Source: `toolkit/gallery/logic/museum-8-incident.ts:53` (`CHAPTERS`). Each chapter has a photograph placeholder (`paintPlaceholder`, `hall-8-never-again.ts:115`: time, title, `photograph to come`, caption), a newspaper clipping where there is one (`paintClipping`, `:139`: THE PELLINGFORD EVENING LAMP, date, `{page} · 28p`, headline, standfirst, body; paper from `PAPER`, `museum-8-incident.ts:18`), and a plaque (`paintPlaque`, `:186`: `{n} · {time} · {title}`, What went wrong, then `Lesson: ` and the lesson). The Narration is the script read aloud by the HEAR WHAT HAPPENED button on the chapter's own lectern; the lectern the visitor is at (`nearestLectern`, with 0.5 m of hysteresis) lights its photograph: its clip `resources/sound/voice/never-again/chapter-1.mp3` to `chapter-6.mp3`, none recorded yet; reading copies are kept in `resources/sound/voice/never-again/index.md` and `doc/scripts/museum-narration.md`, so an edit here must be made there too. With no clip, the chapter lights alone for 20 seconds (`CHAPTER_SECONDS`).
+Source: `toolkit/gallery/logic/museum-8-incident.ts:53` (`CHAPTERS`). Each chapter has a photograph placeholder (`paintPlaceholder`, `hall-8-never-again.ts:115`: time, title, `photograph to come`, caption), a newspaper clipping where there is one (`paintClipping`, `:139`: THE PELLINGFORD EVENING LAMP, date, `{page} · 28p`, headline, standfirst, body; paper from `PAPER`, `museum-8-incident.ts:18`), and a plaque (`paintPlaque`, `:186`: `{n} · {time} · {title}`, What went wrong, then `Lesson: ` and the lesson). The Narration is the script read aloud by the HEAR WHAT HAPPENED button on the chapter's own lectern; the lectern the visitor is at (`nearestLectern`, with 0.5 m of hysteresis) lights its photograph: its clip `resources/sound/voice/never-again/chapter-1.mp3` to `chapter-6.mp3`, none recorded yet; reading copies are kept in `../../../resources/sound/voice/never-again/index.md` and `doc/scripts/museum-narration.md`, so an edit here must be made there too. With no clip, the chapter lights alone for 20 seconds (`CHAPTER_SECONDS`).
 
 #### Chapter 1 · 07:42 · The delivery
 
@@ -1310,5 +1312,5 @@ The dev panel and room readout name each hall `MUSEUM0 · PLANTROOMS · 0 WELCOM
 - The entrance panels' fixed heading is "FOLLOW THE WATER" in every hall, including Hall 5 (photographs) and Hall 4 (chemicals).
 - Hall 2's reset line says "RESET button" where every other hall says "RESET SIMULATION button".
 - Hall 1, placard 6's fact, "Swimmers splashing roughly 2× the evaporation", seems to lack a verb.
-- Hall 8's narration exists twice: in `museum-8-incident.ts` (`narration`) and as a reading copy in `resources/sound/voice/never-again/index.md`.
+- Hall 8's narration exists twice: in `museum-8-incident.ts` (`narration`) and as a reading copy in `../../../resources/sound/voice/never-again/index.md`.
 - Not extracted: the inspect overlay's names and status lines (`markComponent`), for example "Ideal pool (25 × 12.5 m, 470 m³)" or "Losses board (the museum’s model of the heat balance, no real plant measures these)"; maker's badges and model plates on equipment (Hamwarmy, Trager-Feinstein, Penfold Controls and others); the dosing controller's own menus and codes in Hall 3 (SEt, XP, tn, E dt, from `toolkit/components/plant/logic/dosing-controller.ts`); and the gauges' and meters' scale markings. Generic components shared with the rest of the game (boiler controls, pump faces, the twin-head pump's display) may carry further short legends not listed here.
