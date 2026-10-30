@@ -1,10 +1,12 @@
 THE MUSEUM: NARRATION
 
-HALL 0: WELCOME
+HALL 0: WELCOME, ARRIVING BY THE LIFT
 
 1. Welcome to Plantrooms, at the Dyehouse. Look around you. A swimming pool: the simplest thing in the world. You dive in, and the water is simply there, clean, clear and warm. You have never had to think about it. That is the point.
 
 2. Look closer. There is no water in this pool. It is paint, and light. The real pool, the one that works, lives behind the tiles: pumps, filters, boilers and careful chemistry, running all day and all night so that diving in stays this simple. Follow the arrows through the doorway, and go and find it.
+
+HALL 0: WELCOME, ARRIVING FROM HALL 9
 
 3. Welcome back. You have seen what lives behind the tiles. The next time you dive in, and the water is simply there, you will know what it took. Thank you for visiting Plantrooms.
 

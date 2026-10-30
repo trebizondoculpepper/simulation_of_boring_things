@@ -16,7 +16,7 @@ Only three (the owner, 2026-10-30): Hall 0 (Welcome), Hall 7 (Grout) and Hall 8 
 
 ## Hall 0: Welcome
 
-Folder: `resources/sound/voice/welcome/`. All three lines are **new** (proposed 2026-10-30, from the title wall and welcome panel, `doc/scripts/museum.md`): the game does not play them yet. `enter` plays the first time the visitor stands in Hall 0 on a visit; `look` a few seconds after it, or when the visitor first comes to the painted pool's edge; `return` when the visitor comes back into Hall 0 from Hall 9 at the end of the route.
+Folder: `resources/sound/voice/welcome/`. All three lines are **new** (proposed 2026-10-30, from the title wall and welcome panel, `doc/scripts/museum.md`): the game does not play them yet. Which plays depends on how the visitor comes in (the owner, 2026-10-30). Arriving by the freight lift (the start of a visit): `enter` as the lift's doors open onto the hall, then `look` a few seconds after it, or when the visitor first comes to the painted pool's edge. Arriving from Hall 9 (the end of the route): `return` as they cross the archway. Coming back from Hall 1 plays nothing.
 
 Direction: warm and welcoming, a museum's own voice, unhurried; about 15 to 20 seconds each.
 
