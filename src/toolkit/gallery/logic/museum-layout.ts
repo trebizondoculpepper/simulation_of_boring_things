@@ -373,11 +373,21 @@ export function corridorShape(path: readonly [P, P, P]) {
   return { walls, floor };
 }
 
-/** A corridor's windows: their width, sill and head, m, and the least pier between and beside them. */
+/**
+ * Every window's sill and head, the halls' and the corridors' alike, m:
+ * far above head height (the owner, 2026-10-30: "the windows in the
+ * corridors need to be the same height as the windows in the halls.
+ * Everything needs to be far above head height"), so nothing beyond them
+ * is ever seen, only the sky.
+ */
+export const WINDOW_SILL = 4.2;
+export const WINDOW_HEAD = 7.3;
+
+/** A corridor's windows, as the halls': their width, sill and head, m, and the least pier between and beside them. */
 export const CORRIDOR_WINDOW = {
-  w: 1.6,
-  sill: 1.4,
-  head: 4.4,
+  w: 2.4,
+  sill: WINDOW_SILL,
+  head: WINDOW_HEAD,
   pier: 1.0,
 } as const;
 

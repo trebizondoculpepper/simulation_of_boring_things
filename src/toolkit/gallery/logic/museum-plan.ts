@@ -10,6 +10,8 @@ import {
   corridorShape,
   corridorWindows,
   layoutBounds,
+  WINDOW_HEAD,
+  WINDOW_SILL,
 } from './museum-layout';
 import type { LayoutCorridor } from './museum-layout';
 
@@ -687,9 +689,10 @@ export interface MuseumWindow {
 export const WINDOW = {
   w: 2.4,
   every: 4,
-  streetSill: 3.2,
-  courtSill: 2.6,
-  headBelowDeck: 2.2,
+  // All far above head height, the corridors' alike (`WINDOW_SILL`).
+  streetSill: WINDOW_SILL,
+  courtSill: WINDOW_SILL,
+  headBelowDeck: MUSEUM_SQUARE.h - WINDOW_HEAD,
 } as const;
 
 /** A hall's title on its street wall, as gallery vinyl: kept clear of windows. */
