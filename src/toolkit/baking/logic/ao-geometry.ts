@@ -9,7 +9,7 @@
  * The baker's version: bumped whenever the bake's method changes, so every
  * bake cached by an older baker misses and is made again.
  */
-export const BAKE_VERSION = 4;
+export const BAKE_VERSION = 5;
 
 /** How a room is baked: part of its cache key, so a change re-bakes. */
 export interface BakeSettings {
@@ -48,7 +48,7 @@ export const AO_LOOKS = {
     direct: 0.5,
   },
   standard: { bake: DEFAULT_BAKE, depth: 1, direct: 0 },
-  museum: { bake: DEFAULT_BAKE, depth: 3, direct: 0.8 },
+  museum: { bake: DEFAULT_BAKE, depth: 0.2, direct: 0.8 },
 } as const satisfies Record<
   string,
   { bake: BakeSettings; depth: number; direct: number }
@@ -129,6 +129,8 @@ export interface TriangleSoup {
   positions: Float32Array;
   normals: Float32Array;
   uvs: Float32Array | null;
+  /** After subdivision: where each original triangle's pieces begin (one more than there were). */
+  starts?: Uint32Array;
 }
 
 /**
@@ -179,67 +181,72 @@ export function subdivideLongEdges(
   };
   const out: Float64Array[] = [];
   let triangles = count;
+  // Where each original triangle's pieces begin in the result (in order,
+  // its pieces together), so material groups can be carried across.
+  const starts = new Uint32Array(count + 1);
   const stack: Float64Array[][] = [];
   const whole: boolean[] = [];
-  for (let t = count - 1; t >= 0; t--) {
+  for (let t = 0; t < count; t++) {
+    starts[t] = out.length / 3;
     stack.push([vertex(t, 0), vertex(t, 1), vertex(t, 2)]);
     whole.push(Boolean(mask && !mask[t]));
-  }
-  while (stack.length) {
-    const [a, b, c] = stack.pop()!;
-    if (whole.pop()) {
-      out.push(a, b, c);
-      continue;
-    }
-    const ab = long(a, b);
-    const bc = long(b, c);
-    const ca = long(c, a);
-    const splits = Number(ab) + Number(bc) + Number(ca);
-    if (!splits || triangles + splits > maxTriangles) {
-      out.push(a, b, c);
-      continue;
-    }
-    triangles += splits;
-    // Children in order, winding kept; pushed reversed so they come out in order.
-    const children: Float64Array[][] = [];
-    if (splits === 3) {
-      const mab = mid(a, b);
-      const mbc = mid(b, c);
-      const mca = mid(c, a);
-      children.push(
-        [a, mab, mca],
-        [mab, b, mbc],
-        [mca, mbc, c],
-        [mab, mbc, mca],
-      );
-    } else if (splits === 1) {
-      if (ab) {
-        const m = mid(a, b);
-        children.push([a, m, c], [m, b, c]);
-      } else if (bc) {
-        const m = mid(b, c);
-        children.push([a, b, m], [a, m, c]);
-      } else {
-        const m = mid(c, a);
-        children.push([a, b, m], [m, b, c]);
+    while (stack.length) {
+      const [a, b, c] = stack.pop()!;
+      if (whole.pop()) {
+        out.push(a, b, c);
+        continue;
       }
-    } else {
-      // Two long edges: split both, and the quad left by the corner between.
-      const [p, q, r] = !ab
-        ? [c, a, b] // corner c: edges c-a and b-c
-        : !bc
-          ? [a, b, c] // corner a: edges a-b and c-a
-          : [b, c, a]; // corner b: edges b-c and a-b
-      // The corner p's two edges p-q and r-p are long; q-r is not.
-      const mpq = mid(p, q);
-      const mrp = mid(r, p);
-      children.push([p, mpq, mrp], [mpq, q, r], [mpq, r, mrp]);
-    }
-    for (let i = children.length - 1; i >= 0; i--) {
-      stack.push(children[i]);
-      whole.push(false);
+      const ab = long(a, b);
+      const bc = long(b, c);
+      const ca = long(c, a);
+      const splits = Number(ab) + Number(bc) + Number(ca);
+      if (!splits || triangles + splits > maxTriangles) {
+        out.push(a, b, c);
+        continue;
+      }
+      triangles += splits;
+      // Children in order, winding kept; pushed reversed so they come out in order.
+      const children: Float64Array[][] = [];
+      if (splits === 3) {
+        const mab = mid(a, b);
+        const mbc = mid(b, c);
+        const mca = mid(c, a);
+        children.push(
+          [a, mab, mca],
+          [mab, b, mbc],
+          [mca, mbc, c],
+          [mab, mbc, mca],
+        );
+      } else if (splits === 1) {
+        if (ab) {
+          const m = mid(a, b);
+          children.push([a, m, c], [m, b, c]);
+        } else if (bc) {
+          const m = mid(b, c);
+          children.push([a, b, m], [a, m, c]);
+        } else {
+          const m = mid(c, a);
+          children.push([a, b, m], [m, b, c]);
+        }
+      } else {
+        // Two long edges: split both, and the quad left by the corner between.
+        const [p, q, r] = !ab
+          ? [c, a, b] // corner c: edges c-a and b-c
+          : !bc
+            ? [a, b, c] // corner a: edges a-b and c-a
+            : [b, c, a]; // corner b: edges b-c and a-b
+        // The corner p's two edges p-q and r-p are long; q-r is not.
+        const mpq = mid(p, q);
+        const mrp = mid(r, p);
+        children.push([p, mpq, mrp], [mpq, q, r], [mpq, r, mrp]);
+      }
+      for (let i = children.length - 1; i >= 0; i--) {
+        stack.push(children[i]);
+        whole.push(false);
+      }
     }
   }
+  starts[count] = out.length / 3;
   const n = out.length;
   const positions = new Float32Array(n * 3);
   const normals = new Float32Array(n * 3);
@@ -250,7 +257,7 @@ export function subdivideLongEdges(
     normals.set([v[3], v[4], v[5]], i * 3);
     if (uvs) uvs.set([v[6], v[7]], i * 2);
   }
-  return { positions, normals, uvs };
+  return { positions, normals, uvs, starts };
 }
 
 /**
