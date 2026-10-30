@@ -1,6 +1,6 @@
 # The museum's narration: every voice line to record
 
-This is the recording script for the museum (rooms `museum0` to `museum9`): every line the game will play in a voice, hall by hall, with the file name the code looks for, so a finished recording can simply be dropped in. It was gathered from the code on 2026-10-29. The words are a copy: the game shows the same text on its caption cards and plaques from the code (sources named under each hall), so an edit made here must be carried back there too. The museum's written words are in `doc/scripts/museum.md`.
+This is the recording script for the museum (rooms `museum0` to `museum9`): every line the game will play in a voice, hall by hall, with the file name the code looks for, so a finished recording can simply be dropped in. It was gathered from the code on 2026-10-29. The words are a copy: the game shows the same text on its caption cards and plaques from the code (sources named under each hall), so an edit made here must be carried back there too. The museum's written words are in `museum/museum.md`.
 
 ## How to deliver the files
 
@@ -12,11 +12,11 @@ This is the recording script for the museum (rooms `museum0` to `museum9`): ever
 
 ## Which halls are narrated
 
-Only three (the owner, 2026-10-30): Hall 0 (Welcome), Hall 7 (Grout) and Hall 8 (Never again). Every other hall, Hall 5's skimmer included, plays no recorded voice; its words are read on panels, placards and caption cards only. The plain words alone, numbered, are in `doc/scripts/museum-narration.txt`.
+Only three (the owner, 2026-10-30): Hall 0 (Welcome), Hall 7 (Grout) and Hall 8 (Never again). Every other hall, Hall 5's skimmer included, plays no recorded voice; its words are read on panels, placards and caption cards only. The plain words alone, numbered, are in `museum/museum-narration.txt`.
 
 ## Hall 0: Welcome
 
-Folder: `resources/sound/voice/welcome/`. All three lines are **new** (proposed 2026-10-30, from the title wall and welcome panel, `doc/scripts/museum.md`): the game does not play them yet. Which plays depends on how the visitor comes in (the owner, 2026-10-30). Arriving by the freight lift (the start of a visit): `enter` as the lift's doors open onto the hall, then `look` a few seconds after it, or when the visitor first comes to the painted pool's edge. Arriving from Hall 9 (the end of the route): `return` as they cross the archway. Coming back from Hall 1 plays nothing.
+Folder: `resources/sound/voice/welcome/`. All three lines are **new** (proposed 2026-10-30, from the title wall and welcome panel, `museum/museum.md`): the game does not play them yet. Which plays depends on how the visitor comes in (the owner, 2026-10-30). Arriving by the freight lift (the start of a visit): `enter` as the lift's doors open onto the hall, then `look` a few seconds after it, or when the visitor first comes to the painted pool's edge. Arriving from Hall 9 (the end of the route): `return` as they cross the archway. Coming back from Hall 1 plays nothing.
 
 Direction: warm and welcoming, a museum's own voice, unhurried; about 15 to 20 seconds each.
 

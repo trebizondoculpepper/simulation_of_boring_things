@@ -1,0 +1,92 @@
+THE MUSEUM: NARRATION
+
+HALL 0: WELCOME, ARRIVING BY THE LIFT
+
+1. Imagine you've just jumped into a swimming pool: It's simplest thing in the world. You dive in, and the water's simply there, clean, clear and warm. You never had to think about it. And that's the point.
+
+2. No, this isn't a real pool, but behind every pool, underneath the tiles lies a world of pumps, filters, boilers and careful chemistry, running all day and all night so that your swim is safe and pleasant. Please join us in the world behind the poolrooms, follow the arrows and discover ... the plantrooms.
+
+HALL 0: WELCOME, ARRIVING FROM HALL 9
+
+3a. Welcome back. You have seen what lives behind the tiles. The next time you dive in you won't take any of this for granted. Thank you for visiting the bPlantrooms. Please, sign the guestbook and let us know what you think.
+
+3b. And if you can't get enough swimming pools, why hop in the service elevator down to the basement, and experience the real plantrooms. It's just a short ride away.
+
+HALL 1: WARM WATER
+
+4a. A swimming pool a huge volumen of water that is always going cold. Every instant it loses heat to the air, to the ground and to the swimmers themselves. Keeping it warm is a chain: gas burns in a boiler, hot water carries the heat to the rest of the system, and an exchanger hands it to the pool without the two water circuits ever mixing. Everything in this hall works. Turn the heating on, and watch how slowly a whole pool warms.
+
+HALL 2: CLEAN WATER
+
+5a. Every swimmer brings something with them: dirt, sweat, flaky skin, sun cream, and worse. The plant takes it all out again, every moment of the day. It strains the water through a bed of sand, and when the sand is full it washes the sand it out by running the water backwards. Then ozone and ultraviolet light finish the job.
+
+5b. Watch the gauges, and you can see the filter filling up. Try running a backwash yourself - the pool technician has to do that once per day!
+
+HALL 3: SAFE WATER
+
+6a. Clear water is not the same as safe water. Germs are too small to see, so the plant keeps a little chlorine in the pool all the time. Too little, and the water is unsafe. Too much, and it stings. Send in a crowd of swimmers, and watch the controller keep up. Chlorination is a balancing act - the more people use the pool, the more you need to add.
+
+6b. And did you know, that funny swimming pool smell? It's not chloring ... <finish this off>
+
+HALL 4: THE CHEMISTRY OF POOLS
+
+7a. Keeping a pool safe is a balancing act, and every chemical you add changes more than one thing. In this hall, you are the pool's chemist. Test the water, work out what it needs, and dose it. But go carefully: this pool holds five hundred tonnes of water, and it takes a while to respond to your dosing.
+
+HALL 5: A DAY IN THE LIFE
+
+8a. Before the first swimmer arrives, somebody has already been round the pool. For a hundred years the day has run the same way: open up, empty the skimmers, test the water, take the deliveries, backwash the filters, lock up. The tools have changed, from a chalkboard to a pager. From gauges to computer screens, but the pool tech's job has always been to keep the pool clean, safe and warm.
+
+8b. There's a skimmker here, why don't yopu give a try? Simpley open up the lid and fish out whatever it's collected today!
+
+
+HALL 6: THE WORLD OF PUMPS
+
+9. Nothing in a swimming pool moves by itself. Every drop of water you have seen today was pushed there by a pump. A pool needs pumps of every size, from ones that measure out chemicals a drop at a time to ones that could empty the pool in an afternoon. Press a pump's button, and watch the tank.
+
+HALL 7: GROUT, THE UNSUNG HERO OF THE AQUATICS WORLD
+
+10. Welcome. Please, lower your voice. You are standing in the presence of the substance that literally holds pools together: grout. Every tile in every swimming pool you have ever loved has been held in place, quietly, faithfully, by this amazing substance. Take your time certainly Grout has.
+
+11. Lime and sand. From about eighteen-forty, the Victorians set their glazed tiles close, with the finest of joints, and lime filled them, setting slowly as it drew carbon dioxide from the very air. It has the honor of being first, but definitely not the best.
+
+12. In eighteen twenty-four, Joseph Aspdin patented Portland cement. By the eighteen-forties it was burned hotter, and became the cement we would know. For a century it held the public baths of Britain together. It set and then it set the standard.
+
+13. Where the joints grew wider, three millimetres and more, chemists found that adding sand improved it's durability. A simple idea, but one that required careful control of materials. [check this]
+
+14. Where only the finest would do, the glazed tile and the mosaic, about two millimetres on a wall, cement was used alone, unsanded, unadorned. [can you give me more context on this one, so I can rewrite it].
+
+15. The nineteen-seventies. Britain chose its bathroom suites in colours, and grout was pigmented to match them. Avocado was among the decade's defining shades. The museum presents this specimen without comment.
+
+16. From about the nineteen-sixties, installers mixed their grout with a latex admixture in place of water. In time it came ready mixed from the factory, and today it is the most popular grout of all. It made for a more durable, more chemcial resistant grout and pool technicians round the world were grateful.
+
+17. Furan resin. From the nineteen-forties, a grout of great chemical resistance, trusted in dairies, in chemical plants, and in some pools. Furan grouts are generally black, which didn't sit well with every pool designer [we need to fix the specimin to give it black grout]
+
+18. True epoxy grouts were in general use by the sixties and seventies. Class R G, under B S E N thirteen eight eight eight: the pool's choice where the water is soft, or aggressive. Some are rated even for the salt water
+
+19. The modern solution. Class CG two WA [check this]: improved cement, absorbing less water, resisting the scrub of brush and foot, and even mould resistant. It's the modern pinacle of grout engineering.
+
+20. And could this be the future of grount? A flexible sealant with the adhesion and resistance of a cement? Grout engineers never rest, our eyes are always on the future!
+
+21. [cancel this]
+
+HALL 8: NEVER AGAIN, PUTTING SAFETY FIRST
+
+22. Two of the chemicals that keep a pool safe must never meet. Mixed, they make chlorine gas. This is the story of a morning when they did.
+
+23. Pellingford Baths, a spring morning in 1997. At seventeen minutes to eight a chemical tanker pulls into the loading bay. It is early. The duty technician has not yet started his shift, and the driver has never been here before.
+
+24. Two fill points stand side by side in an open recess: one for acid, one other for sodium hypochlorite. They have the same coupling, and their labels faded long ago. The driver connects his acid hose to the hypochlorite fill. Four hundred litres of acid go into the bulk hypochlorite tank.
+
+25. Mixed, acid and hypochlorite give off chlorine: a choking, yellow-green gas, heavier than air. It rises from the tank's vent into the plant room, and then the air handling draws it towards the pool hall. The plant room's gas detector should have raised the alarm. But, it had been disconnected, weeks before, after a series of false alarms.
+
+26. The pool was cleared - Swimmers and staff stand in the car park in foil blankets while fire crews in gas-tight suits go in. A handful were treated for breathing difficulties.
+
+27. Weeks later, the inspectors report. There was no risk assessment for deliveries. The staff had not been trained to handle the chemicals. Nobody had checked the contractor. The council was fined forty thousand pounds, and Pellingdford Baths were shut for six weeks.
+
+28. Pellingford Baths reopened with its fill points rebuilt: a different coupling for each chemical, each in its own locked cabinet, clearly labelled. The gas detector works, and the stores are apart. The fix is to make the mistake impossible.
+
+HALL 9: THE WHOLE PLANT
+
+29. This is the whole plant, the whole shebang! Every part you have met today, working together. Heat, filters, chlorine, chemistry and pumps, all at once. And when something goes wrong, the plant tells you, if you know how to listen.
+
+29b. The machine on the [side] wall is called an Announciator - it's a real alarm system used in industrial plants and also swimmiung pools. Read the alarms, follow the mimic, and find the fault. And if something goes wrong, you can always press the reset button!
