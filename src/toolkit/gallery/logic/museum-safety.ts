@@ -506,6 +506,19 @@ export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
       doorU - FIRE_EXIT.w / 2 - 0.35,
       HEIGHTS.callPoint,
     );
+    // The way-out sign (stairs, ground floor, toilets) on the same wall,
+    // between the lift and the fire exit (the owner, 2026-10-30).
+    put(
+      'wayfinding',
+      exitWall,
+      (exitWall.axis === 'x' ? o.x : o.z) +
+        (LIFT_RESERVED.along +
+          LIFT_RESERVED.w / 2 +
+          FIRE_EXIT.along -
+          FIRE_EXIT.w / 2) /
+          2,
+      1.9,
+    );
     // Medical, by the fire exit: the defibrillator, the first-aid kit and its sign.
     put('aed', exitWall, doorU + 3.6, HEIGHTS.aed);
     put('first-aid', exitWall, doorU + 4.8, HEIGHTS.notice);
@@ -532,7 +545,7 @@ export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
         arrow,
       });
     // Notices by the doorway into the museum, on its wall: CCTV, hearing
-    // loop, occupancy, wayfinding.
+    // loop, occupancy.
     const door = toHall1;
     const doorWall = wallOf(id, door);
     const du = uOf(door);
@@ -555,7 +568,6 @@ export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
       du + inward * (door.w / 2 + 1.75),
       HEIGHTS.notice,
     );
-    put('wayfinding', doorWall, du + inward * (door.w / 2 + 3.2), 1.9);
     put('sounder', doorWall, du + inward * (door.w / 2 + 1.6), HEIGHTS.sounder);
     // The tiled ceiling's own detectors and sprinklers.
     for (const [lx, lz] of [
