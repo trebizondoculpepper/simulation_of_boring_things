@@ -3,6 +3,7 @@ import {
   APPROACH_FAR,
   BENCH,
   approachedPlinth,
+  approachLampAt,
   HALL7,
   PLACES,
   PLINTHS,
@@ -97,6 +98,21 @@ describe('the approach light', () => {
     // Held a little past the near edge, so it does not flicker.
     expect(approachedPlinth(at.x, at.z - 2.5, 6)).toBe(6);
     expect(approachedPlinth(at.x, at.z - APPROACH_FAR - 0.1, 6)).toBeNull();
+  });
+
+  it('hangs each approach lamp over plinth and lectern, aimed at the plinth', () => {
+    for (const p of PLINTHS) {
+      const { from, to } = approachLampAt(p.n, 4.9);
+      const place = PLACES[p.n];
+      const lectern = lecternAt(p.n);
+      expect(Math.abs(from.x)).toBeLessThan(HALL7.halfX);
+      expect(Math.abs(from.z)).toBeLessThan(HALL7.halfZ);
+      expect(from.y).toBe(4.9);
+      // Halfway out from the plinth to its lectern.
+      expect(from.x).toBeCloseTo((place.x + lectern.x) / 2);
+      expect(from.z).toBeCloseTo((place.z + lectern.z) / 2);
+      expect(to).toEqual({ x: place.x, y: 0, z: place.z });
+    }
   });
 });
 

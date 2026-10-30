@@ -29,6 +29,7 @@ import {
   SPECIMEN,
   TITLE_WALL,
   approachedPlinth,
+  approachLampAt,
   stepOf,
   yawOf,
   hall7Solids,
@@ -108,9 +109,14 @@ const TITLE_Y = 7.3;
 const LAMP_Y = 5.0;
 /** Each plinth's pool of light on the floor: its radius to the outside of its fading edge, metres, and the share of its cone that fades. */
 const POOL = { radius: 1.5, penumbra: 0.6 } as const;
-/** Each pool's light, and what the approach adds to it. */
+/** Each pool's light. */
 const POOL_POWER = 28 * METRE * METRE;
-const APPROACH_POWER = 20 * METRE * METRE;
+/**
+ * The approach spot's light at full, on the plinth approached (the owner,
+ * 2026-10-30). It was once only a little more in the round pool overhead,
+ * too little to see, so it seemed never to switch on.
+ */
+const APPROACH_POWER = 90 * METRE * METRE;
 
 /** A plaque's face, metres. */
 const PLAQUE = { w: 0.6, h: 0.42 } as const;
@@ -414,7 +420,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   // and its round spot, straight down from above the middle of its plinth
   // and lectern, so it casts a circle on the floor with a soft, fading
   // edge, taking in the specimen's tiles, the lectern and the floor round
-  // them; brighter over the plinth approached; a wash on the title wall;
+  // them; a spot switched on over the plinth approached (below); a wash on the title wall;
   // no shadows ----
   const lampHeads = new Group();
   const lampPaint = t.paint('#111418', 0.6, 0.4);
@@ -435,7 +441,6 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       decorative: true,
     }),
   );
-  const pools = new Map<number, SpotLight>();
   for (const p of PLINTHS) {
     const { x, z } = poolAt(p.n);
     const light = new SpotLight(
@@ -449,7 +454,6 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     light.position.set(x, LAMP_Y - 0.1, z);
     light.target.position.set(x, 0, z);
     object.add(light, light.target);
-    pools.set(p.n, light);
   }
   // The title wall's wash.
   const wash = new SpotLight('#ffe7c2', 14 * METRE * METRE, 0, 0.7, 0.6, 2);
@@ -457,8 +461,19 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   wash.target.position.set(0, TITLE_Y, halfZ);
   object.add(wash, wash.target);
 
-  // The approach (the owner, 2026-10-29): the pool over the plinth
-  // approached brightens as the visitor comes near and dims as they leave.
+  // The approach (the owner, 2026-10-29): a spot over the
+  // plinth approached switches on as the visitor comes near, goes out
+  // as they leave; from its lamp head, down on the plinth's foot
+  // (`approachLampAt`), a pool round the plinth. Always in the scene, dark when off, so the
+  // count of lights (and so the shaders) never changes.
+  const approach = new SpotLight('#fff1d8', 0, 0, 0.25, 0.5, 2);
+  approach.name = 'Approach spot';
+  object.add(approach, approach.target);
+  const aim = (n: number) => {
+    const { from, to } = approachLampAt(n, LAMP_Y - 0.1);
+    approach.position.set(from.x, from.y, from.z);
+    approach.target.position.set(to.x, to.y, to.z);
+  };
   /** The 1970s' coloured grout's plinth, under the oil wheel. */
   const OIL_WHEEL_PLINTH = 5;
   let lit: number | null = null;
@@ -509,6 +524,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     const want = lit !== null && lit === shown ? 1 : 0;
     if (want === 0 && level === 0 && lit !== shown) {
       shown = lit;
+      if (shown !== null) aim(shown);
       play(shown);
     }
     if (level === want) return;
@@ -516,8 +532,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       want > level
         ? Math.min(1, level + delta / 0.6)
         : Math.max(0, level - delta / 0.3);
-    const pool = shown === null ? undefined : pools.get(shown);
-    if (pool) pool.intensity = POOL_POWER + APPROACH_POWER * level;
+    approach.intensity = APPROACH_POWER * level;
   };
 
   return {

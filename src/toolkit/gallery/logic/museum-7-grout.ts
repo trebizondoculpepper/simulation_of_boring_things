@@ -287,6 +287,23 @@ export function lecternAt(n: number) {
   return { x: p.x + dx * LECTERN_OUT, z: p.z + dz * LECTERN_OUT };
 }
 
+/**
+ * The approach light's lamp and aim for plinth `n` (the owner, 2026-10-30:
+ * its spotlight switches on as the visitor comes near). From the plinth's
+ * lamp head, `lampY` metres up between plinth and lectern, down on the
+ * plinth's foot: a pool of light on the floor round the plinth, the
+ * plaque at its soft edge so it does not glare. (Only brightening the
+ * always-on round pool was too little to be seen.)
+ */
+export function approachLampAt(n: number, lampY: number) {
+  const p = PLACES[n];
+  const at = lecternAt(n);
+  return {
+    from: { x: (p.x + at.x) / 2, y: lampY, z: (p.z + at.z) / 2 },
+    to: { x: p.x, y: 0, z: p.z },
+  };
+}
+
 /** The hall's inside half-sizes (16 × 14 m cell less its walls). */
 export const HALL7 = { halfX: 7.7, halfZ: 6.7, h: 9.5 } as const;
 
