@@ -12,7 +12,7 @@ import {
   innerLegs,
   placeRect,
 } from './museum-layout';
-import { MUSEUM_ARCH } from './museum-plan';
+import { MUSEUM_ARCH, MUSEUM_SQUARE } from './museum-plan';
 
 type Box = { minX: number; maxX: number; minZ: number; maxZ: number };
 const overlap = (a: Box, b: Box) =>
@@ -79,7 +79,8 @@ describe('the museum’s layout C', () => {
     expect(Number(legs[0][0])).toBeCloseTo(FIRST_LEG, 6);
     expect(CORRIDOR.width).toBeGreaterThanOrEqual(2);
     expect(CORRIDOR.width).toBeGreaterThan(MUSEUM_ARCH.w);
-    expect(CORRIDOR.height).toBeGreaterThanOrEqual(4);
+    // As tall as the halls it joins.
+    expect(CORRIDOR.height).toBe(MUSEUM_SQUARE.h);
     // The archway and a pier clear of its wall's corner.
     expect(DOOR_FROM_CORNER - MUSEUM_ARCH.w / 2).toBeGreaterThanOrEqual(0.3);
   });

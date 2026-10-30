@@ -4,6 +4,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum corridors as tall as the halls (the owner, 2026-10-30: "the same height as the rooms that they connect ... the same ceiling style, and the same windows"): 9.5 m, under the halls' metal roof deck and cellular beams with a few services, their windows the halls' tall gridded street windows, 2.4 m wide from 3.2 m up, all above head height; the pendants hung lower from the deck, larger.
 - Museum, Hall 0: the way-out sign (stairs, toilets, cloakroom, the exhibition) moves to the north wall, between the lift and the fire exit, its arrows turned to suit (the owner, 2026-10-30).
 - Museum, Hall 4 rearranged for layout C (112; the owner, 2026-10-30: "put everything that is on the door side on the opposite side of the hall"): its whole exhibit, tanks, desk, mimic, pot, pool, Balance Beam and lecterns with their pipes, stands turned half round along the south wall facing north, its readout board on the west wall, so the north side is a clear walk between its two archways; checked by the new walkway test (`walkways.test.ts`), which every rearranged hall joins.
 - Museum corridors have windows (the owner, 2026-10-30): along the leg that runs along the ring, in both its walls, one side looking out of the building and the other into the courtyard, white with the sky, in steel frames with a mullion and a transom; never in the leg leaving a hall, whose walls face along the ring (`corridorWindows`).

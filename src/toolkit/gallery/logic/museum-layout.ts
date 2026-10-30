@@ -26,8 +26,13 @@ import type { Footprint } from '../../controls/logic/walk-collision';
 
 /** The halls' walls, centred on their wall lines. */
 export const LAYOUT_WALL = 0.6;
-/** A corridor's clear section (wide enough for an archway and its piers, a storey and a half and more tall), and its walls. */
-export const CORRIDOR = { width: 4.4, height: 5.6, wall: 0.6 } as const;
+/**
+ * A corridor's clear section (wide enough for an archway and its piers),
+ * and its walls; as tall as the halls it joins, under the same roof deck
+ * (the owner, 2026-10-30: "the same height as the rooms that they
+ * connect ... the same ceiling style, and the same windows").
+ */
+export const CORRIDOR = { width: 4.4, height: 9.5, wall: 0.6 } as const;
 /** How far a hall stands out from its neighbours along a side of the ring. */
 export const STAGGER = 9.5;
 /** Between neighbouring halls' outside faces. */

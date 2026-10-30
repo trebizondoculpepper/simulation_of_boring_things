@@ -74,8 +74,8 @@ import { MUSEUM_EXHIBITION as BRAND } from '../logic/museum-brand';
 import { CORRIDOR, CORRIDOR_WINDOW } from '../logic/museum-layout';
 import { createPendantLamps } from '../../components/architectural/views/pendant-lamps';
 
-/** A corridor's pendant: its dome's rim, m up, and its size (Lamp Copper's model E). */
-const CORRIDOR_LAMP = { rim: 3.8, size: 0.6 } as const;
+/** A corridor's pendant: its dome's rim, m up, and its size (Lamp Copper's model F), hung from the deck. */
+const CORRIDOR_LAMP = { rim: 4.6, size: 0.8 } as const;
 import { CLOSING_WALL } from '../logic/museum-9-placards';
 import { createMuseumSafety } from './museum-safety';
 import { DECK_LIFT } from '../logic/museum-5-gallery';
@@ -1621,14 +1621,21 @@ export function createMuseumHall(
       g.translate((w.minX + w.maxX) / 2, H / 2, (w.minZ + w.maxZ) / 2);
       slabs.push(g);
     }
-    // The ceiling, a slab over each leg, the corner under the first.
-    for (const f of c.floor) {
-      const g = new BoxGeometry(f.maxX - f.minX, 0.3, f.maxZ - f.minZ);
-      g.translate((f.minX + f.maxX) / 2, H + 0.15, (f.minZ + f.maxZ) / 2);
-      slabs.push(g);
-    }
     run.add(new Mesh(mergeGeometries(slabs), concrete));
     for (const g of slabs) g.dispose();
+    // The halls' roof deck and beams over each leg, the corner under the
+    // first, its services sparse.
+    c.floor.forEach((f, k) => {
+      const { group: ceiling } = createServiceCeiling(
+        { ...f, deckY: H },
+        {
+          seed: MUSEUM_EXHIBITS.indexOf(id) * 7 + k + 101,
+          density: 0.35,
+          beamEvery: 3,
+        },
+      );
+      run.add(ceiling);
+    });
     const floors = c.floor.map((f) => {
       const g = new PlaneGeometry(f.maxX - f.minX, f.maxZ - f.minZ);
       g.rotateX(-Math.PI / 2);
@@ -1662,14 +1669,15 @@ export function createMuseumHall(
       const hgt = head - sill;
       panes.push(at(new PlaneGeometry(ww, hgt), 0, sill + hgt / 2));
       const bar = 0.06;
-      for (const [w, h, x, y] of [
-        [ww + bar, bar, 0, sill],
-        [ww + bar, bar, 0, head],
-        [ww + bar, bar, 0, sill + hgt * 0.62],
-        [bar, hgt, -ww / 2, sill + hgt / 2],
-        [bar, hgt, ww / 2, sill + hgt / 2],
-        [bar, hgt, 0, sill + hgt / 2],
-      ] as const)
+      // A steel grid, as the halls' factory windows: four lights across,
+      // a transom every 0.6 m or so.
+      const rows = Math.round(hgt / 0.6);
+      const grid: (readonly [number, number, number, number])[] = [];
+      for (let k = 0; k <= 4; k++)
+        grid.push([bar, hgt, -ww / 2 + (ww * k) / 4, sill + hgt / 2]);
+      for (let k = 0; k <= rows; k++)
+        grid.push([ww + bar, bar, 0, sill + (hgt * k) / rows]);
+      for (const [w, h, x, y] of grid)
         frames.push(at(new BoxGeometry(w, h, 0.05), x, y, 0.02));
     }
     if (panes.length) {
@@ -1684,14 +1692,14 @@ export function createMuseumHall(
       x: (f.minX + f.maxX) / 2,
       z: (f.minZ + f.maxZ) / 2,
       y: CORRIDOR_LAMP.rim,
-      top: H,
+      top: H - BEAM_DEPTH,
       size: CORRIDOR_LAMP.size,
     }));
     const lamps = createPendantLamps(places, corridorBulb);
     run.add(lamps.group);
     pendantSets.push(lamps);
     for (const p of places) {
-      const light = new PointLight('#ffd9a8', 6, 9, 2);
+      const light = new PointLight('#ffd9a8', 9, 11, 2);
       light.position.set(p.x, p.y - 0.2, p.z);
       run.add(light);
     }
