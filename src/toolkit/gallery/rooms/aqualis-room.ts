@@ -16,7 +16,12 @@ import type {
   Rig,
   RigScenarioId,
 } from '../../../game/plant/aqualis-rig';
-import { DEFAULT_TARGETS } from '../../../game/plant/aqualis-types';
+import { DEFAULT_TARGETS, SCREEN } from '../../../game/plant/aqualis-types';
+import {
+  defectsAt,
+  defectsKey,
+} from '../../components/plant/logic/lcd-defects';
+import { drawDefects } from '../../components/plant/views/lcd-defects';
 import type {
   Advice,
   Alarm,
@@ -231,8 +236,10 @@ export function createAqualisRoomHost(
     },
     drawScreen(c) {
       const m = displayModel(display, inputs());
-      if (m.key === drawn) return false;
-      drawn = m.key;
+      const faults = defectsAt(clock, SCREEN.w, SCREEN.h);
+      const key = m.key + defectsKey(faults);
+      if (key === drawn) return false;
+      drawn = key;
       // Dr Aqualis himself is on his overlay (`drawDoctor`), so his frames
       // upload a small canvas, not the whole screen.
       drawAqualisScreen(c, m, {
@@ -242,6 +249,7 @@ export function createAqualisRoomHost(
             fontPx: 19,
           }),
       });
+      drawDefects(c, faults);
       return true;
     },
     doctorShown: () => displayModel(display, inputs()).page === 'doctor',
