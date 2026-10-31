@@ -58,6 +58,8 @@ it('builds Hall 9’s exhibit, binds a thing to each machine, and runs from its 
 it('stands everything on the floor or on a wall: nothing floats, nothing sinks', async () => {
   const { Box3 } = await import('three');
   const { interior, POINTS } = await import('../../logic/museum-9-layout');
+  const { INSTRUMENTS } = await import('../../../../game/plant/museum-9-plant');
+  const onLines = new Set(INSTRUMENTS.filter((i) => i.edge).map((i) => i.id));
   const hall = buildHallExhibit(createPanelKit());
   hall.reset(9 * 3600);
   hall.update?.(1 / 60);
@@ -70,11 +72,13 @@ it('stands everything on the floor or on a wall: nothing floats, nothing sinks',
         | { model?: { node?: string; fitting?: string; link?: string } }
         | undefined
     )?.model;
-    // Pipes, the fittings in them and the points of the lines are carried by the pipework.
+    // Pipes, the fittings and instruments in them and the points of the lines are carried by the pipework.
     if (
       model?.link ||
       model?.fitting ||
-      (model?.node && (POINTS as readonly string[]).includes(model.node))
+      (model?.node &&
+        ((POINTS as readonly string[]).includes(model.node) ||
+          onLines.has(model.node)))
     )
       continue;
     const b = new Box3().setFromObject(child);

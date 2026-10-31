@@ -18,7 +18,10 @@ import type { Part } from '../../../components/core/parts/parts';
 import { createPipe } from '../../../components/core/views/pipe-kinds';
 import type { PipeKindId } from '../../../components/core/views/pipe-kinds';
 import { mergeTree } from '../../../components/core/views/merge-static';
-import { markComponent } from '../../../components/core/views/component-identity';
+import {
+  componentOf,
+  markComponent,
+} from '../../../components/core/views/component-identity';
 import { tools } from '../../../components/core/views/fitting-tools';
 import { panelMakerMark } from '../../../components/core/views/panel-maker-mark';
 import {
@@ -52,6 +55,8 @@ import { createRotaryGasMeter } from '../../../components/plant/views/utility-me
 import { createChemicalBallValve } from '../../../components/plant/views/chemical-ball-valve';
 import { createDiaphragmPump } from '../../../components/plant/views/diaphragm-pump';
 import { createSamplePanel } from '../../../components/plant/views/sample-cell-panel';
+import { createPipeSightGlass } from '../../../components/plant/views/pipe-sight-glass';
+import { createPoolThermostat } from '../../../components/plant/views/museum-heating-parts';
 import { createCx7Controller } from '../../../components/plant/views/cx7-controller';
 import {
   createDpdTestKit,
@@ -59,7 +64,7 @@ import {
 } from '../../../components/plant/views/museum-dosing-parts';
 import { createAnnunciatorBoard } from '../../views/location-annunciator';
 import { createExperimentalSource } from '../../../../game/plant/experimental-source';
-import { BOILER_KW } from '../../../../game/plant/museum-1-heating';
+import { BOILER_KW, TC_RANGE } from '../../../../game/plant/museum-1-heating';
 import { NOTCHES } from '../../../../game/plant/museum-2-clean-water';
 import type { ValveId as WaterValve } from '../../../../game/plant/museum-2-clean-water';
 import { PUMPS, PUMP_KIND } from '../../../../game/plant/museum-3-dosing';
@@ -117,6 +122,8 @@ import {
   plumbHall9,
 } from '../../logic/museum-9-layout';
 import type { PlacedItem } from '../../logic/museum-9-layout';
+import { cutLine } from '../../logic/ideal-pool-plant-layout';
+import { pointAlong } from '../../logic/source-sink-plumbing';
 import {
   HALL9_MIMIC,
   hall9MimicState,
@@ -215,6 +222,21 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       model,
       ...(status ? { status } : {}),
     });
+  /** An instrument of the model, drawn by `thing`, bound to it by its id. */
+  const instrument = (
+    thing: Object3D,
+    id: string,
+    name: string,
+    status?: () => string | undefined,
+  ) => describe(thing, id, name, { node: id }, status);
+  /** Bind a piece a view has already described to `model`, keeping its words. */
+  const bindPiece = (
+    thing: Object3D,
+    model: { node: string } | { fitting: string },
+  ) => markComponent(thing, { ...componentOf(thing), model });
+  /** The exhibit's own controls of the simulation (time, faults, RESET): no plant. */
+  const exhibitControl = (thing: Object3D, name: string) =>
+    markComponent(thing, { ...componentOf(thing), name, decorative: true });
   const atMachine = (o: Object3D, id: MachineId) =>
     turnTo(o, PLACES[id].x, PLACES[id].y ?? 0, PLACES[id].z, PLACES[id].yaw);
   const solids: { minX: number; maxX: number; minZ: number; maxZ: number }[] = [
@@ -285,7 +307,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       pi3Post,
       'gas.pi',
       'gas pressure gauge',
-      { node: 'gasMain' },
+      { node: 'gas.pi' },
       () => `reads ${readings.pi3.toFixed(0)} mbar`,
     ),
   );
@@ -432,11 +454,16 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     const plate = tagPlate(id, 0.135);
     plate.position.set(-0.22 + i * 0.146, 1.31, 0.032);
     tiBoard.add(plate);
+    // Each thermometer and its tag plate are its own instrument of the model.
+    const status = () => `reads ${readings.ti[k].toFixed(i < 2 ? 1 : 0)} °C`;
+    instrument(g.group, id, 'thermometer', status);
+    instrument(plate, id, 'tag plate', status);
     return { g, k };
   });
   object.add(
     markComponent(tiBoard, {
-      name: 'Heating thermometers TI1 to TI4',
+      name: `${TAGS.tiBoard} heating thermometer board: ${shortTag('hxIn.ti')} to ${shortTag('boilerReturn.ti')}`,
+      model: { node: 'tiBoard' },
       status: () =>
         `${shortTag('hxIn.ti')} ${readings.ti.ti1.toFixed(1)}, ${shortTag('hxOut.ti')} ${readings.ti.ti2.toFixed(1)}, ${shortTag('boilerFlow.ti')} ${readings.ti.ti3.toFixed(0)}, ${shortTag('boilerReturn.ti')} ${readings.ti.ti4.toFixed(0)} °C`,
     }),
@@ -479,7 +506,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       pdiPost,
       'filter.pdi',
       'filter differential pressure gauge',
-      { node: 'filter' },
+      { node: 'filter.pdi' },
       () => `reads ${readings.pdi1.toFixed(2)} bar`,
     ),
   );
@@ -511,6 +538,18 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   );
 
   const pump = createEndSuctionPump(kit);
+  instrument(
+    pump.gauges.suction.group,
+    'pump.suction.pi',
+    'pool pump suction compound gauge',
+    () => `reads ${readings.pi1.toFixed(2)} bar`,
+  );
+  instrument(
+    pump.gauges.discharge.group,
+    'pump.discharge.pi',
+    'pool pump discharge pressure gauge',
+    () => `reads ${readings.pi2.toFixed(2)} bar`,
+  );
   machine(
     pump,
     'poolPump',
@@ -601,6 +640,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   object.add(
     markComponent(starter, {
       name: `${TAGS['starter']} P1 starter (HAND · OFF · AUTO, overload)`,
+      // P1's own starter, bound to the pump it starts, as Hall 3's station is.
+      model: { node: 'poolPump' },
       status: () =>
         `at ${plant().starter.mode.toUpperCase()}, ${runLamp.value ? 'RUN lit' : 'RUN out'}${tripLamp.value ? ', TRIPPED lit' : ''}, ammeter ${readings.p1Amps.toFixed(0)} A`,
     }),
@@ -687,7 +728,14 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   // TI5 is the pool's own display; its tag plate on the vessel's front.
   const ti5 = tagPlate('pool.ti', 0.3);
   ti5.position.set(0.6, 1.0, POOL_SHAPE.d / 2 + 0.006);
-  poolHolder.add(ti5);
+  poolHolder.add(
+    instrument(
+      ti5,
+      'pool.ti',
+      'pool water thermometer (the pool display)',
+      () => `shows ${readings.ti.ti5.toFixed(1)} °C`,
+    ),
+  );
   updates.push(() =>
     pool.show([
       `WATER ${readings.ti.ti5.toFixed(1).padStart(5)}C 470m3`,
@@ -759,6 +807,13 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
           `its sight gauge ${TAGS[li]} at ${plant().chem.tanks[chemical].litres.toFixed(0)} litres`,
       ),
     );
+    for (const piece of tank.sight)
+      instrument(
+        piece,
+        li,
+        'sight gauge',
+        () => `reads ${plant().chem.tanks[chemical].litres.toFixed(0)} litres`,
+      );
     updates.push(() => tank.show(plant().chem.tanks[chemical].litres));
   }
   const channelOf: Record<'hypoPump' | 'acidPump', DoseChannel> = {
@@ -859,6 +914,13 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
         `${Math.round(readings.sampleFlow)} l/h, ${shortTag('cell.fs')} ${readings.fs2 ? 'made' : 'open'}`,
     ),
   );
+  // Its working pieces, each its own component of the model.
+  bindPiece(panel.pieces.valve, { fitting: 'sample.iso' });
+  bindPiece(panel.pieces.regulator, { fitting: 'sample.needle' });
+  bindPiece(panel.pieces.flowSwitch, { node: 'cell.fs' });
+  bindPiece(panel.pieces.probes[0], { node: 'cell.cl' });
+  bindPiece(panel.pieces.probes[1], { node: 'cell.ph' });
+  bindPiece(panel.pieces.tap, { node: 'cell.tap' });
   for (const p of panel.parts) parts.add(p as Part);
   updates.push((delta) => panel.update(delta));
 
@@ -876,7 +938,15 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     SOUTH - 0.01,
     FACE_NORTH,
   );
-  object.add(cx7.object);
+  object.add(
+    instrument(
+      cx7.object,
+      'controller',
+      'Chlorella CX-7 pool water controller',
+      () =>
+        `reads free chlorine ${readings.free.toFixed(2)} mg/l, pH ${readings.ph.toFixed(2)}`,
+    ),
+  );
   parts.add(cx7.part);
   updates.push((delta) => cx7.update(delta));
 
@@ -892,6 +962,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   object.add(
     markComponent(tk.group, {
       name: `${TAGS['testKit']} DPD test kit`,
+      model: { node: 'testKit' },
       status: () => {
         const r = plant().chem.test;
         return r
@@ -908,6 +979,12 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   footprint(PLACES.sampleCell.x + 0.9, CHEM_EDGE + 0.2, 0.3);
 
   // ---- The pipes ----
+  // SG1 takes its pipe's place on the backwash waste's high run, where the
+  // tundish's watcher sees it; FS1 and TC1 sit on the exchanger's feed's
+  // low run before the exchanger, clear of its nest.
+  const lineOf = (edge: string) => plumbed.lines.find((l) => l.edge === edge)!;
+  const GLASS_AT = 2.1;
+  const glassLine = lineOf('backwashOut');
   for (const line of plumbed.lines) {
     const kind: PipeKindId =
       line.pipe === 'flue'
@@ -915,27 +992,143 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
         : line.pipe === 'gas-steel'
           ? 'steel-screwed'
           : line.pipe;
-    const pipe = createPipe(
-      kind,
-      line.od,
-      line.points,
-      line.pipe === 'gas-steel'
-        ? { colour: '#e8c21a' }
-        : line.chemical === 'hypochlorite'
-          ? { colour: '#e8d84a', laid: true }
-          : line.chemical === 'acid'
-            ? { colour: '#d8d2c0', laid: true }
-            : line.pipe === 'pvc-pressure'
-              ? { colour: '#4d5a63' }
-              : line.pipe === 'steel-screwed'
-                ? { colour: '#b0392b' }
-                : {},
-    );
-    markComponent(pipe, {
-      name: `Pipe: ${LINK_NAMES[line.edge]}`,
-      model: { link: line.edge },
+    const runs =
+      line === glassLine
+        ? cutLine(line.points, GLASS_AT - 0.17, GLASS_AT + 0.17)
+        : [line.points];
+    for (const points of runs) {
+      const pipe = createPipe(
+        kind,
+        line.od,
+        points,
+        line.pipe === 'gas-steel'
+          ? { colour: '#e8c21a' }
+          : line.chemical === 'hypochlorite'
+            ? { colour: '#e8d84a', laid: true }
+            : line.chemical === 'acid'
+              ? { colour: '#d8d2c0', laid: true }
+              : line.pipe === 'pvc-pressure'
+                ? { colour: '#4d5a63' }
+                : line.pipe === 'steel-screwed'
+                  ? { colour: '#b0392b' }
+                  : {},
+      );
+      markComponent(pipe, {
+        name: `Pipe: ${LINK_NAMES[line.edge]}`,
+        model: { link: line.edge },
+      });
+      object.add(pipe);
+    }
+  }
+
+  // SG1: the sight glass on the backwash waste, murked by what it carries.
+  {
+    const { at, along } = pointAlong(glassLine.points, GLASS_AT);
+    const glass = createPipeSightGlass(kit, {
+      od: glassLine.od,
+      tag: shortTag('backwashOut.sg'),
     });
-    object.add(pipe);
+    placeFitting(glass.group, 'flowmeter', at, along, [0, 1]);
+    object.add(
+      instrument(
+        glass.group,
+        'backwashOut.sg',
+        'sight glass on the backwash waste',
+        () =>
+          readings.sg1 > 100
+            ? 'the water in it murky'
+            : readings.sg1 > 10
+              ? 'the water in it cloudy'
+              : 'the water in it clear',
+      ),
+    );
+    updates.push(() => glass.show(readings.sg1));
+  }
+
+  // FS1: a paddle flow switch on the exchanger's feed, its lamp lit while made.
+  const hxFeed = lineOf('toHx');
+  {
+    const { at, along } = pointAlong(hxFeed.points, 3.45);
+    const od = hxFeed.od;
+    const holder = new Group();
+    placeFitting(holder, 'isolating-valve', at, along, [0, 1]);
+    t.cyl(
+      holder,
+      t.paint('#7d8285', 0.5, 0.4),
+      0.02,
+      0.08,
+      0,
+      od / 2 + 0.04,
+      0,
+    );
+    const head = new Group();
+    head.position.set(0, od / 2 + 0.13, 0);
+    // Its lamp toward the room, whichever way the pipe runs.
+    head.rotation.y = Math.PI;
+    holder.add(head);
+    t.box(head, t.paint('#d8dbd6', 0.5), 0.1, 0.1, 0.07, 0, 0, 0);
+    const made = signal(readings.fs1);
+    const led = parts.add(
+      pilotLight(kit, {
+        colour: 'green',
+        legend: shortTag('hx.fs'),
+        drive: made,
+        name: `${shortTag('hx.fs')} flow switch lamp`,
+        pushToTest: false,
+      }),
+    );
+    led.object.position.set(0, 0, 0.036);
+    led.object.scale.setScalar(0.6);
+    head.add(led.object);
+    object.add(
+      instrument(holder, 'hx.fs', 'flow switch', () =>
+        made.value ? 'its lamp lit' : 'its lamp out',
+      ),
+    );
+    updates.push(() => {
+      if (made.value !== readings.fs1) made.value = readings.fs1;
+    });
+  }
+
+  // TC1: the pool thermostat, its stem in the exchanger's feed, its dial and
+  // CALL lamp on a box above, facing the room.
+  {
+    const { at, along } = pointAlong(hxFeed.points, 3.8);
+    const od = hxFeed.od;
+    const tc = createPoolThermostat(kit, {
+      tag: shortTag('pool.tc'),
+      range: TC_RANGE,
+      setting: {
+        get value() {
+          return plant().heat.tcSet;
+        },
+        set: (celsius: number) =>
+          act({ type: 'heat', action: { type: 'tc-set', celsius } }),
+      },
+      calling: () => readings.tc1Calling,
+    });
+    const holder = new Group();
+    placeFitting(holder, 'isolating-valve', at, along, [0, 1]);
+    t.cyl(
+      holder,
+      t.paint('#7d8285', 0.5, 0.4),
+      0.012,
+      0.35,
+      0,
+      od / 2 + 0.17,
+      0,
+    );
+    const box = new Group();
+    box.add(tc.group);
+    box.position.set(at[0], at[1] + od / 2 + 0.47, at[2]);
+    const tcStatus = () =>
+      `dial at ${plant().heat.tcSet} °C, CALL lamp ${readings.tc1Calling ? 'lit' : 'out'}`;
+    object.add(
+      instrument(holder, 'pool.tc', 'pool thermostat stem', tcStatus),
+      instrument(box, 'pool.tc', 'pool thermostat', tcStatus),
+    );
+    take(tc.parts);
+    updates.push(tc.update);
   }
 
   // ---- The fittings on the lines ----
@@ -1136,7 +1329,12 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   t.box(desk, steel, DESK.w, 0.85, 0.5, 0, 0.425, 0.15);
   t.box(desk, t.paint('#3b3f42', 0.5), DESK.w, 0.04, 0.55, 0, 0.87, 0.16);
   t.box(desk, steel, DESK.w, 1.9, 0.12, 0, 1.85, -0.2);
-  object.add(still(desk));
+  object.add(
+    markComponent(still(desk), {
+      name: `${TAGS.desk} control desk: mimic, annunciator, water panel, station clock`,
+      model: { node: 'desk' },
+    }),
+  );
   const board = createMimicBoard(kit, HALL9_MIMIC, {
     maker: 'penfold',
     press: (id: string) => {
@@ -1145,7 +1343,9 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     },
   } as never);
   board.group.position.set(-0.6, 1.95, -0.13);
-  desk.add(board.group);
+  // The mimic panel is in the model (M9-MP1), its lamps, labels and
+  // buttons bound through it.
+  desk.add(instrument(board.group, 'mimic', 'mimic panel (Penfold Controls)'));
   take(board.parts);
   const ann = createAnnunciatorBoard(
     kit,
@@ -1163,7 +1363,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     },
   );
   ann.object.position.set(1.65, 2.05, -0.13);
-  desk.add(ann.object);
+  desk.add(bindPiece(ann.object, { node: 'desk.ua' }));
   if (ann.parts) take(ann.parts);
   // The water panel and the station clock on the desk's fascia.
   const fascia = new Group();
@@ -1177,7 +1377,15 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     backlight: true,
   });
   water.group.position.set(-1.2, 0, 0.01);
-  fascia.add(water.group);
+  fascia.add(
+    instrument(
+      water.group,
+      'desk.qi',
+      'water panel',
+      () =>
+        `free chlorine ${readings.free.toFixed(2)} mg/l, pH ${readings.ph.toFixed(2)}, pool ${readings.ti.ti5.toFixed(1)} °C, flow ${readings.flow.toFixed(0)} m³/h`,
+    ),
+  );
   const waterLabel = createMicroLabel(
     kit,
     `${shortTag('desk.qi')} THE WATER, FROM ITS INSTRUMENTS`,
@@ -1188,22 +1396,30 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     },
   );
   waterLabel.position.set(-1.2, 0.12, 0.01);
-  fascia.add(waterLabel);
+  fascia.add(instrument(waterLabel, 'desk.qi', 'water panel legend'));
   const clock = createSevenSegment(kit, 4, { digitHeight: 0.06 });
   clock.group.position.set(0.55, 0.02, 0.01);
   clock.group.traverse((o) => (o.userData.live = true));
-  fascia.add(clock.group);
+  const clockStatus = () => {
+    const c = stationClock(hall());
+    return `PLANT TIME ${c.time} DAY ${c.day}`;
+  };
+  fascia.add(
+    instrument(clock.group, 'desk.clock', 'station clock', clockStatus),
+  );
   const day = createSevenSegment(kit, 2, { digitHeight: 0.04 });
   day.group.position.set(0.95, 0.02, 0.01);
   day.group.traverse((o) => (o.userData.live = true));
-  fascia.add(day.group);
+  fascia.add(
+    instrument(day.group, 'desk.clock', 'station clock day', clockStatus),
+  );
   const clockLabel = createMicroLabel(kit, 'PLANT TIME          DAY', {
     height: 0.022,
     ink: '#16191b',
     plate: '#f4f3ee',
   });
   clockLabel.position.set(0.7, 0.1, 0.01);
-  fascia.add(clockLabel);
+  fascia.add(instrument(clockLabel, 'desk.clock', 'station clock legend'));
   const speedLamps = SPEEDS.map(() => signal(false));
   SPEEDS.forEach((sp, k) => {
     const b = parts.add(
@@ -1219,12 +1435,14 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       }),
     );
     b.object.position.set(1.3 + k * 0.1, 0, 0.01);
-    fascia.add(b.object);
+    // The exhibit's own speed of time, not plant.
+    fascia.add(exhibitControl(b.object, `TIME ×${sp}`));
   });
   // Marked where it is, on the desk's fascia (re-parented, it would float in the hall).
   fascia.name = 'Desk fascia: water panel and station clock';
   markComponent(fascia, {
     name: `${TAGS['desk.qi']} water panel and ${TAGS['desk.clock']} station clock`,
+    model: { node: 'desk' },
     status: () => {
       const c = stationClock(hall());
       return `free chlorine ${readings.free.toFixed(2)} mg/l, pH ${readings.ph.toFixed(2)}, pool ${readings.ti.ti5.toFixed(1)} °C, flow ${readings.flow.toFixed(0)} m³/h; PLANT TIME ${c.time} DAY ${c.day}, ×${session.clock.speed}`;
@@ -1348,6 +1566,10 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   object.add(
     markComponent(ped, {
       name: `${TAGS['faults']} fault pedestal and ${TAGS['scoreboard']} scoreboard`,
+      // The exhibit's fault buttons, key switch and score: they stage a
+      // fault in the simulation and time its putting right, as RESET
+      // restarts it; they work no plant.
+      decorative: true,
       status: () => {
         const s = scoreboard(hall());
         return `FAULT ${s.fault.trim()}, TO ACCEPT ${s.toAccept}, TO FIX ${s.toFix}, BEST ${s.best}${hall().key ? `; key turned, fault ${hall().selected} chosen` : ''}`;
@@ -1381,7 +1603,12 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     paintEntrance(hall9Entrance(), 'Hall 9 · The whole plant'),
   );
   turnTo(entrance, E - 0.04, 1.65, -0.6, FACE_WEST);
-  object.add(still(entrance));
+  object.add(
+    markComponent(still(entrance), {
+      name: 'Entrance panel',
+      decorative: true,
+    }),
+  );
   const resetSign = createWallPanel(
     kit,
     'RESET sign',
@@ -1390,13 +1617,21 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     paintResetSign(RESET_SIGN),
   );
   turnTo(resetSign, E - 0.04, 1.75, 1.2, FACE_WEST);
-  object.add(still(resetSign));
+  object.add(
+    markComponent(still(resetSign), { name: 'RESET sign', decorative: true }),
+  );
   const resetButton = createResetPedestal(kit, {
     reset: () => reset(localNow()),
     lit: () => sinceReset < 2.5,
   });
   turnTo(resetButton.group, E - 0.5, 0, 1.2, FACE_WEST);
-  object.add(resetButton.group);
+  // The exhibit's RESET: it restarts the simulation, it works no plant.
+  object.add(
+    markComponent(resetButton.group, {
+      name: 'RESET SIMULATION pedestal',
+      decorative: true,
+    }),
+  );
   take(resetButton.parts);
   updates.push(resetButton.update);
   footprint(E - 0.5, 1.2, 0.25);
@@ -1413,7 +1648,12 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     const [x, z, yaw] = LECTERNS[p.station!];
     const lectern = createLectern(kit, p);
     turnTo(lectern, x, 0, z, yaw);
-    object.add(still(lectern));
+    object.add(
+      markComponent(still(lectern), {
+        name: `Lectern: ${p.title}`,
+        decorative: true,
+      }),
+    );
     footprint(x, z, 0.2);
   }
   void inHall;

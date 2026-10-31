@@ -652,7 +652,10 @@ export type InstrumentKind =
   | 'controller'
   | 'annunciator'
   | 'test-kit'
-  | 'clock';
+  | 'clock'
+  | 'board'
+  | 'mimic'
+  | 'desk';
 
 export interface Instrument {
   id: string;
@@ -704,6 +707,13 @@ export const INSTRUMENTS: readonly Instrument[] = [
   inst('desk.ua', 'annunciator', 'location annunciator'),
   inst('testKit', 'test-kit', 'DPD test kit'),
   inst('desk.clock', 'clock', 'station clock'),
+  // The boards and the desk that carry the instruments above, coded as
+  // Hall 1's losses board (QB), the plant rooms' mimic panels (MP) and
+  // Hall 4's desk (DS) are: the heating's thermometer board by the
+  // exchanger, the mimic and the control desk that holds it.
+  inst('tiBoard', 'board', 'heating thermometer board'),
+  inst('mimic', 'mimic', 'mimic panel'),
+  inst('desk', 'desk', 'control desk'),
 ];
 
 // ---- Tags, derived -------------------------------------------------------------
@@ -727,6 +737,9 @@ const LETTERS: Record<InstrumentKind, string> = {
   annunciator: 'UA',
   'test-kit': 'TK',
   clock: 'KI',
+  board: 'QB',
+  mimic: 'MP',
+  desk: 'DS',
 };
 
 /**
