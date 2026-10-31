@@ -35,11 +35,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 /** Hall 4's wall boards (the audit, 2026-10-31: they stood 40 mm off their walls). */
-const ON_THE_WALLS = [
-  'Hall 4 mimic board',
-  'Challenge cards',
-  'Analyser readout board',
-];
+const ON_THE_WALLS = ['Hall 4 mimic board', 'Analyser readout board'];
 
 describe('Hall 4’s wall boards', () => {
   it('hang flush, their backs (brackets and all) within 0.05 m of a wall', () => {

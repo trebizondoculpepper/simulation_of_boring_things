@@ -60,13 +60,12 @@ import type {
 import { touchPoint } from '../../../controls/input/touch-point';
 import { createConsoleSounds } from '../../views/console-sounds';
 import { CELEBRATION_SECONDS } from '../../logic/console-celebration';
-import { createDosingConsole } from '../../views/dosing-console';
+import { CONSOLE, createDosingConsole } from '../../views/dosing-console';
 import {
   BALANCE_TANK,
   BEAM,
   BEAM_LECTERN,
   BEAM_SCALE,
-  CARDS_BOARD,
   DESK,
   EAST,
   FRESH_SPOUT,
@@ -778,8 +777,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   const cardsBoard = createWallPanel(
     kit,
     'Challenge cards',
-    3.4,
-    1.2,
+    2.0,
+    0.7,
     (c, w, h) => {
       c.fillStyle = '#f6f4ec';
       c.fillRect(0, 0, w, h);
@@ -810,9 +809,11 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       });
     },
   );
-  turnTo(cardsBoard, CARDS_BOARD.x, CARDS_BOARD.y, NORTH, FACE_SOUTH);
-  cardsBoard.userData.onWall = 'Challenge cards';
-  object.add(still(cardsBoard));
+  // On the console's pedestal front, sized to fit it (the owner, 2026-10-31):
+  // its middle, its back on the pedestal's face (`dosing-console.ts`).
+  const CARDS_ON_CONSOLE = { y: 0.08 + (CONSOLE.h - 0.1) / 2, z: 0.1 };
+  cardsBoard.position.set(0, CARDS_ON_CONSOLE.y, CARDS_ON_CONSOLE.z);
+  desk.group.add(still(cardsBoard));
 
   // No entrance panel (the owner, 2026-10-31): the desk invites the visitor.
   const root = new Group();
