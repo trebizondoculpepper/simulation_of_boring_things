@@ -1,4 +1,4 @@
-import { Group, Mesh } from 'three';
+import { CylinderGeometry, ExtrudeGeometry, Group, Mesh, Shape } from 'three';
 import type { Object3D } from 'three';
 import { signal } from '@preact/signals-core';
 import type { Signal } from '@preact/signals-core';
@@ -25,12 +25,13 @@ import {
  * each facing +z.
  */
 
-const HAZARD_GLYPH: Record<string, string> = {
-  corrosive: 'CORROSIVE',
-  oxidiser: 'OXIDISER',
-  irritant: 'IRRITANT',
-  environment: 'ENVIRONMENT',
-  gas: 'GAS UNDER PRESSURE',
+/** Each hazard's CLP pictogram number and its word on the label. */
+const HAZARD: Record<string, { ghs: string; word: string }> = {
+  corrosive: { ghs: 'GHS05', word: 'Corrosive' },
+  oxidiser: { ghs: 'GHS03', word: 'Oxidiser' },
+  irritant: { ghs: 'GHS07', word: 'Irritant' },
+  environment: { ghs: 'GHS09', word: 'Environment' },
+  gas: { ghs: 'GHS04', word: 'Gas under pressure' },
 };
 
 /**
@@ -43,13 +44,17 @@ export function createChemicalTank(
   kit: PanelKit,
   {
     code,
-    product,
+    name,
+    formula,
+    strength,
     unit,
     colour,
     hazards,
   }: {
     code: string;
-    product: string;
+    name: string;
+    formula: string;
+    strength: string;
     unit: string;
     colour: string;
     hazards: readonly string[];
@@ -58,47 +63,37 @@ export function createChemicalTank(
   const t = tools(kit);
   const group = new Group();
   group.name = `Ideal tank ${code}`;
-  const W = 0.44;
+  // A clear cylinder on a steel base under a steel lid, its contents a
+  // smaller coloured cylinder inside whose height is how much is there.
+  const R = 0.2;
   const H = 1.5;
   const frame = t.paint('#3a4246', 0.5, 0.4);
-  t.box(group, frame, W, 0.04, W, 0, 0.02, 0);
-  t.box(group, frame, W, 0.04, W, 0, H - 0.02, 0);
-  for (const sx of [-1, 1])
-    for (const sz of [-1, 1])
-      t.box(
-        group,
-        frame,
-        0.03,
-        H,
-        0.03,
-        (sx * (W - 0.03)) / 2,
-        H / 2,
-        (sz * (W - 0.03)) / 2,
-      );
-  const content = t.box(
+  t.cyl(group, frame, R + 0.01, 0.04, 0, 0.02, 0, 'y', 28);
+  t.cyl(group, frame, R + 0.01, 0.04, 0, H - 0.02, 0, 'y', 28);
+  const glass = t.cyl(group, t.paint('#cfe3ea', 0.1), R, H - 0.08, 0, H / 2);
+  glass.geometry = new CylinderGeometry(R, R, H - 0.08, 32, 1, true);
+  const glassPaint = glass.material as {
+    transparent?: boolean;
+    opacity?: number;
+    depthWrite?: boolean;
+  };
+  glassPaint.transparent = true;
+  glassPaint.opacity = 0.25;
+  glassPaint.depthWrite = false;
+  const content = t.cyl(
     group,
     t.paint(colour, 0.3),
-    W - 0.04,
+    R - 0.04,
     1,
-    W - 0.04,
     0,
     0,
     0,
+    'y',
+    24,
   );
-  const glass = t.box(
-    group,
-    t.paint('#cfe3ea', 0.1),
-    W - 0.035,
-    H - 0.08,
-    0.004,
-    0,
-    H / 2,
-    W / 2 - 0.01,
-  );
-  (glass.material as { transparent?: boolean; opacity?: number }).transparent =
-    true;
-  (glass.material as { opacity?: number }).opacity = 0.25;
-  const full = 0.85 * (H - 0.08);
+  // The sticker, curved round the glass; its 100 % line just above it.
+  const S = { y: 1.0, h: 0.42, arc: 1.9 };
+  const full = S.y + S.h / 2 + 0.03 - 0.04;
   const level = (f: number) => {
     const h = Math.max(0.02, full * f);
     content.scale.y = h;
@@ -106,30 +101,34 @@ export function createChemicalTank(
   };
   level(1);
   const plate = t.printed(
-    W - 0.04,
-    0.3,
+    R * S.arc,
+    S.h,
     (c, w, h) => {
       c.fillStyle = '#f6f4ec';
       c.fillRect(0, 0, w, h);
       c.fillStyle = '#16232b';
-      c.font = `bold ${h * 0.22}px Arial`;
-      c.fillText(code, w * 0.05, h * 0.24);
-      c.font = `${h * 0.12}px Arial`;
-      const words = product.split(' ');
-      let line = '';
-      let y = h * 0.42;
-      for (const word of words) {
-        if (c.measureText(`${line} ${word}`).width > w * 0.9 && line) {
-          c.fillText(line, w * 0.05, y);
-          y += h * 0.14;
-          line = word;
-        } else line = line ? `${line} ${word}` : word;
-      }
-      c.fillText(line, w * 0.05, y);
+      c.textAlign = 'center';
+      c.font = `bold ${h * 0.15}px Arial`;
+      c.fillText(code, w / 2, h * 0.2);
+      // Its name, formula and strength, then its hazards in words and
+      // their CLP diamonds.
+      c.font = `${h * 0.08}px Arial`;
+      c.fillText(name, w / 2, h * 0.36, w * 0.92);
+      c.font = `bold ${h * 0.09}px Arial`;
+      c.fillText(formula, w / 2, h * 0.47, w * 0.92);
+      c.font = `${h * 0.08}px Arial`;
+      c.fillText(strength, w / 2, h * 0.57, w * 0.92);
+      c.font = `${h * 0.055}px Arial`;
+      c.fillText(
+        hazards.map((z) => HAZARD[z].word).join(', '),
+        w / 2,
+        h * 0.67,
+        w * 0.94,
+      );
       hazards.forEach((z, k) => {
-        const x = w * (0.15 + k * 0.32);
-        const cy = h * 0.86;
-        const r = h * 0.11;
+        const x = w * (0.5 + (k - (hazards.length - 1) / 2) * 0.22);
+        const cy = h * 0.82;
+        const r = h * 0.07;
         c.save();
         c.translate(x, cy);
         c.rotate(Math.PI / 4);
@@ -140,32 +139,68 @@ export function createChemicalTank(
         c.strokeRect(-r * 0.7, -r * 0.7, r * 1.4, r * 1.4);
         c.restore();
         c.fillStyle = '#16232b';
-        c.font = `bold ${h * 0.045}px Arial`;
-        c.fillText(
-          HAZARD_GLYPH[z].split(' ')[0],
-          x - r,
-          cy + r * 1.35,
-          r * 2.2,
-        );
+        c.font = `bold ${h * 0.03}px Arial`;
+        c.fillText(HAZARD[z].ghs, x, cy + h * 0.012, r * 1.3);
       });
     },
     256,
   );
-  plate.mesh.position.set(0, 1.12, W / 2 + 0.004);
-  group.add(plate.mesh);
-  // The USED counter, on the bund's front below.
+  const sticker = new Mesh(
+    new CylinderGeometry(
+      R + 0.002,
+      R + 0.002,
+      S.h,
+      24,
+      1,
+      true,
+      -S.arc / 2,
+      S.arc,
+    ),
+    plate.mesh.material,
+  );
+  sticker.position.set(0, S.y, 0);
+  group.add(sticker);
+  // The USED counter, in a box on the glass above the sticker and the
+  // 100 % line, its back cut to the tube's curve so it sits flush.
   const counter = new Group();
-  counter.position.set(0, 0.22, W / 2 + 0.01);
-  t.box(counter, t.paint('#1b2328', 0.5), W - 0.06, 0.12, 0.02, 0, 0, 0);
-  const digits = createSevenSegment(kit, 5, { digitHeight: 0.04 });
-  digits.group.position.set(0, 0.015, 0.011);
-  counter.add(digits.group);
+  counter.position.set(0, full + 0.04 + 0.07, 0);
+  const CW = 0.2;
+  const CH = 0.08;
+  const front = R + 0.025;
+  const back = Math.sqrt(R * R - (CW / 2) ** 2);
+  const outline = new Shape();
+  outline.moveTo(-CW / 2, back);
+  outline.lineTo(-CW / 2, front);
+  outline.lineTo(CW / 2, front);
+  outline.lineTo(CW / 2, back);
+  outline.absarc(
+    0,
+    0,
+    R,
+    Math.atan2(back, CW / 2),
+    Math.atan2(back, -CW / 2),
+    false,
+  );
+  const housing = new ExtrudeGeometry(outline, {
+    depth: CH,
+    bevelEnabled: false,
+    curveSegments: 12,
+  });
+  housing.rotateX(Math.PI / 2);
+  housing.translate(0, CH / 2, 0);
+  counter.add(new Mesh(housing, t.paint('#1b2328', 0.5)));
+  const face = new Group();
+  face.position.z = front;
+  counter.add(face);
+  const digits = createSevenSegment(kit, 5, { digitHeight: 0.035 });
+  digits.group.position.set(0, 0.01, 0.001);
+  face.add(digits.group);
   const unitLabel = createMicroLabel(kit, `USED ${unit}`, {
-    height: 0.016,
+    height: 0.013,
     ink: '#f4f3ee',
   });
-  unitLabel.position.set(0, -0.042, 0.011);
-  counter.add(unitLabel);
+  unitLabel.position.set(0, -0.028, 0.001);
+  face.add(unitLabel);
   group.add(counter);
   let shown = '';
   return {

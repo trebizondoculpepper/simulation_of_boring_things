@@ -280,7 +280,9 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   for (const tank of TANKS) {
     const view = createChemicalTank(kit, {
       code: tank.code,
-      product: tank.product,
+      name: tank.name,
+      formula: tank.formula,
+      strength: tank.strength,
       unit: tank.unit === 'm3' ? 'm³' : tank.unit,
       colour: tank.colour,
       hazards: tank.hazards,
