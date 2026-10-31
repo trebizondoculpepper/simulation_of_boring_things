@@ -84,6 +84,18 @@ import { drAqualisPose } from '../../components/plant/logic/dr-aqualis';
 import type { DrAqualisFrame } from '../../components/plant/logic/dr-aqualis';
 import { drawDrAqualis } from '../../components/plant/views/dr-aqualis';
 import type { Mood } from '../../../game/plant/aqualis-types';
+import { SCREEN } from '../../../game/plant/aqualis-types';
+import {
+  stopKey,
+  stopMoment,
+  stopScreen,
+} from '../../components/core/logic/stop-screen';
+import { drawStopScreen } from '../../components/core/views/stop-screen';
+import {
+  glitchMoment,
+  glitchPlan,
+} from '../../components/core/logic/lcd-glitch';
+import { drawLcdGlitch } from '../../components/core/views/lcd-glitch';
 
 /**
  * The component benchmark (mission 094, `doc/prompts/094-slowest-components.md`),
@@ -483,6 +495,75 @@ async function candidates(usage: Map<string, Usage>): Promise<Candidate[]> {
       },
     });
   }
+  // The Trio's crash screens (mission 114, `doc/plans/114/crash-modes.md`),
+  // each on a 640 × 480 canvas of its own, redrawn only on a new key.
+  usage.set('part:stop-screen', { count: 1, busy: 0, rooms: ['dev58'] });
+  list.push({
+    id: 'part:stop-screen',
+    label: 'Aqualis stop screen (the parody blue screen, its dump counting)',
+    source: 'part',
+    room: 'dev58',
+    build: () => {
+      // A crash after a crash: each runs to its reboot (or a minute, if
+      // it hangs), then the next seed's.
+      const lcd = crashCanvas();
+      let t = 0;
+      let crash = 0;
+      let screen = stopScreen(crash);
+      let drawn = '';
+      const update = (d: number) => {
+        if (!clockStopped.value) t += d;
+        if (t > (screen.rebootAt ?? 60)) {
+          t = 0;
+          screen = stopScreen(++crash);
+        }
+        if (stopKey(screen, t) === drawn) return;
+        const moment = stopMoment(screen, t);
+        drawn = moment.key;
+        drawStopScreen(lcd.context, moment);
+        lcd.texture.needsUpdate = true;
+      };
+      update(0);
+      return { object: lcd.mesh, update, dispose: lcd.dispose };
+    },
+  });
+  // The glitch over a stand-in last good page. Its bursts change it up to
+  // ten times a second for a second or two, then it holds for four to
+  // twelve: under 0.8 changes a second over a run (`lcd-glitch.test.ts`),
+  // 245k texels/s at 640 × 480. A 1.2 s phase landing in a burst would
+  // measure the burst, not the run, so its clock starts in the hold after
+  // the first burst (which ends by 2 s; the second begins after 4.2 s).
+  usage.set('part:lcd-glitch', { count: 1, busy: 0, rooms: ['dev58'] });
+  list.push({
+    id: 'part:lcd-glitch',
+    label: 'Aqualis LCD glitch (the buffer overflow, in bursts)',
+    source: 'part',
+    room: 'dev58',
+    build: () => {
+      const lcd = crashCanvas();
+      const good = document.createElement('canvas');
+      good.width = SCREEN.w;
+      good.height = SCREEN.h;
+      drawBootScreen(good.getContext('2d')!, 0.7);
+      const seed = 114;
+      let t = 2.05;
+      let drawn = '';
+      const update = (d: number) => {
+        if (!clockStopped.value) t += d;
+        const moment = glitchMoment(seed, t);
+        if (moment.key === drawn) return;
+        drawn = moment.key;
+        drawLcdGlitch(
+          lcd.context,
+          good,
+          glitchPlan(seed, moment.burst, moment.frame, SCREEN),
+        );
+        lcd.texture.needsUpdate = true;
+      };
+      update(0);
+      return { object: lcd.mesh, update, dispose: lcd.dispose };
+    },
+  });
   // The development rooms' exhibits the rooms do not already use.
   const usedModels = new Set(
     [...first.keys()]
@@ -662,6 +743,27 @@ function disposeAll(object: Object3D, kit: PanelKit) {
   object.traverse((o) => (o as Mesh).geometry?.dispose());
   for (const m of [...materials, ...kit.materials]) m.dispose();
   for (const t of [...textures, ...kit.textures]) t.dispose();
+}
+
+/** A 640 × 480 screen on a plane, for the crash screens. */
+function crashCanvas() {
+  const canvas = document.createElement('canvas');
+  canvas.width = SCREEN.w;
+  canvas.height = SCREEN.h;
+  const context = canvas.getContext('2d')!;
+  const texture = new CanvasTexture(canvas);
+  const material = new MeshBasicMaterial({ map: texture });
+  const geometry = new PlaneGeometry(0.4, 0.3);
+  return {
+    context,
+    texture,
+    mesh: new Mesh(geometry, material),
+    dispose: () => {
+      texture.dispose();
+      material.dispose();
+      geometry.dispose();
+    },
+  };
 }
 
 const nextFrame = () =>
