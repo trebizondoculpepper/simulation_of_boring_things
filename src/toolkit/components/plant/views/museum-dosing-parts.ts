@@ -568,7 +568,7 @@ export function createSmallDayTank(
     28,
   );
   // The sight tube and its scale.
-  t.cyl(
+  const sightTube = t.cyl(
     group,
     t.paint('#d9eef2', 0.15),
     0.008,
@@ -633,6 +633,8 @@ export function createSmallDayTank(
   let shown = -1;
   return {
     group,
+    /** Its sight gauge: the tube, the level in it and its scale. */
+    sight: [sightTube, tubeLevel, scale.mesh] as const,
     show(level: number) {
       const share = Math.max(0.001, Math.min(1, level / litres));
       const k = Math.round(share * 200);

@@ -45,6 +45,8 @@ describe('Hall 3’s schematic', () => {
       controller: 'M3-DC1',
       chart: 'M3-QR1',
       testKit: 'M3-TK1',
+      board: 'M3-QB1',
+      mimic: 'M3-MP1',
     });
   });
 

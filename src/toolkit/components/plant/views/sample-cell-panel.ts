@@ -167,6 +167,7 @@ export function createSamplePanel(
   // The holders and their probes.
   const n = holders.length;
   const probeAt: Point[] = [];
+  const probes: Group[] = [];
   const phHome = new Group();
   let phProbe: Group | null = null;
   holders.forEach((h, i) => {
@@ -199,6 +200,7 @@ export function createSamplePanel(
     }
     object.add(probe);
     describe(probe, `${tag}: ${h.name}`);
+    probes.push(probe);
     probeAt.push([x, my + 0.14, z]);
     label(h.name.toUpperCase(), x, my + 0.17, 0.0065);
   });
@@ -298,5 +300,21 @@ export function createSamplePanel(
     const c = state();
     return `${Math.round(cellFlow(c))} l/h${flowOk(c) ? '' : ', below its flow switch'}`;
   });
-  return { object, parts, update, inAt, outAt, probeAt };
+  return {
+    object,
+    parts,
+    update,
+    inAt,
+    outAt,
+    probeAt,
+    /** Its working pieces, for a hall to bind each to its own model. */
+    pieces: {
+      valve: valve.object,
+      regulator: regulator.object,
+      flowSwitch: reed,
+      rotameter: float,
+      probes,
+      tap: tap.object,
+    },
+  };
 }

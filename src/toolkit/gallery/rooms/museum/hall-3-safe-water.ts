@@ -9,7 +9,10 @@ import {
   createPipeTee,
 } from '../../../components/core/views/pipe-kinds';
 import { mergeTree } from '../../../components/core/views/merge-static';
-import { markComponent } from '../../../components/core/views/component-identity';
+import {
+  componentOf,
+  markComponent,
+} from '../../../components/core/views/component-identity';
 import { tools } from '../../../components/core/views/fitting-tools';
 import { createEndSuctionPump } from '../../../components/plant/views/pumps-plant';
 import {
@@ -177,6 +180,18 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       model,
       ...(status ? { status } : {}),
     });
+  /** An instrument of the model, drawn by `thing`, bound to it by its id. */
+  const instrument = (
+    thing: Object3D,
+    id: string,
+    name: string,
+    status?: () => string | undefined,
+  ) => describe(thing, id, name, { node: id }, status);
+  /** Bind a piece a view has already described to `model`, keeping its words. */
+  const bindPiece = (
+    thing: Object3D,
+    model: { node: string } | { fitting: string },
+  ) => markComponent(thing, { ...componentOf(thing), model });
   const atMachine = (o: Object3D, id: MachineId) =>
     turnTo(o, PLACES[id].x, PLACES[id].y ?? 0, PLACES[id].z, PLACES[id].yaw);
   const solids: { minX: number; maxX: number; minZ: number; maxZ: number }[] = [
@@ -233,6 +248,13 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
           `its sight gauge ${TAGS[li]} at ${state().tanks[chemical].litres.toFixed(0)} litres`,
       ),
     );
+    for (const piece of tank.sight)
+      instrument(
+        piece,
+        li,
+        'sight gauge',
+        () => `reads ${state().tanks[chemical].litres.toFixed(0)} litres`,
+      );
     updates.push(() => tank.show(state().tanks[chemical].litres));
   }
 
@@ -350,6 +372,13 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
         `${Math.round(readings.sampleFlow)} l/h, ${shortTag('cell.fs')} ${readings.flowSwitch ? 'made' : 'open'}`,
     ),
   );
+  // Its working pieces, each its own component of the model.
+  bindPiece(panel.pieces.valve, { fitting: 'sample.iso' });
+  bindPiece(panel.pieces.regulator, { fitting: 'sample.needle' });
+  bindPiece(panel.pieces.flowSwitch, { node: 'cell.fs' });
+  bindPiece(panel.pieces.probes[0], { node: 'cell.cl' });
+  bindPiece(panel.pieces.probes[1], { node: 'cell.ph' });
+  bindPiece(panel.pieces.tap, { node: 'cell.tap' });
   for (const p of panel.parts) parts.add(p as Part);
   updates.push((delta) => panel.update(delta));
 
@@ -362,9 +391,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   dc.object.scale.setScalar(1.6);
   turnTo(dc.object, PLACES.sampleCell.x + 1.0, PANEL_Y + 0.25, NORTH + 0.01, 0);
   object.add(
-    markComponent(dc.object, {
-      name: `${TAGS['controller']} Chlorella DC-1 pair (chlorine, pH)`,
-    }),
+    instrument(dc.object, 'controller', 'Chlorella DC-1 pair (chlorine, pH)'),
   );
   take(dc.parts);
   updates.push((delta) => dc.update(delta));
@@ -378,7 +405,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     PANEL_Y - 0.05,
     NORTH + 0.012,
   );
-  object.add(dcPlate);
+  // Its settings plate is the controller's own.
+  object.add(instrument(dcPlate, 'controller', 'settings plate'));
 
   // The sample drain: a floor gully.
   const drain = atMachine(new Group(), 'drain');
@@ -436,7 +464,12 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     resetTrip: () => {},
   });
   turnTo(station.group, PLACES.poolPump.x + 1.3, 0, PLANT_EDGE - 0.3, 0);
-  object.add(station.group);
+  object.add(
+    markComponent(station.group, {
+      name: `${TAGS.poolPump} circulation pump local control station`,
+      model: { node: 'poolPump' },
+    }),
+  );
   take(station.parts);
   updates.push(station.update);
   footprint(PLACES.poolPump.x + 1.3, PLANT_EDGE - 0.3, 0.2);
@@ -491,13 +524,20 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     });
     object.add(pipe);
     if (SERVICE[line.edge])
+      // Its plates and flow arrows are its own: bound to its link.
       object.add(
-        markPipe(kit, line.points, {
-          radius: line.od / 2,
-          service: 'pool water',
-          text: LINK_NAMES[line.edge].toUpperCase(),
-          flow: 1,
-        }),
+        markComponent(
+          markPipe(kit, line.points, {
+            radius: line.od / 2,
+            service: 'pool water',
+            text: LINK_NAMES[line.edge].toUpperCase(),
+            flow: 1,
+          }),
+          {
+            name: `${LINK_NAMES[line.edge]} pipe markings`,
+            model: { link: line.edge },
+          },
+        ),
       );
   }
   {
@@ -615,6 +655,9 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   object.add(
     markComponent(swim.group, {
       name: `${TAGS['swimmers']} SWIMMERS dial`,
+      // The exhibit's own control of the bathers, the world beyond the
+      // hall (never drawn): it sets the load, it is no part of the plant.
+      decorative: true,
       status: () =>
         `at ${state().swimmers.toUpperCase()}, ${Math.round(bathersNow(state()))} in the water`,
     }),
@@ -631,6 +674,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   object.add(
     markComponent(kitTk.group, {
       name: `${TAGS['testKit']} DPD test kit`,
+      model: { node: 'testKit' },
       status: () => {
         const r = state().test;
         return r
@@ -655,7 +699,12 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   });
   turnTo(faults.group, WEST + 1.2, 0, PLANT_EDGE + 0.4, 0);
   object.add(
-    markComponent(faults.group, { name: `${TAGS['faults']} fault pedestal` }),
+    markComponent(faults.group, {
+      name: `${TAGS['faults']} fault pedestal`,
+      // The exhibit's fault buttons: they stage a fault in the simulation
+      // (air in a pump, weak delivery), as RESET restarts it; no plant.
+      decorative: true,
+    }),
   );
   take(faults.parts);
   updates.push(faults.update);
@@ -683,7 +732,11 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     },
   });
   turnTo(board.group, 0, 1.5, SOUTH, FACE_NORTH);
-  object.add(board.group);
+  // The mimic panel is in the model (M3-MP1), its lamps, readouts and
+  // buttons bound through it.
+  object.add(
+    instrument(board.group, 'mimic', 'mimic panel (Penfold Controls)'),
+  );
   take(board.parts);
 
   // The chemistry board: QI1, QI2 and the chart recorder QR1, and PLANT TIME.
@@ -696,7 +749,14 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   });
   cl.group.scale.setScalar(3.2);
   cl.group.position.set(-0.55, 1.75, 0.05);
-  chem.add(cl.group);
+  chem.add(
+    instrument(
+      cl.group,
+      'board.cl',
+      'free chlorine meter',
+      () => `reads ${readings.free.toFixed(2)} mg/l`,
+    ),
+  );
   const ph = createDialGauge(kit, {
     dia: 0.2,
     min: 6.5,
@@ -707,10 +767,17 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     flutter: 0,
   });
   ph.group.position.set(-0.55, 1.28, 0.06);
-  chem.add(ph.group);
+  chem.add(
+    instrument(
+      ph.group,
+      'board.ph',
+      'pH meter',
+      () => `reads pH ${readings.ph.toFixed(2)}`,
+    ),
+  );
   const chart = createDayChartRecorder(kit);
   chart.group.position.set(0.35, 1.62, 0.04);
-  chem.add(chart.group);
+  chem.add(instrument(chart.group, 'chart', '24-hour chart recorder'));
   for (const [text, x, y] of [
     [`${shortTag('board.cl')} FREE CHLORINE`, -0.55, 1.52],
     [`${shortTag('board.ph')} pH`, -0.55, 1.13],
@@ -731,10 +798,18 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     backlight: true,
   });
   timeLcd.group.position.set(0.35, 1.15, 0.045);
-  chem.add(timeLcd.group);
+  chem.add(
+    markComponent(timeLcd.group, {
+      name: 'Plant time display',
+      // The exhibit's own time readout, not plant.
+      decorative: true,
+      status: () => `shows ${hallClockText(session.clock)}`,
+    }),
+  );
   object.add(
     markComponent(chem, {
-      name: 'Chemistry board: free chlorine, pH and the 24-hour chart, from DC1',
+      name: `${TAGS.board} chemistry board: free chlorine, pH and the 24-hour chart, from DC1`,
+      model: { node: 'board' },
       status: () =>
         `meters at ${readings.free.toFixed(2)} mg/l and pH ${readings.ph.toFixed(2)}; PLANT TIME ${hallClockText(session.clock)}`,
     }),
@@ -790,7 +865,13 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     lit: () => state().sinceReset < 2.5,
   });
   turnTo(resetButton.group, WEST + 2.6, 0, SOUTH - 0.45, FACE_NORTH);
-  object.add(resetButton.group);
+  // The exhibit's RESET: it restarts the simulation, it works no plant.
+  object.add(
+    markComponent(resetButton.group, {
+      name: 'RESET SIMULATION pedestal',
+      decorative: true,
+    }),
+  );
   take(resetButton.parts);
   updates.push(resetButton.update);
   footprint(WEST + 2.6, SOUTH - 0.45, 0.25);

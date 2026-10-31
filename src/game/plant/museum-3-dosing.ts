@@ -378,7 +378,9 @@ export type InstrumentKind =
   | 'controller'
   | 'sample-point'
   | 'test-kit'
-  | 'recorder';
+  | 'recorder'
+  | 'board'
+  | 'mimic';
 
 export interface Instrument {
   id: string;
@@ -416,6 +418,11 @@ export const INSTRUMENTS: readonly Instrument[] = [
   { id: 'controller', kind: 'controller', role: 'dosing controller' },
   { id: 'chart', kind: 'recorder', role: 'chart recorder' },
   { id: 'testKit', kind: 'test-kit', role: 'DPD test kit' },
+  // The chemistry board on the south wall, which carries the meters and
+  // the chart recorder above, coded as Hall 1's losses board is; and the
+  // mimic panel beside it, coded MP as the plant rooms' mimic panels are.
+  { id: 'board', kind: 'board', role: 'chemistry board' },
+  { id: 'mimic', kind: 'mimic', role: 'mimic panel' },
 ];
 
 // ---- Tags, derived -------------------------------------------------------------
@@ -433,6 +440,8 @@ const LETTERS: Record<InstrumentKind, string> = {
   'sample-point': 'SP',
   'test-kit': 'TK',
   recorder: 'QR',
+  board: 'QB',
+  mimic: 'MP',
 };
 
 /**
