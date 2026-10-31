@@ -24,7 +24,13 @@ An Aqualis dosing controller of the early 2000s: a white cabinet, mostly touch-s
 The interface leans into early-2000s skeuomorphism: brushed metal and glass, glossy buttons, gauges drawn as dials, tabbed panels; the Frutiger Aero widget kit in `src/ui2d/aero/` is the starting point, extended as needed.
 
 - **Its main job is AUTO** (the owner, 2026-10-31): regulating the dosing systems connected to it on its own. Everything else it does is in support of that, or of the player.
-- **The screen cycles** (the owner, 2026-10-31): left alone, the main screen rotates between its displays. At least: a **pump status** screen, showing which dosing pumps are connected to its control ports and what each is doing (running, its rate, stopped, inhibited); and the **Dr Aqualis** screen, where he diagnoses the water's condition and makes his recommendations. A touch stops the cycle on the screen touched, so the player can read it, work it or ask for Show dose; the cycle resumes after a while untouched.
+- **The screen cycles between three** (the owner, 2026-10-31): left alone, the main screen rotates between its three normal screens.
+  - **Pump status**: its three automatic control channels (hypochlorite, hydrochloric acid, CO₂), and for each what is being dosed now or what is being requested; a channel with nothing connected says so.
+  - **Water status**: a readout of the water quality it is sampling, every reading with its band against its target.
+  - **Dr Aqualis**: the Microsoft Agent-like helper, recommending what should be done to the water to improve its quality.
+
+  A touch stops the cycle on the screen touched, so the player can read it, work it or ask for Show dose; the cycle resumes after a while untouched. Settings (below) is reached from any of them.
+
 - **Settings** (the owner, 2026-10-31): a settings screen of two tabs, reached from the touch screen, never part of the cycle.
   - **Pool dynamics**: the operator enters the total volume of water in circulation and the average filtration rate, from which the controller works out how quickly and how much to dose (the turnover sets how long a dose takes to reach the pool and the probes). The values are what was entered, right or wrong: a controller set up with the wrong volume over- or under-doses, and its Show dose amounts are wrong with it. Each installation comes set up correctly for its pool.
   - **Targets**: the target for every reading the analyser has, editable, its set point and band. Defaults after PWTAG: free chlorine 1.2 mg/l, held between 1.0 and 1.5; pH 7.3, held between 7.2 and 7.4; the other readings' bands from the water chemistry model's own. AUTO doses in proportion to how far a reading is from its set point, stopping inside its band and capped at each pump's rated output. The diagnosis and recommendations judge the water against these targets too.
@@ -32,7 +38,7 @@ The interface leans into early-2000s skeuomorphism: brushed metal and glass, glo
 
 - **Diagnosis and direction, not prescriptions** (the owner chose this): the advice says what is wrong and which chemical puts it right ("Alkalinity low (62 mg/l): the pH will be unstable. Raise the alkalinity with sodium bicarbonate."), not how much. A **Show dose** button reveals the exact amount for anyone stuck, worked out through the real chemistry model at the pool's real volume (the Hall 4 dose table and solver, `src/game/plant/museum-4-doses.ts`, `museum-4-solver.ts`, are the place to start; the amounts belong in that chemical's own unit). Advice for hand-dosed chemicals points at where they go: the balance tank, or the pool itself.
 - **Dr Aqualis**, an animated helper in the spirit of Microsoft Agent, an original character and not a copy of any Microsoft one: an anthropomorphic water drop with eyes and a face (the owner, 2026-10-31): the Aqualis water-drop logo come to life, a glossy, blobby, animated blue droplet in a white lab coat with a head mirror and a stethoscope. He gives the advice in speech bubbles. Animations, at no more than 10 Hz and redrawn only while they play: idle (a gentle bob), concerned (a frown, tapping his clipboard), alarmed (wide eyes, a little jump), pleased (a thumbs up when the water is good), pointing (at the reading his advice is about).
-- **Readings**: every reading the analyser has, with its band, the set points for chlorine and pH, the state of each dosing system connected, and the selector's position.
+- **Readings**: what the three screens show between them: every reading the analyser has, with its band and target, each channel's state and demand, and the selector's position.
 
 ## The hand-dosing game to come (not this mission)
 
