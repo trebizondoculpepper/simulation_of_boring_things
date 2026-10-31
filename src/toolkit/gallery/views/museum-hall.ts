@@ -32,6 +32,7 @@ import {
   BEAM_DEPTH,
   createServiceCeiling,
 } from '../../components/site-dressing/views/service-ceiling';
+import { createServiceMaterials } from '../../components/site-dressing/views/service-materials';
 import {
   BENCH,
   COLUMN_FOOT,
@@ -82,6 +83,7 @@ import {
   LAYOUT_CORRIDORS,
 } from '../logic/museum-layout';
 import { createCorridorDecals } from './museum-corridor-decals';
+import { corridorFinish } from '../logic/museum-corridor-finish';
 import { createPendantLamps } from '../../components/architectural/views/pendant-lamps';
 
 /** A corridor's hanging sign: its width (within the corridor), height, middle's height (just below the arch's crown) and distance in from the archway. */
@@ -1699,9 +1701,47 @@ export function createMuseumHall(
   corridorBulb.toneMapped = false;
   disposables.push(corridorBulb);
   const pendantSets: ReturnType<typeof createPendantLamps>[] = [];
+  // Between two black boxes (c78), the corridor is black too (the owner,
+  // 2026-10-31, `corridorFinish`): matt black walls, floor and deck, the
+  // halls' own, so the walk from one to the other stays dark; its
+  // pendants a little brighter, so it is still walkable and readable.
+  let blackRun: {
+    walls: MeshStandardMaterial;
+    floor: MeshStandardMaterial;
+    services: ReturnType<typeof createServiceMaterials>;
+  } | null = null;
+  const blackFinish = () => {
+    if (blackRun) return blackRun;
+    const services = createServiceMaterials();
+    services.deck.color.set(BLACK_BOX.deck);
+    services.deck.metalness = 0;
+    services.deck.roughness = 0.95;
+    services.beam.color.set(BLACK_BOX.deck);
+    blackRun = {
+      walls: new MeshStandardMaterial({
+        color: BLACK_BOX.walls,
+        roughness: 0.95,
+      }),
+      floor: new MeshStandardMaterial({
+        color: BLACK_BOX.floor,
+        roughness: 0.9,
+      }),
+      services,
+    };
+    disposables.push(
+      blackRun.walls,
+      blackRun.floor,
+      ...Object.values(services).filter(
+        (v): v is MeshStandardMaterial => v instanceof MeshStandardMaterial,
+      ),
+    );
+    return blackRun;
+  };
   for (const c of hallCorridors(id)) {
     const run = new Group();
-    run.name = `Corridor to ${c.to}`;
+    const black =
+      corridorFinish(id, c.to) === 'blackBox' ? blackFinish() : null;
+    run.name = black ? `Black box corridor to ${c.to}` : `Corridor to ${c.to}`;
     const H = CORRIDOR.height;
     // Its walls, built as the halls' are (`wallRun`), its windows cut
     // through them with their round heads and glazed as the halls' are.
@@ -1728,7 +1768,18 @@ export function createMuseumHall(
           head: CORRIDOR_WINDOW.head,
           kind: 'street' as const,
         }));
-      run.add(wallRun(axis, line, from, to, [], windows, m.paint, m.rawBrick));
+      run.add(
+        wallRun(
+          axis,
+          line,
+          from,
+          to,
+          [],
+          windows,
+          black?.walls ?? m.paint,
+          black?.walls ?? m.rawBrick,
+        ),
+      );
       for (const w of windows) glaze(m, { axis, line }, w, run, bars);
     }
     if (bars.length) {
@@ -1742,7 +1793,12 @@ export function createMuseumHall(
     for (const piece of pieces) {
       const { group: ceiling } = createServiceCeiling(
         { ...piece.rect, deckY: H },
-        { seed: piece.seed, density: 0.35, beamEvery: 3 },
+        {
+          seed: piece.seed,
+          density: 0.35,
+          beamEvery: 3,
+          ...(black ? { materials: black.services } : {}),
+        },
       );
       run.add(ceiling);
     }
@@ -1761,7 +1817,12 @@ export function createMuseumHall(
         );
       return g;
     });
-    run.add(new Mesh(mergeGeometries(floors), m.floor));
+    const corridorFloor = new Mesh(
+      mergeGeometries(floors),
+      black?.floor ?? m.floor,
+    );
+    if (black) corridorFloor.name = 'Black box corridor floor';
+    run.add(corridorFloor);
     for (const g of floors) g.dispose();
     // A pendant in each leg (the owner, 2026-10-30: "a pair of industrial
     // lights in each, one in each leg"), the Encabulator's, on its chain
@@ -1779,7 +1840,7 @@ export function createMuseumHall(
     run.add(lamps.group);
     pendantSets.push(lamps);
     for (const p of places) {
-      const light = new PointLight('#ffd9a8', 9, 11, 2);
+      const light = new PointLight('#ffd9a8', black ? 14 : 9, 11, 2);
       light.position.set(p.x, p.y - 0.2, p.z);
       run.add(light);
     }
