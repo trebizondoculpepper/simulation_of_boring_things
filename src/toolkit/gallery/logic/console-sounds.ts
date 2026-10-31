@@ -50,8 +50,10 @@ export const CONSOLE_SOUNDS: Record<
     inOrder: true,
   },
   'out-of-range': { files: ['out-of-range'], level: 0.3 },
-  won: { files: ['won-1', 'won-2'], level: 0.35 },
-  lost: { files: ['lost-1', 'lost-2'], level: 0.3 },
+  // Synthesised for the console (`scripts/console-fanfares.mjs`): a glassy
+  // fanfare for a win, a sad trombone for a loss (the owner, 2026-10-31).
+  won: { files: ['won-fanfare'], level: 0.4 },
+  lost: { files: ['lost-trombone'], level: 0.4 },
 };
 
 /** The sound of pressing region `id`, from `before` to `after` (from `pressConsole`). */

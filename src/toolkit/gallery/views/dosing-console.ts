@@ -40,6 +40,13 @@ import {
   drawScenarioScreen,
 } from './dosing-console-screens';
 import { pressSound } from '../logic/console-sounds';
+import {
+  celebrationFrame,
+  celebrationKey,
+  celebrationOn,
+} from '../logic/console-celebration';
+import type { CelebrationKind } from '../logic/console-celebration';
+import { drawCelebration } from './console-celebration';
 import type { ConsoleSound } from '../logic/console-sounds';
 
 /**
@@ -158,6 +165,10 @@ export function createDosingConsole(kit: PanelKit, host: ConsoleHost) {
   let state: ConsoleState = newConsole();
   let glow = 0;
   let lastKind: ScenarioView['kind'] | null = null;
+  /** A celebration or commiseration playing over the screens, and how far in, s. */
+  let party: { kind: CelebrationKind; t: number } | null = null;
+  const partyFrame = () =>
+    party ? celebrationFrame(party.kind, party.t) : null;
 
   const models = () => ({
     scenario: scenarioScreen(
@@ -173,22 +184,28 @@ export function createDosingConsole(kit: PanelKit, host: ConsoleHost) {
   const draw = () => {
     const m = models();
     if (lastKind !== null && m.scenario.view.kind !== lastKind) {
+      const on = celebrationOn(lastKind, m.scenario.view.kind);
+      if (on) party = { kind: on, t: 0 };
       lastKind = m.scenario.view.kind;
       state = settleConsole(state);
       return draw();
     }
     lastKind = m.scenario.view.kind;
-    for (const s of screens) {
+    const f = partyFrame();
+    const fk = celebrationKey(f);
+    for (const [i, s] of screens.entries()) {
       const key =
-        s.id === 'scenario'
+        fk +
+        (s.id === 'scenario'
           ? scenarioKey(m.scenario)
           : s.id === 'chemical'
             ? chemicalKey(m.chemical)
-            : doseKey(m.dose);
+            : doseKey(m.dose));
       if (!s.gate.needs(key)) continue;
       if (s.id === 'scenario') drawScenarioScreen(s.context, m.scenario);
       else if (s.id === 'chemical') drawChemicalScreen(s.context, m.chemical);
       else drawDoseScreen(s.context, m.dose);
+      if (f) drawCelebration(s.context, i, f);
       s.texture.needsUpdate = true;
     }
   };
@@ -200,7 +217,8 @@ export function createDosingConsole(kit: PanelKit, host: ConsoleHost) {
   /** What a touch on `object` at `uv` would press, or null. */
   const regionAt = (object: Object3D, uv: Vector2 | undefined) => {
     const s = screenOf(object);
-    if (!s || !uv) return null;
+    // Touches wait while a celebration plays over the screens.
+    if (!s || !uv || partyFrame()) return null;
     return hitScreen(
       s.id,
       state,
@@ -254,12 +272,25 @@ export function createDosingConsole(kit: PanelKit, host: ConsoleHost) {
     aimed(object: Object3D, uv?: Vector2) {
       return regionAt(object, uv) !== null;
     },
+    /** Whether a celebration or commiseration is playing. */
+    get celebrating() {
+      return partyFrame() !== null;
+    },
+    /** Play a celebration (won) or commiseration (lost) from its start (the dev room's demonstrations). */
+    celebrate(kind: CelebrationKind) {
+      party = { kind, t: 0 };
+      draw();
+    },
     /** Set the console's state (the dev room's demonstrations). */
     set(next: Partial<ConsoleState>) {
       state = { ...state, ...next };
       draw();
     },
     update(dt: number) {
+      if (party) {
+        party.t += dt;
+        if (!partyFrame()) party = null;
+      }
       if (glow > 0) {
         glow -= dt;
         if (glow <= 0) state = releaseConsole(state);

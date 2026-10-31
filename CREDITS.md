@@ -60,6 +60,10 @@ The bridge's console sounds (touch presses on its consoles, its displays booting
 
 The 37 sounds in `resources/sound/effects/frutiger-aero/` are from [Interface Sounds](https://kenney.nl/assets/interface-sounds) (version 1.0, 2020) by [Kenney](https://www.kenney.nl), released under [Creative Commons Zero (CC0)](https://creativecommons.org/publicdomain/zero/1.0/). They were downloaded on 2026-10-31, copied unchanged and renamed after the Hall 4 console button or moment each suits; the folder's `notes.md` maps each new name to its original. Credit is not required by the licence; it is given with thanks. The pack's licence is kept beside them as `KENNEY-LICENSE.txt`.
 
+## Hall 4's won and lost sounds
+
+`won-fanfare.ogg` and `lost-trombone.ogg` in `resources/sound/effects/frutiger-aero/` are original to this project, synthesised on 2026-10-31 by `scripts/console-fanfares.mjs` (FM bells and additive tones, no samples), and are under the project's own licence.
+
 ## Textures and code
 
 | Files                                                                                                                                              | Author and source                                                                                                          | Licence                                                                                                                                     |

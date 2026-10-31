@@ -94,3 +94,10 @@ describe('console sounds', () => {
     expect(pick('start')).toBe('start-1');
   });
 });
+
+describe('the won and lost sounds', () => {
+  it('are the fanfare and the sad trombone', () => {
+    expect(CONSOLE_SOUNDS.won.files).toEqual(['won-fanfare']);
+    expect(CONSOLE_SOUNDS.lost.files).toEqual(['lost-trombone']);
+  });
+});

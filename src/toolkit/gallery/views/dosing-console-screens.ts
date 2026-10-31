@@ -312,11 +312,16 @@ export function drawDoseScreen(ctx: Ctx, m: DoseScreen) {
     });
   // The lower third: DOSE once a chemical and a size are picked, the hint till then.
   if (m.armed)
-    drawGlossyButton(ctx, L.dose, m.ready ? 'DOSE' : 'NO DOSES LEFT', {
-      tint: m.ready ? 'green' : 'grey',
-      state: !m.ready ? 'disabled' : state(m.pressed, 'dose'),
-      size: m.ready ? 40 : 22,
-    });
+    drawGlossyButton(
+      ctx,
+      L.dose,
+      !m.ready ? 'NO DOSES LEFT' : m.repeat ? 'REPEAT DOSE' : 'DOSE',
+      {
+        tint: m.ready ? 'green' : 'grey',
+        state: !m.ready ? 'disabled' : state(m.pressed, 'dose'),
+        size: !m.ready ? 22 : m.repeat ? 30 : 40,
+      },
+    );
   else
     drawText(
       ctx,

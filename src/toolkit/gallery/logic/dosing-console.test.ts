@@ -136,7 +136,7 @@ describe("Hall 4's dosing console screens", () => {
     ).not.toBe(a);
   });
 
-  it('show DOSE in the lower third only once a chemical and a size are picked afresh', () => {
+  it('show DOSE in the lower third once a chemical is picked, REPEAT DOSE after one is taken', () => {
     const L = DOSE_LAYOUT.dose;
     expect(L.y).toBeGreaterThanOrEqual(SCREEN.h * (2 / 3) - 2);
     expect(L.y + L.h).toBeLessThanOrEqual(SCREEN.h);
@@ -161,16 +161,28 @@ describe("Hall 4's dosing console screens", () => {
     expect(hitScreen('dose', s, free(s), ...mid(L))).toBe('dose');
     expect(pressConsole(s, 'dose', 7).effect).toEqual({ type: 'dose' });
     expect(doseScreen(press(s, 'dose'), null, true).pressed).toBe('dose');
-    // Taken, both picks start again; the arrows count as picks too.
+    expect(doseScreen(s, null, true).repeat).toBe(false);
+    // Taken, the picks stay and DOSE reads REPEAT DOSE.
     s = afterDose(s);
-    expect(hitScreen('dose', s, free(s), ...mid(L))).toBeNull();
-    expect(armed(press(press(s, 'chem-down'), 'size-up'))).toBe(true);
-    // RESET clears them too.
-    s = press(press(s, 'chem-down'), 'size-up');
-    expect(armed(press(s, 'reset-yes'))).toBe(false);
+    expect(armed(s)).toBe(true);
+    expect(doseScreen(s, null, true).repeat).toBe(true);
+    expect(hitScreen('dose', s, free(s), ...mid(L))).toBe('dose');
+    expect(pressConsole(s, 'dose', 7).effect).toEqual({ type: 'dose' });
+    // The same chemical or size touched again: still a repeat.
+    expect(press(s, 'row-2').repeat).toBe(true);
+    expect(press(s, 'size-3').repeat).toBe(true);
+    // A change of either: DOSE again, still armed; the arrows count too.
+    expect(press(s, 'size-up').repeat).toBe(false);
+    expect(press(s, 'chem-down').repeat).toBe(false);
+    expect(armed(press(s, 'chem-down'))).toBe(true);
+    // RESET, START and RETRY clear the picks.
+    for (const id of ['reset-yes', 'start', 'retry']) {
+      expect(armed(press(s, id))).toBe(false);
+      expect(press(s, id).repeat).toBe(false);
+    }
     // The screen's key changes with the button, so it redraws once.
-    expect(doseKey(doseScreen(s, null, true))).not.toBe(
-      doseKey(doseScreen(afterDose(s), null, true)),
+    expect(doseKey(doseScreen(press(s, 'size-up'), null, true))).not.toBe(
+      doseKey(doseScreen(afterDose(press(s, 'size-up')), null, true)),
     );
   });
 });

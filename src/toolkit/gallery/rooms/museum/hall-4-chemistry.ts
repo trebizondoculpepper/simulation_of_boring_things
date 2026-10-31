@@ -59,6 +59,7 @@ import type {
 } from '../../../../game/plant/museum-4-challenge';
 import { touchPoint } from '../../../controls/input/touch-point';
 import { createConsoleSounds } from '../../views/console-sounds';
+import { CELEBRATION_SECONDS } from '../../logic/console-celebration';
 import { createDosingConsole } from '../../views/dosing-console';
 import {
   BALANCE_TANK,
@@ -851,7 +852,10 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
           kind: n.kind,
           text: cardWords(game.card, n.kind, game.level),
         };
-        captionLeft = CAPTION_SECONDS;
+        // The explanation waits under the celebration, then shows its full time.
+        captionLeft =
+          CAPTION_SECONDS +
+          (n.kind === 'explanation' ? CELEBRATION_SECONDS.won : 0);
         narrate(
           CARD_NARRATION[game.card.id]?.[
             n.kind === 'briefing' && game.level === 'pro'

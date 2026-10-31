@@ -36,7 +36,8 @@ import {
   toFreePlay,
 } from '../../../game/plant/museum-4-challenge';
 import type { Hall4Game } from '../../../game/plant/museum-4-challenge';
-import { DEMO_STATES, demoView } from '../logic/dosing-console';
+import { CYCLED_STATES, DEMO_STATES, demoView } from '../logic/dosing-console';
+import { CELEBRATION_SECONDS } from '../logic/console-celebration';
 import type { DemoState } from '../logic/dosing-console';
 import { createConsoleSounds } from '../views/console-sounds';
 import { createDosingConsole, CONSOLE } from '../views/dosing-console';
@@ -53,7 +54,8 @@ const CAPTION_SECONDS = 20;
  * new console alone in a plain room, its three Aero touch screens on their
  * stand (DOSE a glossy button on the dose screen), driven by the real challenge engine (free play and the
  * first seven cards, the lab at 1,000×). `?console=free|challenge|holding|won|out`
- * shows the scenario screen in that state instead, `?console=cycle` cycles
+ * shows the scenario screen in that state instead, `?console=celebrate|commiserate`
+ * plays the won or lost celebration over all three screens every few seconds, `?console=cycle` cycles
  * them every four seconds; `?view=screens|scenario|chemical|dose` frames it.
  */
 export function startDosingConsoleRoom(canvas: HTMLCanvasElement) {
@@ -106,7 +108,7 @@ export function startDosingConsoleRoom(canvas: HTMLCanvasElement) {
   let clock = 0;
   const demoState = (): DemoState =>
     demo === 'cycle'
-      ? DEMO_STATES[Math.floor(clock / CYCLE) % DEMO_STATES.length]
+      ? CYCLED_STATES[Math.floor(clock / CYCLE) % CYCLED_STATES.length]
       : (demo ?? 'free');
   let caption: {
     kind: 'briefing' | 'clue' | 'explanation';
@@ -226,6 +228,7 @@ export function startDosingConsoleRoom(canvas: HTMLCanvasElement) {
 
   // ---- Each frame --------------------------------------------------------------------
   let last = 0;
+  let encore = 0.5;
   renderer.setAnimationLoop((time) => {
     if (canvas.parentElement?.hidden) {
       last = 0;
@@ -244,10 +247,23 @@ export function startDosingConsoleRoom(canvas: HTMLCanvasElement) {
           kind: n.kind,
           text: cardWords(game.card, n.kind, game.level),
         };
-        captionLeft = CAPTION_SECONDS;
+        // The explanation waits under the celebration, then shows its full time.
+        captionLeft =
+          CAPTION_SECONDS +
+          (n.kind === 'explanation' ? CELEBRATION_SECONDS.won : 0);
       }
       captionLeft -= delta;
       if (!game.card || captionLeft <= 0) caption = null;
+    }
+    // The celebration demonstrations: again, two seconds after each ends.
+    if (demo === 'celebrate' || demo === 'commiserate') {
+      encore -= delta;
+      if (!desk.celebrating && encore <= 0) {
+        const kind = demo === 'celebrate' ? 'won' : 'lost';
+        desk.celebrate(kind);
+        sounds.play(kind);
+        encore = CELEBRATION_SECONDS[kind] + 2;
+      }
     }
     walk.update(delta);
     desk.update(delta);

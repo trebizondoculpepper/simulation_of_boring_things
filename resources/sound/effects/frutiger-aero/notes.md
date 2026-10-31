@@ -22,8 +22,8 @@ The files are Ogg Vorbis, as Kenney supplies them. Chrome, Firefox and the deskt
 | `dialog-open.ogg`, `dialog-close.ogg`         | `open_001`, `close_001`                  | Any panel or dialog opening or closing; `dialog-close` for RESET's NO.                                                                                  |
 | `in-range-1.ogg` to `in-range-3.ogg`          | `glass_001`, `glass_002`, `glass_004`    | The water comes into range and the hour's hold begins. A glassy ping, rising if the three are played in order as more readings come in.                 |
 | `out-of-range.ogg`                            | `bong_001`                               | A reading drifts out of range and the hold starts again.                                                                                                |
-| `won-1.ogg`, `won-2.ogg`                      | `glass_006`, `maximize_006`              | Challenge won. These are small for the moment; a longer chime from Freesound may suit better (below).                                                   |
-| `lost-1.ogg`, `lost-2.ogg`                    | `pluck_002`, `minimize_001`              | Challenge lost: out of doses with the water still wrong. Soft, so a visitor tries again.                                                                |
+| `won-1.ogg`, `won-2.ogg`                      | `glass_006`, `maximize_006`              | Challenge won. Small; replaced in use by `won-fanfare.ogg` (below).                                                                                     |
+| `lost-1.ogg`, `lost-2.ogg`                    | `pluck_002`, `minimize_001`              | Challenge lost: out of doses with the water still wrong. Soft, so a visitor tries again. Replaced in use by `lost-trombone.ogg` (below).                |
 
 ## Wiring them in
 
@@ -32,3 +32,7 @@ The console already has a sound hook: `ConsoleHost.sound('touch' | 'dose' | 'den
 ## Other candidates
 
 For the bigger moments, where Kenney's sounds are small, there is a shortlist of other CC0 sounds from Freesound (achievement chimes, a vibraphone sting, a pipette dripping into a jar) on the owner's audition page of 2026-10-31. Each file added from there needs its own row in `CREDITS.md`.
+
+## The won and lost sounds
+
+`won-fanfare.ogg` (3.4 s: a rising C major arpeggio of FM bells landing on a shimmering chord, a soft pad and scattered sparkle) and `lost-trombone.ogg` (3.2 s: a sad trombone, G, F sharp, F, then a long E that sags and wobbles, each note's brightness opening and closing like a plunger mute) were synthesised for the console on 2026-10-31 by `scripts/console-fanfares.mjs` rather than taken from the Freesound shortlist; they are original, not Kenney's, and play for won and lost in place of `won-1`/`won-2` and `lost-1`/`lost-2`, which are kept as spares. Rerun the script (it needs ffmpeg) to make them again; it is seeded, so they come out the same.

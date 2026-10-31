@@ -62,6 +62,12 @@ export interface ConsoleState {
    */
   pickedChemical: boolean;
   pickedSize: boolean;
+  /**
+   * Whether the last dose was this chemical at this size: the picks stay
+   * after a dose, and DOSE reads REPEAT DOSE until either is changed (the
+   * owner, 2026-10-31).
+   */
+  repeat: boolean;
 }
 
 export const newConsole = (): ConsoleState => ({
@@ -74,6 +80,7 @@ export const newConsole = (): ConsoleState => ({
   level: 'journeyman',
   pickedChemical: false,
   pickedSize: false,
+  repeat: false,
 });
 
 /**
@@ -83,11 +90,21 @@ export const newConsole = (): ConsoleState => ({
  */
 export const armed = (s: ConsoleState) => s.pickedChemical;
 
-/** The console after a dose was taken: both picks to be made afresh. */
+/**
+ * The console after a dose was taken: its picks kept, so DOSE stays and
+ * reads REPEAT DOSE for one more of the same.
+ */
 export const afterDose = (s: ConsoleState): ConsoleState => ({
+  ...s,
+  repeat: true,
+});
+
+/** The console's picks cleared (RESET, START, RETRY): DOSE waits for a chemical again. */
+export const clearPicks = (s: ConsoleState): ConsoleState => ({
   ...s,
   pickedChemical: false,
   pickedSize: false,
+  repeat: false,
 });
 
 export const chosenTank = (s: ConsoleState): TankId => DOSE_ORDER[s.chemical];
@@ -205,6 +222,8 @@ export interface DoseScreen {
   ready: boolean;
   /** Whether the DOSE button shows (a chemical and a size picked). */
   armed: boolean;
+  /** Whether it reads REPEAT DOSE: the same again as the last dose. */
+  repeat: boolean;
   pressed: string | null;
 }
 
@@ -317,6 +336,21 @@ export function pressConsole(
   id: string,
   cards: number,
 ): { state: ConsoleState; effect?: ConsoleEffect } {
+  const r = pressRaw(s, id, cards);
+  // A change of chemical or size: no longer a repeat.
+  if (
+    r.state.repeat &&
+    (r.state.chemical !== s.chemical || r.state.size !== s.size)
+  )
+    return { ...r, state: { ...r.state, repeat: false } };
+  return r;
+}
+
+function pressRaw(
+  s: ConsoleState,
+  id: string,
+  cards: number,
+): { state: ConsoleState; effect?: ConsoleEffect } {
   const n: ConsoleState = { ...s, pressed: id };
   if (id.startsWith('row-')) {
     const w = listWindow(DOSE_ORDER.length, LIST_ROWS, s.top);
@@ -352,7 +386,7 @@ export function pressConsole(
       return { state: { ...n, level: 'pro' } };
     case 'start':
       return {
-        state: n,
+        state: clearPicks(n),
         effect: { type: 'start', card: s.pick, level: s.level },
       };
     case 'reset':
@@ -361,7 +395,7 @@ export function pressConsole(
       return { state: { ...n, confirmReset: false } };
     case 'reset-yes':
       return {
-        state: afterDose({ ...n, confirmReset: false }),
+        state: clearPicks({ ...n, confirmReset: false }),
         effect: { type: 'reset' },
       };
     case 'abandon':
@@ -370,7 +404,7 @@ export function pressConsole(
     case 'free-play':
       return { state: n, effect: { type: 'continue' } };
     case 'retry':
-      return { state: n, effect: { type: 'retry' } };
+      return { state: clearPicks(n), effect: { type: 'retry' } };
   }
   return { state: s };
 }
@@ -419,6 +453,7 @@ export function doseScreen(
     left,
     ready,
     armed: armed(s),
+    repeat: s.repeat,
     pressed:
       s.pressed?.startsWith('size-') || s.pressed === 'dose' ? s.pressed : null,
   };
@@ -475,11 +510,18 @@ export const DEMO_STATES = [
   'holding',
   'won',
   'out',
+  // The won and out screens with their celebration and commiseration playing over them, again and again.
+  'celebrate',
+  'commiserate',
 ] as const;
 export type DemoState = (typeof DEMO_STATES)[number];
+/** The states `?console=cycle` steps through. */
+export const CYCLED_STATES: readonly DemoState[] = DEMO_STATES.slice(0, 5);
 
 /** A demonstration state's scenario view, from the first card. */
-export function demoView(state: DemoState, heldSeconds = 2520): ScenarioView {
+export function demoView(asked: DemoState, heldSeconds = 2520): ScenarioView {
+  const state =
+    asked === 'celebrate' ? 'won' : asked === 'commiserate' ? 'out' : asked;
   if (state === 'free') return { kind: 'free', swimmers: 20 };
   const c = CHALLENGES[0];
   return {
