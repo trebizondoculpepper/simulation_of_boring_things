@@ -78,9 +78,10 @@ const BAR_SEGMENTS = 10;
  * with its own REMOTE · MANUAL · OFF selector; the scenario board and the
  * time-speed knob on the right wall. Everything it runs is behind one host
  * (`aqualis-room.ts`); `?view=room|cabinet|screen|units|board|boots`
- * frames it. The cabinet's computer boots as the room loads (`&boot=skip`
- * starts it running, `&boot=20` 20 s into its boot), when its supply (the switch beside the time-speed
- * knob) comes back, and at Restart on its Settings › Pool dynamics tab; a
+ * frames it. The cabinet's computer is on and running as the room loads
+ * (`&boot=on` boots it instead, `&boot=20` 20 s into its boot); it boots
+ * when its supply (the switch beside the time-speed knob, or its own
+ * power switch) comes back, and at Restart on its Settings › Pool dynamics tab; a
  * board on the right wall shows the game's other boot families, each with
  * its own Restart. The crash board, left of the scenario board, crashes the
  * computer (BLUE SCREEN, GLITCH; `&crash=stop|glitch` crashes it two
@@ -111,7 +112,10 @@ export function startAqualisControllerRoom(canvas: HTMLCanvasElement) {
   const host: AqualisRoomHost = createAqualisRoomHost(
     (params.get('scenario') as never) ?? 'good',
     {
-      boot: params.get('boot') !== 'skip',
+      // On and running from the start (the owner, 2026-10-31); it boots
+      // after a power cycle or a Restart, or at load with `&boot=on` (or
+      // `&boot=<seconds>` to start part-way through its boot).
+      boot: params.get('boot') === 'on' || Number(params.get('boot')) > 0,
       bootAt: Number(params.get('boot')) || 0,
       crash:
         params.get('crash') === 'stop' || params.get('crash') === 'glitch'

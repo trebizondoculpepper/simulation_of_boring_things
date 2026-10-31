@@ -54,7 +54,9 @@ export function drawAqualisScreen(
   hooks: ScreenHooks = {},
 ) {
   drawAeroBackground(ctx, { x: 0, y: 0, w: SCREEN.w, h: SCREEN.h }, 114);
-  drawTitleBar(ctx, LAYOUT.title, 'Dr Aqualis Trio', {
+  // Just the maker's name, leaving the strip to the page tabs (the owner,
+  // 2026-10-31).
+  drawTitleBar(ctx, LAYOUT.title, 'Aqualis', {
     mark: (c, x, y, r) => drawDroplet(c, x, y, r),
   });
   for (const t of tabRects())
