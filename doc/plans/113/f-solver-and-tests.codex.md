@@ -1,0 +1,15 @@
+**The main risk is that the solver may prove less than the plan claims.**
+
+- **“Fewest doses” means fewest under one schedule.** The search fixes 20 lab minutes between doses. Chemistry changes during that wait: the bench applies bather load, fresh water and reactions on each step ([chemistry-bench.ts](/Users/salimfadhley/workspace/simulation_of_boring_things/src/game/water/chemistry-bench.ts:288)). A visitor can dose sooner or later, so the solver cannot establish a global minimum. Call it the best route under the authoring schedule, or search several timings.
+
+- **The proposed pruning is unsafe.** Two smaller doses of the same chemical separated by 20 minutes need not equal one larger dose: the first has already reacted before the second arrives. Fresh water also drains and refills by mixing, so its sequence matters ([museum-4-lab.ts](/Users/salimfadhley/workspace/simulation_of_boring_things/src/game/plant/museum-4-lab.ts:1116)). Prune only states shown equivalent at the same time, or retain both routes.
+
+- **The runtime estimate needs measurement before committing to breadth-first search.** Depths 1–3 contain **127,550** sequences before pruning, rather than 125,000. At the claimed 7 ms per sequence, that is about **15 minutes per card per level**. The existing `runHall4` default advances in half-second slices ([museum-4-lab.ts](/Users/salimfadhley/workspace/simulation_of_boring_things/src/game/plant/museum-4-lab.ts:1166)); benchmark the _new engine’s full replay_, then cache shared prefixes or use a bounded search if necessary.
+
+- **The fuzz test describes doses visitors cannot choose.** The proposed console offers five fixed sizes, while ±10% scaling creates arbitrary amounts. Such a test can check chemistry margin through a lower-level dosing hook, but it does not validate playable routes. Also test neighbouring selectable sizes and variation in starting water or dose timing.
+
+- **A replay that shares code with the solver can share its mistake.** Add an independent assertion against the game’s public outcome, par counter and hold duration. Existing lab wins depend on continuous in-band time, checked during chemistry steps ([museum-4-lab.ts](/Users/salimfadhley/workspace/simulation_of_boring_things/src/game/plant/museum-4-lab.ts:1095)); checking only final readings would miss a broken hold or premature win.
+
+- **The card-selection rule is stronger than the “two routes” test.** Selection requires a _shorter_ Journeyman route, but the test permits equal dose counts when Journeyman uses fewer distinct chemicals. Assert the intended dose-count difference, and first verify that enough of the six named scenarios have such a route within depth three.
+
+- **Resolve the band mismatch before storing solutions.** The existing meter green ranges include pH 7.0–7.4, hardness 80–200 and combined chlorine up to 0.5 ([museum-4-lab.ts](/Users/salimfadhley/workspace/simulation_of_boring_things/src/game/plant/museum-4-lab.ts:1183)); mission 113 proposes different bands. A winning card could leave a meter visibly outside green. Decide whether the displays or challenge rules change, then solve against that single definition.

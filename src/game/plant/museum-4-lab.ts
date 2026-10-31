@@ -970,6 +970,8 @@ export type Hall4Action =
   | { type: 'select'; tank: TankId }
   | { type: 'wheel'; digit: 0 | 1 | 2 | 3; by: number }
   | { type: 'dose' }
+  /** The console's DOSE (mission 113): `amount` of `tank` in at once, no metering. */
+  | { type: 'dose-now'; tank: TankId; amount: number }
   | { type: 'cancel' }
   | { type: 'swimmers'; swimmers: Swimmers }
   | { type: 'group' }
@@ -1000,6 +1002,29 @@ export function actOnHall4(s: Hall4State, a: Hall4Action): Hall4State {
       );
       return print(
         { ...s, delivering: { tank: t.id, amount, left: DOSE_SECONDS } },
+        `DOSE ${t.code} ${t.short} ${amount.toFixed(1)} ${t.unit}`,
+      );
+    }
+    case 'dose-now': {
+      const t = tankById(a.tank);
+      const amount = Math.max(0, a.amount);
+      let n: Hall4State = {
+        ...s,
+        delivering: null,
+        used: { ...s.used, [t.id]: s.used[t.id] + amount },
+      };
+      n = t.addition
+        ? {
+            ...n,
+            bench: handDose(
+              n.bench,
+              { [t.addition]: amount * t.perUnit },
+              'pool',
+            ),
+          }
+        : refill(n, amount);
+      return print(
+        { ...n, due: CHEMISTRY_STEP },
         `DOSE ${t.code} ${t.short} ${amount.toFixed(1)} ${t.unit}`,
       );
     }

@@ -1,0 +1,9 @@
+**The clue and win criteria need two decisions before implementation:**
+
+- **The clue may arrive too late.** One lab hour is 3.6 real seconds at 1,000×, and the engine can fail a card after its final dose in about 7.2 real seconds. A clue at 60 seconds will mainly reach someone who has stopped dosing. Trigger it from a useful sign of difficulty, such as a failed attempt, a stalled hold, or time spent considering the next dose. ([challenge engine](/Users/salimfadhley/workspace/simulation_of_boring_things/src/game/plant/museum-4-challenge.ts:216))
+
+- **Narration needs a playback contract.** Specify whether briefing, clue, and explanation queue or interrupt one another, when captions disappear, and what happens if the eight-second automatic return to free play occurs while the explanation is playing. A single `narration: { kind, at }` field also needs a clear consumed or acknowledged rule so the host neither misses nor repeats an event. ([engine plan](/Users/salimfadhley/workspace/simulation_of_boring_things/doc/plans/113/e-challenge-engine.md:49))
+
+- **“Best reachable” is too strong for the proposed search.** The solver fixes dose timing and searches chemicals once each in tank order. Failure to find a win under those limits does not establish that the card needs relaxed bands. Report the search limits, try retuning first, and require a replayed winning route for every accepted relaxation. ([solver plan](/Users/salimfadhley/workspace/simulation_of_boring_things/doc/plans/113/f-solver-and-tests.md:25))
+
+- **Define the relaxation boundary.** “Within what a real pool could accept” and “never lets a wrong answer win” need explicit per-reading limits and a testable rule for wrong answers. Otherwise a card-specific band can quietly make an unsafe or unintended result count as a win. ([engine plan](/Users/salimfadhley/workspace/simulation_of_boring_things/doc/plans/113/e-challenge-engine.md:51))

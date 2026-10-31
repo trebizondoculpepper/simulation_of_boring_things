@@ -1,0 +1,125 @@
+import { describe, expect, it } from 'vite-plus/test';
+import { CHALLENGES } from './museum-4-cards';
+import {
+  CLUE_AFTER,
+  FREE_SWIMMERS,
+  HOLD,
+  MAX_REAL_STEP,
+  SETTLE,
+  SPEED,
+  WON_SHOWN,
+  canDose,
+  doseGame,
+  labClock,
+  newGame,
+  resetGame,
+  scenarioView,
+  startCard,
+  stepGame,
+  stepLab,
+} from './museum-4-challenge';
+import type { Hall4Game } from './museum-4-challenge';
+
+const card = CHALLENGES[0];
+const realFor = (g: Hall4Game, seconds: number) => {
+  let n = g;
+  for (let t = 0; t < seconds - 1e-9; t += MAX_REAL_STEP)
+    n = stepGame(n, Math.min(MAX_REAL_STEP, seconds - t));
+  return n;
+};
+
+describe("Hall 4's challenge engine", () => {
+  it('starts in free play with twenty swimmers, no limit and no win', () => {
+    let g = newGame();
+    expect(scenarioView(g)).toEqual({ kind: 'free', swimmers: FREE_SWIMMERS });
+    expect(g.lab.bench.plant.batherFactor).toBe(1);
+    for (let i = 0; i < 12; i++) g = doseGame(g, 'fresh', 0);
+    expect(g.used).toBe(12);
+    expect(canDose(g)).toBe(true);
+    g = stepLab(g, 2 * HOLD);
+    expect(g.outcome).toBe('playing');
+  });
+
+  it('runs at a fixed 1,000×, a long frame clamped', () => {
+    const g = newGame();
+    expect(stepGame(g, 0.05).lab.seconds).toBeCloseTo(0.05 * SPEED);
+    expect(stepGame(g, 5).lab.seconds).toBeCloseTo(MAX_REAL_STEP * SPEED);
+  });
+
+  it('loads a card’s water and swimmers and briefs the visitor', () => {
+    const g = startCard(newGame(), card, 'pro');
+    expect(g.lab.bench.pool.ph).toBeCloseTo(card.water().ph);
+    expect(g.lab.bench.plant.batherFactor).toBe(card.swimmers / FREE_SWIMMERS);
+    expect(g.narration?.kind).toBe('briefing');
+    const v = scenarioView(g);
+    expect(v.kind).toBe('challenge');
+    if (v.kind !== 'free') {
+      expect(v.par).toBe(card.pars.pro);
+      expect(v.used).toBe(0);
+      expect(v.out.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('refuses DOSE at par, and fails once the water has had its time', () => {
+    let g = startCard(newGame(), card, 'journeyman');
+    for (let i = 0; i < card.pars.journeyman; i++) g = doseGame(g, 'fresh', 0);
+    expect(canDose(g)).toBe(false);
+    expect(doseGame(g, 'hcl', 2)).toBe(g);
+    g = stepLab(g, SETTLE + 60);
+    expect(g.outcome).toBe('failed');
+    expect(scenarioView(g).kind).toBe('failed');
+  });
+
+  it('wins on an hour held, explains, then returns to free play', () => {
+    let g = startCard(newGame(), card, 'journeyman');
+    g = doseGame(
+      g,
+      card.solutions.journeyman[0].tank,
+      card.solutions.journeyman[0].size,
+    );
+    g = stepLab(g, 600);
+    const held = g.heldSince;
+    expect(held).not.toBeNull();
+    g = stepLab(g, HOLD);
+    expect(g.outcome).toBe('won');
+    expect(g.narration?.kind).toBe('explanation');
+    expect(canDose(g)).toBe(false);
+    g = realFor(g, WON_SHOWN + 0.2);
+    expect(scenarioView(g).kind).toBe('free');
+  });
+
+  it('restarts the hold when a reading drifts out', () => {
+    let g = startCard(newGame(), card, 'journeyman');
+    g = doseGame(g, 'hcl', 2);
+    g = stepLab(g, 600);
+    expect(g.heldSince).not.toBeNull();
+    g = doseGame(g, 'sodaAsh', 4);
+    g = stepLab(g, 60);
+    expect(g.heldSince).toBeNull();
+  });
+
+  it('gives its clue once after a real minute without a win', () => {
+    let g = startCard(newGame(), card, 'pro');
+    g = realFor(g, CLUE_AFTER - 1);
+    expect(g.narration?.kind).toBe('briefing');
+    g = realFor(g, 1.2);
+    expect(g.narration?.kind).toBe('clue');
+    const seq = g.narration!.seq;
+    g = realFor(g, CLUE_AFTER);
+    expect(g.narration!.seq).toBe(seq);
+    // A new attempt starts the minute again.
+    g = startCard(g, card, 'pro');
+    expect(g.clueGiven).toBe(false);
+  });
+
+  it('resets to free play from the reset water', () => {
+    const g = resetGame(doseGame(startCard(newGame(), card, 'pro'), 'hcl', 4));
+    expect(g.card).toBeNull();
+    expect(g.lab.bench.pool.ph).toBeCloseTo(7.4, 1);
+  });
+
+  it('writes lab time as hours and minutes', () => {
+    expect(labClock(42 * 60)).toBe('0:42');
+    expect(labClock(3600)).toBe('1:00');
+  });
+});
