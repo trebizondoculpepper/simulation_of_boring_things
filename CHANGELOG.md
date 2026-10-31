@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Changed
 
+- The engineer's software boxes redrawn as period products, designed with Codex: Macrosoft Pool Simulator 97 a floodlit, chrome-lettered mid-90s simulation; Chlorine Quest II a painted adventure with a dungareed poolman hero and its own lettering; Lido Tycoon and DEEP END bright and over-promising; the business boxes tidied.
 - The console logs every valve opening and closing, with its tag and who or what did it (you, the console, AUTO and its controller, a spring return); a slowly moving valve logs its command, its start and its arrival, not every frame. Events now come from a list of sources, ready for pumps and alarms.
 - The loading bay's fire exit sign is fixed to its door's leaf, swinging with it, instead of floating in the doorway when the door is open.
 - The crosshair's carrying cues (mission 116): a lift arrow over what can be picked up; while carrying, put down, put back in its place, into a bin or carton, or fit into a socket, red with a × where the place refuses; the help line names what is carried. The click and the cue come from one resolver, so they cannot disagree; carrying no longer raycasts every frame; dev4's live card sparks only when actually pulled.
