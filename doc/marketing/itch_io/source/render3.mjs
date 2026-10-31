@@ -1,3 +1,4 @@
+import process from 'node:process';
 import { chromium } from 'playwright-core';
 const D = process.argv[2];
 const b = await chromium.launch({ headless: true, channel: 'chrome' });
