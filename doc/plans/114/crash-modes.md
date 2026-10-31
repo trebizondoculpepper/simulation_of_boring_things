@@ -2,6 +2,14 @@
 
 The owner, 2026-10-31: one of the game's failure modes is the Trio's operating system crashing. It runs on a Vista-like embedded OS (the boot sequences' `gui` family) because that OS was notoriously unreliable. When it crashes, the controller goes offline and its dosing outputs lock: on, or off, either is possible. The screen shows the crash: a blue screen of death, or a total glitch, the LCD full of binary gibberish as though a buffer overflow were writing into the display's registers. This plan sets out how; nothing is built yet.
 
+## The owner's rulings (2026-10-31)
+
+- **It never crashes on its own.** Crashing belongs to a game mode of scenarios in which specific things go wrong, designed later; a scenario makes it crash. There is no uptime hazard, so the "How often" section below is superseded.
+- **Two failure modes in dev58**, each forced from its crash board:
+  - **Blue screen**: the stop screen; the outputs **hold** whatever they were sending when it crashed. Bad, but predictable.
+  - **Glitch**: the buffer-overflow screen; the outputs go **random**, each channel's signal jumping to new values as the glitch's bursts come, so pumps lurch between stopped and flat out. Much the worse.
+- The freeze and the reboot loop, and the off, full and mixed behaviours below, stay ideas on file for later scenarios.
+
 ## What crashes, and what the plant sees
 
 The cabinet's computer has four states: off, booting (the boot sequence), running, and crashed. Crashed has a kind and an output behaviour, chosen when it crashes (seeded, so a given crash replays the same).
@@ -29,7 +37,7 @@ The cabinet's watchdog relay should drop the release contacts when the computer 
 - **Restarting:** the cabinet's power isolator, off and on, then the long boot. There is no software reset: the touch screen is dead.
 - **Afterwards:** the parody "did not shut down successfully" screen, Dr Aqualis's apology ("Terribly sorry: I seem to have had a funny turn."), and his advice for the water the crash left.
 
-## How often
+## How often (superseded: see the owner's rulings)
 
 A failure mode, not a constant nuisance. Proposed: a hazard that grows with uptime (a memory leak, the joke being that it needs restarting every few days), set so a cabinet left alone crashes about once every few game days; scenarios and dev58 can force one. Uptime is reset by any restart, so a careful operator who reboots it on the weekly schedule rarely sees it. The rates are for the owner to set.
 
