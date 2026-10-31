@@ -11,6 +11,29 @@ The owner, 2026-10-31: one of the game's failure modes is the Trio's operating s
 - **The watchdog is the trigger's choice** (a heartbeat monitor that does not always work): each forced crash, blue screen or glitch, is triggered with the watchdog either working (it drops the release contacts, so nothing doses, and lights CONTROLLER FAULT on the annunciator) or not (the outputs hold or go random, and the annunciator says nothing). dev58's crash board has a WATCHDOG WORKS / FAILS switch beside its two crash buttons; scenarios set it as they need.
 - The freeze and the reboot loop, and the off, full and mixed behaviours below, stay ideas on file for later scenarios.
 
+## Fault finding: a trail of clues, and restarting is not the end
+
+The owner, 2026-10-31: part of the game is the joy of fault finding in a complex but rational system. A crash is built as a trail the player can follow, each clue leading to the next, and putting the controller right is only half the job: the damage its failure did must be put right too.
+
+**The trail in** (each step real, each pointing at the next):
+
+1. The first sign is the water: a chlorine or pH window on the annunciator, a poolside reading, a chart recorder's trace running away. Or, if the watchdog worked, CONTROLLER FAULT straight away.
+2. The annunciator's window names the system (the dosing, for that pool), which leads to its plant room.
+3. In the plant room the pumps' own displays show something wrong: dosing flat out, stuck at one rate while the water is far off, or lurching (the glitch). Their state points back at whatever drives them.
+4. The Trio's screen gives itself away: a blue screen, the glitch, or (in a later scenario) a frozen Dr Aqualis whose blink never ends. The obvious status says "restart me": the touch screen is dead, so the isolator it is.
+
+**Making it safe before the restart:** a careful player first puts the pumps to OFF or MANUAL at their own selectors (and isolates the CO₂), so a held or random output does no more harm while the cabinet reboots for its 30–45 s.
+
+**What the restart does not fix** (the aftermath, each a fault of its own to find):
+
+- **The water itself.** Chlorine overdosed while an output was held or random wants dechlorinating (sodium thiosulphate) or diluting, and the pool may have to close until it is safe; pH driven low by acid wants soda ash; alkalinity eaten by the acid wants bicarbonate; or, if the outputs were off, chlorine run down under the bathers' load. Dr Aqualis, once he is back, diagnoses what the crash left, and these are mostly hand doses.
+- **The pumps left as the player left them.** Any pump turned to OFF or MANUAL to make it safe stays there until someone turns it back to REMOTE; the Trio's pump status shows it OFFLINE (manual), and Dr Aqualis says so. A player who forgets has a second, quieter fault.
+- **Faults the failure caused downstream.** A pump driven flat out for long may have run its day tank low or dry, gas-locked, or tripped; the transfer system then has a tank to refill.
+- **The annunciator's latched windows** wait to be acknowledged and reset, and stay lit while their cause (the water) is still out.
+- **What the crash did to the controller (proposals, for later scenarios):** its settings reverting to factory defaults after a bad shutdown, so its pool dynamics are wrong and it mis-doses until someone re-enters the volume and filtration rate (Settings › Pool dynamics); its chlorine integral wound up or lost, so it overshoots for a while after it comes back.
+
+The scenarios that use the crash pick from these, so each one is a short chain of faults, found one from another, rather than one switch to flip.
+
 ## What crashes, and what the plant sees
 
 The cabinet's computer has four states: off, booting (the boot sequence), running, and crashed. Crashed has a kind and an output behaviour, chosen when it crashes (seeded, so a given crash replays the same).
