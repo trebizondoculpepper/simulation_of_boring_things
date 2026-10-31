@@ -41,6 +41,7 @@ import {
   HALL_TITLE,
   MUSEUM_ARCH,
   MUSEUM_EXHIBITS,
+  hallNumber,
   MUSEUM_HALL0,
   MUSEUM_SQUARE,
   MUSEUM_WALL,
@@ -75,7 +76,12 @@ import type {
   MuseumWindow,
 } from '../logic/museum-plan';
 import { MUSEUM_EXHIBITION as BRAND } from '../logic/museum-brand';
-import { CORRIDOR, CORRIDOR_WINDOW } from '../logic/museum-layout';
+import {
+  CORRIDOR,
+  CORRIDOR_WINDOW,
+  LAYOUT_CORRIDORS,
+} from '../logic/museum-layout';
+import { createCorridorDecals } from './museum-corridor-decals';
 import { createPendantLamps } from '../../components/architectural/views/pendant-lamps';
 
 /** A corridor's hanging sign: its width (within the corridor), height, middle's height (just below the arch's crown) and distance in from the archway. */
@@ -1777,6 +1783,17 @@ export function createMuseumHall(
       light.position.set(p.x, p.y - 0.2, p.z);
       run.add(light);
     }
+    // Its artwork (the owner, 2026-10-31): framed pictures and vinyls.
+    const k = LAYOUT_CORRIDORS.length;
+    const own = hallNumber(id);
+    run.add(
+      createCorridorDecals(
+        c,
+        c.onward ? own : (own - 1 + k) % k,
+        textures,
+        disposables,
+      ),
+    );
     group.add(run);
   }
 

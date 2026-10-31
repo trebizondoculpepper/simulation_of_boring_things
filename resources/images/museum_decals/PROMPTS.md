@@ -1,6 +1,6 @@
 # Museum corridor decals: brief and prompts
 
-Decorative decals for the ten corridors that join the museum's halls round the ring (`LAYOUT_CORRIDORS` in `src/toolkit/gallery/logic/museum-layout.ts`; corridor _n_ joins Hall _n_ to Hall _n_+1, and the tenth joins Hall 9 back to Hall 0). Two per corridor, the last corridor's second split into four. They are designed only: none is placed in the game yet (see `TODO.md`).
+Decorative decals for the ten corridors that join the museum's halls round the ring (`LAYOUT_CORRIDORS` in `src/toolkit/gallery/logic/museum-layout.ts`; corridor _n_ joins Hall _n_ to Hall _n_+1, and the tenth joins Hall 9 back to Hall 0). Two per corridor, the last corridor's second split into four. They hang in the game (2026-10-31): placed by `src/toolkit/gallery/logic/museum-corridor-decals.ts`, drawn by `src/toolkit/gallery/views/museum-corridor-decals.ts`, from the game copies in `game/` (WebP; the cut-outs at most 1024 px, the framed pictures and posters at their full 1536 px), made from these PNGs with ImageMagick (`magick <png> -resize '1024x1024>' -quality 85 game/<name>.webp`).
 
 ## The owner's brief (2026-10-31)
 
