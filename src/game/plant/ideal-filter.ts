@@ -654,7 +654,8 @@ export const commandProcess = (
  * What the sight glass shows of the bed (`sight-glass.ts`), from the model
  * itself: its dirt as the crust, its fissuring as the channelled surface,
  * the waste water's dirt as the murk in a backwash, and in a rinse the
- * fines it is settling.
+ * fines it is settling; and, where sand loss is on, its bed's surface
+ * as low as the sand it has lost.
  */
 export function idealGlass(rig: FilterRig, flows: RigFlows): GlassInputs {
   const z = bedSizing(rig.spec, rig.filter);
@@ -669,5 +670,7 @@ export function idealGlass(rig: FilterRig, flows: RigFlows): GlassInputs {
         : mode === 'rinse'
           ? Math.min(1, rig.filter.unsettled * 0.6)
           : 0,
+    // Its sand, where sand loss is on: a bed short of it shows lower.
+    sand: rig.filter.sand,
   };
 }

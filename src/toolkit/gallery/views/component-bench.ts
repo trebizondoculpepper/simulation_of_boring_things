@@ -1,3 +1,7 @@
+import {
+  rescanDisplays,
+  signsFading,
+} from '../../components/core/views/display-reach';
 import { CHALLENGES } from '../../../game/plant/museum-4-cards';
 import {
   canDose,
@@ -769,8 +773,13 @@ export async function runComponentBench(root: HTMLElement) {
         camera.updateProjectionMatrix();
         camera.lookAt(middle);
         const update = built.update?.bind(built);
+        // Its signs found at the first render, not up to a second on.
+        rescanDisplays(scene);
         // Warm: its first uploads and shader compiles, the world running.
         await phase(update, 0.3);
+        // And its signs settled on the step this camera sees them at:
+        // their fades, begun by its framing, are not idle uploads.
+        for (let k = 0; k < 10 && signsFading(); k++) await phase(update, 0.2);
         renderer.info.autoReset = true;
         renderer.render(scene, camera);
         sample.drawCalls = renderer.info.render.calls;

@@ -237,19 +237,28 @@ export function buildRoomServices(kit: PanelKit): LiveExhibit {
   };
 }
 
-/** The states the board shows, the backwash one cycling through a whole backwash. */
+/**
+ * The states the board shows (the owner, 2026-10-31: clean, half loaded,
+ * very dirty, pitted, backwashing, and the rest), the backwash one
+ * cycling through a whole backwash.
+ */
 const BOARD: { label: string; inputs: (t: number) => GlassInputs }[] = [
   {
     label: 'CLEAN',
     inputs: () => ({ mode: 'service', dirt: 0, channelling: 0, murk: 0 }),
   },
   {
-    label: 'DIRTY',
-    inputs: () => ({ mode: 'service', dirt: 1.8, channelling: 0, murk: 0 }),
+    label: 'HALF LOADED',
+    inputs: () => ({ mode: 'service', dirt: 1, channelling: 0, murk: 0 }),
   },
   {
-    label: 'CHANNELLED',
-    inputs: () => ({ mode: 'service', dirt: 1.8, channelling: 1, murk: 0 }),
+    label: 'VERY DIRTY',
+    inputs: () => ({ mode: 'service', dirt: 2.4, channelling: 0, murk: 0 }),
+  },
+  {
+    // Fissured past where its condition calls it pitted (0.2).
+    label: 'PITTED',
+    inputs: () => ({ mode: 'service', dirt: 1.6, channelling: 1, murk: 0 }),
   },
   {
     // 3 s stopped, then a 30 s backwash clearing as it goes, round again.
@@ -271,32 +280,56 @@ const BOARD: { label: string; inputs: (t: number) => GlassInputs }[] = [
     // Clear by now: only a backwash clouds the glass (the owner, 2026-10-23).
     inputs: () => ({ mode: 'rinse', dirt: 0, channelling: 0, murk: 0 }),
   },
+  {
+    // A tenth of its sand washed away by too fierce a backwash.
+    label: 'SAND LOST',
+    inputs: () => ({
+      mode: 'service',
+      dirt: 0.3,
+      channelling: 0,
+      murk: 0,
+      sand: 0.88,
+    }),
+  },
+  {
+    label: 'DRAINED DOWN',
+    inputs: () => ({
+      mode: 'stopped',
+      dirt: 0.6,
+      channelling: 0,
+      murk: 0,
+      water: 0.2,
+    }),
+  },
 ];
 
 function sightGlassBoard(kit: PanelKit) {
   const t = tools(kit);
   const group = new Group();
   group.name = 'Sight glass states';
-  t.box(group, t.paint('#9aa0a2', 0.5, 0.4), 0.05, 1.6, 0.05, -0.9, 0.8, 0);
-  t.box(group, t.paint('#9aa0a2', 0.5, 0.4), 0.05, 1.6, 0.05, 0.9, 0.8, 0);
-  t.box(group, t.paint('#e8e8e2', 0.7), 2.0, 0.55, 0.03, 0, 1.55, 0);
+  t.box(group, t.paint('#9aa0a2', 0.5, 0.4), 0.05, 2.05, 0.05, -0.9, 1.025, 0);
+  t.box(group, t.paint('#9aa0a2', 0.5, 0.4), 0.05, 2.05, 0.05, 0.9, 1.025, 0);
+  t.box(group, t.paint('#e8e8e2', 0.7), 2.0, 1.05, 0.03, 0, 1.47, 0);
   const title = createMicroLabel(kit, 'SIGHT GLASS: WHAT YOU SEE', {
     height: 0.035,
     ink: '#1d2326',
     maxWidth: 1.6,
   });
-  title.position.set(0, 1.76, 0.02);
+  title.position.set(0, 1.93, 0.02);
   group.add(title);
   const glasses = BOARD.map((b, k) => {
+    // Two rows of four.
+    const x = -0.6 + (k % 4) * 0.4;
+    const y = k < 4 ? 1.66 : 1.18;
     const g = createSightGlass(kit, { radius: 0.15, seed: 11 + k });
-    g.group.position.set(-0.76 + k * 0.38, 1.52, 0.02);
+    g.group.position.set(x, y, 0.02);
     group.add(g.group);
     const label = createMicroLabel(kit, b.label, {
       height: 0.025,
       ink: '#1d2326',
       maxWidth: 0.34,
     });
-    label.position.set(-0.76 + k * 0.38, 1.33, 0.02);
+    label.position.set(x, y - 0.19, 0.02);
     group.add(label);
     return g;
   });

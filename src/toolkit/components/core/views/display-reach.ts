@@ -391,8 +391,26 @@ function stageOf(sign: Sign, step: number) {
  */
 export const SIGN_FADE = 1200;
 
+/** The signs fading from one step to another now, and when each began, ms. */
+const fading = new Map<Sign, number>();
+
+/**
+ * Whether any sign is fading from one step to another: the component
+ * benchmark waits for its component's signs to settle on the step its
+ * camera sees them at before it measures it idle, so a fade begun by its
+ * framing is not counted as uploads with nothing changing. A fade no
+ * longer stepped (its sign gone from the scenes watched) is forgotten
+ * once it would have finished.
+ */
+export function signsFading(now = performance.now()) {
+  for (const [sign, since] of fading)
+    if (now - since > SIGN_FADE + 2 * CHECK) fading.delete(sign);
+  return fading.size > 0;
+}
+
 function setStep(sign: Sign, step: number, now: number) {
   if (sign.step === step) return;
+  fading.set(sign, now);
   // Fading from whatever is shown now, part-way through a fade or not.
   sign.fade = {
     from: (sign.texture.image as HTMLCanvasElement) ?? stageOf(sign, sign.step),
@@ -418,6 +436,7 @@ function stepFade(sign: Sign, now: number) {
   const k = Math.min(1, (now - fade.since) / SIGN_FADE);
   if (k >= 1) {
     sign.fade = null;
+    fading.delete(sign);
     sign.texture.image = to;
   } else {
     if (!sign.blend) {
@@ -443,6 +462,19 @@ interface SceneWatch {
   checked: number;
 }
 const scenes = new WeakMap<Scene, SceneWatch>();
+
+/**
+ * Look over a scene's displays and signs again at its next render, not up
+ * to a second later: for the component benchmark, which builds a
+ * component into its scene and wants its signs on their steps at once.
+ */
+export function rescanDisplays(scene: Scene) {
+  const s = scenes.get(scene);
+  if (s) {
+    s.scanned = -SCAN;
+    s.checked = -CHECK;
+  }
+}
 const eye = new Vector3();
 const at = new Vector3();
 
