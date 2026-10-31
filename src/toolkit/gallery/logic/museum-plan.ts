@@ -760,6 +760,20 @@ export function wallWindows(id: MuseumHallId, wall: HallWall): MuseumWindow[] {
     }
     return out;
   }
+  // Hall 9 (the owner, 2026-10-31: "would benefit from some more
+  // windows"): as many as its wall takes, evenly from the middle.
+  if (id === FINALE) {
+    const n = Math.floor((hi - lo + WINDOW.every - WINDOW.w) / WINDOW.every);
+    for (let k = 0; k < n; k++)
+      out.push({
+        u: mid + (k - (n - 1) / 2) * WINDOW.every,
+        w: WINDOW.w,
+        sill,
+        head,
+        kind,
+      });
+    return out;
+  }
   for (let k = Math.ceil((lo + half - 2) / WINDOW.every); ; k++) {
     const u = k * WINDOW.every + 2;
     if (u + half > hi) break;
