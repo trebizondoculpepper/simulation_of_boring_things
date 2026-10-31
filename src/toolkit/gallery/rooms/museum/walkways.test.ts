@@ -19,6 +19,7 @@ const DONE: readonly MuseumHallId[] = [
   'museum3',
   'museum4',
   'museum6',
+  'museum9',
 ];
 
 beforeEach(stubDocument);

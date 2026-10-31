@@ -1371,7 +1371,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   });
   footprint(PEDESTAL.x, PEDESTAL.z, 0.3);
 
-  // ---- The entrance panel and RESET, by the way in from Hall 8 ----
+  // ---- The entrance panel and RESET, on the east wall between its two
+  // archways (layout C), by the way in from Hall 8 ----
   const entrance = createWallPanel(
     kit,
     'Entrance panel',
@@ -1379,7 +1380,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     1.5,
     paintEntrance(hall9Entrance(), 'Hall 9 · The whole plant'),
   );
-  turnTo(entrance, E - 0.04, 1.65, 3.4, FACE_WEST);
+  turnTo(entrance, E - 0.04, 1.65, -0.6, FACE_WEST);
   object.add(still(entrance));
   const resetSign = createWallPanel(
     kit,
@@ -1388,17 +1389,17 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     0.56,
     paintResetSign(RESET_SIGN),
   );
-  turnTo(resetSign, E - 0.04, 1.75, 5.4, FACE_WEST);
+  turnTo(resetSign, E - 0.04, 1.75, 1.2, FACE_WEST);
   object.add(still(resetSign));
   const resetButton = createResetPedestal(kit, {
     reset: () => reset(localNow()),
     lit: () => sinceReset < 2.5,
   });
-  turnTo(resetButton.group, E - 0.5, 0, 5.4, FACE_WEST);
+  turnTo(resetButton.group, E - 0.5, 0, 1.2, FACE_WEST);
   object.add(resetButton.group);
   take(resetButton.parts);
   updates.push(resetButton.update);
-  footprint(E - 0.5, 5.4, 0.25);
+  footprint(E - 0.5, 1.2, 0.25);
 
   // ---- The placards ----
   const LECTERNS: Record<number, [number, number, number]> = {

@@ -93,6 +93,12 @@ export const PLANT_EDGE = NORTH + 4.2;
 export const CHEM_EDGE = SOUTH - 1.6;
 /** Pipes may cross the visitors' floor only above this. */
 export const OVERHEAD = 3.0;
+/**
+ * Kept clear at the hall's east end (layout C, 112): both archways are in
+ * its east end wall, so the pool, and the chemistry along the south wall,
+ * stand back from it, the visitor's floor free in front of both.
+ */
+export const EAST_CLEAR = 2.0;
 /** Where the chemistry's tubes and the sample line may cross the hall, overhead (the owner, 2026-10-28: no pipes hanging out over the room). */
 export const CROSSING = { minX: 2.0, maxX: 7.6 } as const;
 /** The desk's place in the south-west corner, its front (+z of its frame) north, toward the visitor. */
@@ -141,7 +147,7 @@ export const PLACES: Record<MachineId, MachinePlace> = {
   sampleTee: { x: W + 18.3, z: NORTH + 0.4, yaw: 0, y: MAIN_Y },
   hypoInjection: { x: W + 18.9, z: NORTH + 0.4, yaw: 0, y: MAIN_Y },
   acidInjection: { x: W + 19.5, z: NORTH + 0.4, yaw: 0, y: MAIN_Y },
-  pool: { x: E - 1.4, z: NORTH + 1.4, yaw: 0 },
+  pool: { x: E - EAST_CLEAR - 1.4, z: NORTH + 1.4, yaw: 0 },
   hypoStore: { x: E - 1.9, z: CHEM_Z, yaw: S },
   hypoTank: { x: E - 2.9, z: CHEM_Z, yaw: S },
   hypoPump: { x: E - 3.9, z: CHEM_Z - 0.1, yaw: S },
