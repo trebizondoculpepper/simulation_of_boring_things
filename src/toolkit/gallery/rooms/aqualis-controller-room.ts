@@ -667,6 +667,17 @@ export function startAqualisControllerRoom(canvas: HTMLCanvasElement) {
     cabinet.setLeds(host.leds());
     cabinet.setSampleFlow(host.sampleLh());
     if (host.drawScreen(cabinet.context)) cabinet.screenChanged();
+    const shown = host.doctorShown();
+    cabinet.overlay.visible(shown);
+    if (
+      shown &&
+      host.drawDoctor(
+        cabinet.overlay.context,
+        cabinet.overlay.box.w,
+        cabinet.overlay.box.h,
+      )
+    )
+      cabinet.overlay.changed();
     for (const u of units) {
       const fb = host.feedback(u.id);
       u.run.set(Boolean(fb?.running));

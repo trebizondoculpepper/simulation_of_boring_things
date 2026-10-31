@@ -114,6 +114,10 @@ export interface AqualisRoomHost {
   step(realDt: number): void;
   /** Draw the cabinet's screen if it needs it: whether it drew. */
   drawScreen(c: CanvasRenderingContext2D): boolean;
+  /** Whether Dr Aqualis is on show (his page). */
+  doctorShown(): boolean;
+  /** Draw Dr Aqualis on his overlay (pre-scaled to the box's pixels) if his pose changed: whether it drew. */
+  drawDoctor(c: CanvasRenderingContext2D, w: number, h: number): boolean;
   /** A touch on the cabinet's screen, in its pixels. */
   screenTouch(x: number, y: number): void;
 }
@@ -140,6 +144,7 @@ export function createAqualisRoomHost(
   let alarmsOn: Alarm[] = [];
   let display: DisplayState = newDisplay();
   let doctor: DrAqualisFrame | null = null;
+  let doctorDrawn = '';
   let owed = 0;
   let clock = 0;
 
@@ -226,25 +231,31 @@ export function createAqualisRoomHost(
     },
     drawScreen(c) {
       const m = displayModel(display, inputs());
-      let key = m.key;
-      if (m.page === 'doctor') {
-        const a = m.doctor.advice;
-        doctor = drAqualisPose(a?.mood ?? 'idle', clock, doctor, {
-          box: DOCTOR.him,
-          target: { x: DOCTOR.bubble.x + 40, y: DOCTOR.bubble.y + 60 },
-        });
-        key += doctor.key;
-      }
-      if (key === drawn) return false;
-      drawn = key;
+      if (m.key === drawn) return false;
+      drawn = m.key;
+      // Dr Aqualis himself is on his overlay (`drawDoctor`), so his frames
+      // upload a small canvas, not the whole screen.
       drawAqualisScreen(c, m, {
-        doctor: (ctx, box) => doctor && drawDrAqualis(ctx, doctor.pose, box),
         bubble: (ctx, text, box, tail) =>
           drawSpeechBubble(ctx, text.split('\n'), box, tail, {
             title: 'Dr Aqualis says',
             fontPx: 19,
           }),
       });
+      return true;
+    },
+    doctorShown: () => display.page === 'doctor',
+    drawDoctor(c, w, h) {
+      const a = displayModel(display, inputs()).doctor.advice;
+      const box = DOCTOR.him;
+      doctor = drAqualisPose(a?.mood ?? 'idle', clock, doctor, {
+        box,
+        target: { x: DOCTOR.bubble.x + 40, y: DOCTOR.bubble.y + 60 },
+      });
+      if (doctor.key === doctorDrawn) return false;
+      doctorDrawn = doctor.key;
+      c.clearRect(0, 0, w, h);
+      drawDrAqualis(c, doctor.pose, { x: 0, y: 0, w: box.w, h: box.h });
       return true;
     },
     screenTouch(x, y) {
