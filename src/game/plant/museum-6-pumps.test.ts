@@ -34,6 +34,7 @@ describe('Hall 6’s schematic', () => {
     expect(TAGS['tank.lsh']).toBe('M6-LSH1');
     expect(TAGS['tank.li']).toBe('M6-LI1');
     expect(TAGS['tank.lt']).toBe('M6-LT1');
+    expect(TAGS['mimic']).toBe('M6-MP1');
   });
 
   it('gives every fitting, so the plumber adds nothing', () => {

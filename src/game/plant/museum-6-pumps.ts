@@ -379,7 +379,8 @@ export type InstrumentKind =
   | 'pressure'
   | 'level-gauge'
   | 'level'
-  | 'level-switch';
+  | 'level-switch'
+  | 'mimic';
 
 export interface Instrument {
   id: string;
@@ -389,7 +390,12 @@ export interface Instrument {
   unit: string;
 }
 
-/** The instruments: the big pumps' suction and discharge gauges, and the tank's level gauge, transmitter and float switch. */
+/**
+ * The instruments: the big pumps' suction and discharge gauges, the
+ * tank's level gauge, transmitter and float switch, and the mimic panel
+ * that shows them all, coded MP as the plant rooms' mimics are (on the
+ * header, which it centres on).
+ */
 export const INSTRUMENTS: readonly Instrument[] = [
   ...PUMPS.filter((p) => p.dn >= 150).flatMap((p): Instrument[] => [
     {
@@ -422,6 +428,7 @@ export const INSTRUMENTS: readonly Instrument[] = [
     on: 'tank',
     unit: '',
   },
+  { id: 'mimic', kind: 'mimic', role: 'mimic panel', on: 'header', unit: '' },
 ];
 
 // ---- Tags, derived -------------------------------------------------------------
@@ -435,6 +442,7 @@ const LETTERS: Record<InstrumentKind, string> = {
   'level-gauge': 'LI',
   level: 'LT',
   'level-switch': 'LSH',
+  mimic: 'MP',
 };
 
 /**

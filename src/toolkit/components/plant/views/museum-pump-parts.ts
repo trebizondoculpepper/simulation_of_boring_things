@@ -120,6 +120,8 @@ export function createTankInstruments(
   return {
     group,
     parts,
+    /** Its instruments' own pieces, for binding each to its model: LI1's scale and words, LSH1's switch and lamp. */
+    pieces: { li: [scale, liTag, full] as Object3D[], lsh: lsh as Object3D },
     show(isHigh: boolean) {
       if (high.value !== isHigh) high.value = isHigh;
     },

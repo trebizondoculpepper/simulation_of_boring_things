@@ -4,7 +4,10 @@ import type { PanelKit } from '../../../components/core/views/eighties-controls'
 import { createPartSet } from '../../../components/core/parts/parts';
 import { createPipe } from '../../../components/core/views/pipe-kinds';
 import { mergeTree } from '../../../components/core/views/merge-static';
-import { markComponent } from '../../../components/core/views/component-identity';
+import {
+  componentOf,
+  markComponent,
+} from '../../../components/core/views/component-identity';
 import { tools } from '../../../components/core/views/fitting-tools';
 import { partAudio } from '../../../components/core/audio/part-audio';
 import { markFrontCentre } from '../../../components/core/audio/front-centre';
@@ -247,6 +250,21 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     for (const [o, use] of set.uses) parts.uses.set(o, use);
   };
   const nodeName = (id: MachineId) => NODES.find((n) => n.id === id)!.name;
+  /** An instrument of the model, drawn by `thing`, bound to it by its id. */
+  const instrument = (
+    thing: Object3D,
+    id: string,
+    what: string,
+    status?: () => string,
+  ) =>
+    markComponent(thing, {
+      name: `${TAGS[id]} ${what}`,
+      model: { node: id },
+      ...(status ? { status } : {}),
+    });
+  /** The exhibit's own controls and words (RESET, its panels, the clock): no plant. */
+  const exhibitPiece = (thing: Object3D, name: string) =>
+    markComponent(thing, { ...componentOf(thing), name, decorative: true });
   const atMachine = (o: Object3D, id: MachineId) =>
     turnTo(o, PLACES[id].x, 0, PLACES[id].z, PLACES[id].yaw);
   const solids = [...plumbed.solids];
@@ -379,23 +397,29 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     } else {
       // The two NKC end-suction pumps.
       const pump = createEndSuctionPump(kit);
+      const g = pump.gauges;
+      // Its gauges, each its own instrument of the model, marked before the
+      // pump's static parts are merged so the merge keeps them as theirs.
+      instrument(
+        g.suction.group,
+        `${pumpId(no)}.suction.pi`,
+        'suction compound gauge',
+        () => `reads ${readings.gauges[no].suctionBar.toFixed(2)} bar`,
+      );
+      instrument(
+        g.discharge.group,
+        `${pumpId(no)}.discharge.pi`,
+        'discharge pressure gauge',
+        () => `reads ${readings.gauges[no].dischargeBar.toFixed(2)} bar`,
+      );
       object.add(describePump(still(atMachine(pump, pumpId(no))), no));
-      const g = (
-        pump as unknown as {
-          gauges?: {
-            suction: { set(v: number): void; update(d: number): void };
-            discharge: { set(v: number): void; update(d: number): void };
-          };
-        }
-      ).gauges;
-      if (g)
-        updates.push((delta) => {
-          const r = readings.gauges[no];
-          g.suction.set(r.suctionBar);
-          g.discharge.set(r.dischargeBar);
-          g.suction.update(delta);
-          g.discharge.update(delta);
-        });
+      updates.push((delta) => {
+        const r = readings.gauges[no];
+        g.suction.set(r.suctionBar);
+        g.discharge.set(r.dischargeBar);
+        g.suction.update(delta);
+        g.discharge.update(delta);
+      });
     }
     // The centrifugal pumps' sound: each its motor's, the showpiece loudest and lowest.
     if (p.family === 'centrifugal') {
@@ -448,9 +472,13 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       running: on,
     });
     turnTo(stand.group, at.x, 0, at.z, at.yaw);
+    // The pump's own local station, bound to the pump it starts (as Hall
+    // 3's station is): its RUN button, its plaque and its readout of the
+    // pump's delivery.
     object.add(
       markComponent(stand.group, {
-        name: `${shortTag(pumpId(no))} RUN stand and flow readout ${TAGS[`${pumpId(no)}.fi`]}`,
+        name: `${shortTag(pumpId(no))} RUN stand and flow readout`,
+        model: { node: pumpId(no) },
         status: () =>
           `RUN lamp ${on() ? 'lit' : 'out'}; shows ${flowLines(no, readings.flow[no])[1].trim()}`,
       }),
@@ -497,6 +525,16 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     },
   });
   ibc.group.add(tank.group);
+  for (const piece of tank.pieces.li)
+    instrument(
+      piece,
+      'tank.li',
+      'tank litres scale',
+      () => `the water at the ${Math.round(state().litres)} litre mark`,
+    );
+  instrument(tank.pieces.lsh, 'tank.lsh', 'tank high-level float switch', () =>
+    readings.high ? 'its lamp lit' : 'its lamp out',
+  );
   object.add(
     markComponent(still(atMachine(ibc.group, 'tank'), new Set([ibc.lever])), {
       name: `${TAGS['tank']} ${nodeName('tank')}`,
@@ -531,7 +569,13 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   const tankFrame = atMachine(new Group(), 'tank');
   tankFrame.userData.live = true;
   tankFrame.add(surface.object);
-  object.add(tankFrame);
+  // The tank's water is the tank's own.
+  object.add(
+    markComponent(tankFrame, {
+      name: `${TAGS['tank']} water`,
+      model: { node: 'tank' },
+    }),
+  );
   // The fill pipe carries on down through the open top to its open end
   // just over the brim, the water out of it as the model delivers it.
   const fill = plumbed.lines.find((l) => l.edge === 'fill')!;
@@ -565,10 +609,21 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     0,
   );
   strap.position.set(ix, 0, iz);
-  object.add(still(strap));
+  // The fill pipe's support, and the water out of its open end: the fill's own.
+  object.add(
+    markComponent(still(strap), {
+      name: `${LINK_NAMES.fill} pipe strap`,
+      model: { link: 'fill' },
+    }),
+  );
   const outflow = createOutflow(fill.od * 0.9, deliveryAlone(6));
   outflow.group.position.set(ix, MOUTH_Y, iz);
-  object.add(outflow.group);
+  object.add(
+    markComponent(outflow.group, {
+      name: `${LINK_NAMES.fill} outflow`,
+      model: { link: 'fill' },
+    }),
+  );
   updates.push((delta) => {
     const level = levelOf(state().litres);
     const wet = state().litres > 0.5;
@@ -592,10 +647,12 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   litresPost.add(litres.group);
   turnTo(litresPost, TANK_AT.x, 0, TANK_AT.z + 1.0, FACE_WEST);
   object.add(
-    markComponent(litresPost, {
-      name: `${TAGS['tank.lt']} tank level display`,
-      status: () => `shows ${Math.round(state().litres)} litres`,
-    }),
+    instrument(
+      litresPost,
+      'tank.lt',
+      'tank level display',
+      () => `shows ${Math.round(state().litres)} litres`,
+    ),
   );
   updates.push(() => litres.show(state().litres));
   footprint(TANK_AT.x, TANK_AT.z + 1.0, 0.15);
@@ -623,13 +680,20 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     });
     object.add(pipe);
     if (line.dn >= 40)
+      // Its plates, arrows and their wires are its own: bound to its link.
       object.add(
-        markPipe(kit, line.points, {
-          radius: line.od / 2,
-          service: 'pool water',
-          text: LINK_NAMES[line.edge].toUpperCase(),
-          flow: 1,
-        }),
+        markComponent(
+          markPipe(kit, line.points, {
+            radius: line.od / 2,
+            service: 'pool water',
+            text: LINK_NAMES[line.edge].toUpperCase(),
+            flow: 1,
+          }),
+          {
+            name: `${LINK_NAMES[line.edge]} pipe markings`,
+            model: { link: line.edge },
+          },
+        ),
       );
   }
 
@@ -779,7 +843,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     ),
   );
   turnTo(entrance, WALL, 1.65, INTERIOR.minZ + 2.4, FACE_WEST);
-  object.add(still(entrance));
+  object.add(exhibitPiece(still(entrance), 'Entrance panel'));
 
   const board = createMimicBoard(kit, HALL6_MIMIC, {
     maker: 'penfold',
@@ -796,7 +860,11 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     },
   });
   turnTo(board.group, WALL, 1.5, 2.6, FACE_WEST);
-  object.add(board.group);
+  // The mimic panel is in the model (M6-MP1), its lamps, readouts and
+  // buttons bound through it.
+  object.add(
+    instrument(board.group, 'mimic', 'mimic panel (Penfold Controls)'),
+  );
   take(board.parts);
 
   const clock = createPoolClock(kit, { dia: 0.75 });
@@ -804,6 +872,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   object.add(
     markComponent(clock.group, {
       name: 'Grundflow wall clock, showing the visitor’s local time',
+      // The visitor's own time on the sponsor's clock: set dressing, no plant.
+      decorative: true,
     }),
   );
   updates.push((delta) =>
@@ -827,7 +897,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     },
   );
   turnTo(clockBadge, WALL, CLOCK.y - 0.48, -0.6, FACE_WEST);
-  object.add(still(clockBadge));
+  object.add(exhibitPiece(still(clockBadge), 'Clock placard'));
 
   const resetSign = createWallPanel(
     kit,
@@ -837,13 +907,15 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     paintResetSign(RESET_SIGN),
   );
   turnTo(resetSign, WALL, 1.75, -2.6, FACE_WEST);
-  object.add(still(resetSign));
+  object.add(exhibitPiece(still(resetSign), 'RESET sign'));
   const resetButton = createResetPedestal(kit, {
     reset: () => act({ type: 'reset' }),
     lit: () => state().sinceReset < 2.5 || state().draining,
   });
   turnTo(resetButton.group, WALL - 0.45, 0, -2.6, FACE_WEST);
-  object.add(resetButton.group);
+  // The exhibit's control of the simulation (it empties the tank and
+  // starts the hall afresh), not plant.
+  object.add(exhibitPiece(resetButton.group, 'RESET SIMULATION pedestal'));
   take(resetButton.parts);
   updates.push(resetButton.update);
   footprint(WALL - 0.45, -2.6, 0.25);
@@ -894,7 +966,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     },
   );
   turnTo(families, WALL, 1.6, 6.5, FACE_WEST);
-  object.add(still(families));
+  object.add(exhibitPiece(still(families), 'Two families of pump'));
 
   const placed = [...solids];
   return {
