@@ -1,5 +1,4 @@
 import { CHEMICALS } from '../../../game/plant/chemicals';
-import { PLANT_DOOR } from '../../components/architectural/logic/plant-door';
 import { OT216_SIZE } from '../../components/industrial-control/logic/ot216-terminal';
 import {
   DAY_TANKS,
@@ -12,7 +11,10 @@ import { olympicItems } from './olympic-plumbing';
 import { retiredLayout } from './retired-rooms';
 import { placeStacks } from './air-plant';
 import type { Footprint } from '../../controls/logic/walk-collision';
-import { plantRoomPlan, PLANT_ROOM } from './plant-rooms';
+import { EQUIPMENT_OPENING, plantRoomPlan, PLANT_ROOM } from './plant-rooms';
+import { annunciatorBoardLayout } from './annunciator-board';
+import type { AnnunciatorControls } from './annunciator-board';
+import { LOCATION_ANNUNCIATORS } from '../../../game/plant/location-annunciators';
 import type { PlantRoomSize } from './plant-rooms';
 import { POOL_HALLS } from './pool-halls';
 import {
@@ -90,6 +92,14 @@ export interface Item {
    * vessel's axis (the owner, 2026-10-23).
    */
   nozzles?: 'square' | 'radial';
+  /**
+   * Where along its front it is worked, metres from its middle, to the
+   * right as one faces it (negative, to the left), where its controls are
+   * off to one side: someone must be able to stand there (`reachOf`).
+   */
+  reachAt?: number;
+  /** A location annunciator's controls: under its windows (the default) or down its left (`annunciator-board.ts`). */
+  controls?: AnnunciatorControls;
 }
 
 export interface Placed {
@@ -105,6 +115,38 @@ export interface Placed {
   access: Footprint;
   side: Side | 'island';
 }
+
+/** How far either side of a panel's controls someone may stand and still work them, metres: an arm's reach along its front. */
+export const REACH_HALF = 0.4;
+
+/**
+ * The floor someone must reach to work `p`: its access, or, for one
+ * worked off to one side (`Item.reachAt`), the strip of floor as deep as
+ * its access and within REACH_HALF either side of that point, which may
+ * run past its end (its controls at its end are reached from beside it).
+ */
+export function reachOf(p: Placed): Footprint {
+  const at = p.item.reachAt;
+  if (at === undefined) return p.access;
+  // Its right, as one faces it: Three's yaw turns its +x to (cos, −sin).
+  const x = p.x + at * Math.cos(p.yaw);
+  const z = p.z - at * Math.sin(p.yaw);
+  const a = p.access;
+  return Math.abs(Math.cos(p.yaw)) > 0.5
+    ? { ...a, minX: x - REACH_HALF, maxX: x + REACH_HALF }
+    : { ...a, minZ: z - REACH_HALF, maxZ: z + REACH_HALF };
+}
+
+/**
+ * PL1-CP3, the lounge plant room's annunciator: its controls down its
+ * left (the owner, 2026-10-31), so they are nearest the equipment doors
+ * beside it, worked from the open floor inside them.
+ */
+const LOUNGE_ANNUNCIATOR_BOARD = annunciatorBoardLayout(
+  LOCATION_ANNUNCIATORS.pool_01.alarms.length,
+  LOCATION_ANNUNCIATORS.pool_01.columns,
+  'left',
+);
 
 export interface RoomBox {
   /** Its inside, metres. */
@@ -759,6 +801,9 @@ function chemPlaced(
   );
 }
 
+/** PL1-CP3's edge from the equipment doors' frame beside it, metres. */
+export const ANNUNCIATOR_FRAME_GAP = 0.06;
+
 /** Each room's machines, and its box. */
 export function roomEquipment(
   room: string,
@@ -780,14 +825,18 @@ export function roomEquipment(
           ),
           ...chemDays('pool_01'),
           // Its annunciator (the owner, 2026-10-28), on the south wall
-          // east of the door, behind the heat exchanger.
+          // west of the equipment doors, its controls down its left.
           wall(
             'annunciator:pool_01',
             'Lounge pool annunciator',
-            0.9,
+            LOUNGE_ANNUNCIATOR_BOARD.w,
             0.2,
             1.1,
             1.65,
+            {
+              controls: 'left',
+              reachAt: LOUNGE_ANNUNCIATOR_BOARD.controls.x,
+            },
           ),
         ],
       };
@@ -1798,18 +1847,20 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
     // The annunciator on the south wall, just west of the door (the owner,
     // 2026-10-31, moving it from east of the door, where it was put on
     // 2026-10-28, to clear floor east of the door for the Dr Aqualis Trio).
-    // The doorway is in the middle of its clear zone.
+    // The doorway, the equipment doors' (1.8 m between their frames), is
+    // in the middle of its clear zone. The owner (2026-10-31) saw it
+    // overprint the doors, and moved it to the right, away from them: its
+    // edge clear of their frame by ANNUNCIATOR_FRAME_GAP, its controls
+    // down its left, nearest the doorway, over the open floor inside it,
+    // its windows out over sand filter 1.
     const annunciator = at('annunciator');
     out.push(
       put(box, annunciator, {
         wall: 'south',
-        // Edged up to the door's frame (the owner), over the open floor
-        // inside the doorway, where its ACCEPT and RESET are in reach,
-        // rather than behind sand filter 1.
         along:
           (door + doorEast) / 2 -
-          (PLANT_DOOR.leaf.w + 2 * PLANT_DOOR.frame) / 2 -
-          0.1 -
+          EQUIPMENT_OPENING / 2 -
+          ANNUNCIATOR_FRAME_GAP -
           annunciator.w / 2,
       }),
     );

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 import type { Footprint } from '../../controls/logic/walk-collision';
-import { EQUIPPED_ROOMS, layoutRoom } from './room-equipment';
+import { EQUIPPED_ROOMS, layoutRoom, reachOf } from './room-equipment';
 import type { Placed, RoomBox } from './room-equipment';
 import {
   pipeObstacles,
@@ -156,11 +156,12 @@ describe.each(EQUIPPED_ROOMS)('%s', (room) => {
         }),
         `${iso.name} out of reach`,
       ).toBe(true);
-    // Every machine and panel; signs are read from afar, not reached.
+    // Every machine and panel; signs are read from afar, not reached. A
+    // panel worked off to one side, from in front of its controls.
     for (const p of placed.filter(
       (q) => !q.item.key.startsWith('sign:') && q.item.key !== 'store-signs',
     ))
-      expect(reaches(p.access), `${p.item.label} out of reach`).toBe(true);
+      expect(reaches(reachOf(p)), `${p.item.label} out of reach`).toBe(true);
   });
 
   it('puts every valve within an arm’s reach of somewhere to stand', () => {
@@ -206,8 +207,52 @@ describe.each(EQUIPPED_ROOMS)('%s', (room) => {
   });
 });
 
-import { PLANT_ROOM, plantRoomPlan } from './plant-rooms';
-import { roomEquipment } from './room-equipment';
+import { EQUIPMENT_OPENING, PLANT_ROOM, plantRoomPlan } from './plant-rooms';
+import {
+  ANNUNCIATOR_FRAME_GAP,
+  REACH_HALF,
+  roomEquipment,
+} from './room-equipment';
+
+describe('PL1-CP3, the lounge plant room’s annunciator (the owner, 2026-10-31)', () => {
+  const { placed, box } = layoutRoom('plant_pool_01')!;
+  const board = placed.find((p) => p.item.key === 'annunciator:pool_01')!;
+  const filter1 = placed
+    .filter((p) => p.item.key.startsWith('sand-filter'))
+    .reduce((a, b) => (a.footprint.maxX > b.footprint.maxX ? a : b));
+  // The equipment doors, in the middle of their clear zone on the south wall.
+  const doorway = box.keepClear.find((k) => k.maxZ >= box.d / 2 - 1e-9)!;
+  const middle = (doorway.minX + doorway.maxX) / 2;
+
+  it('hangs on the south wall, west of the doors, its controls down its left', () => {
+    expect(board.side).toBe('south');
+    expect(board.item.controls).toBe('left');
+    expect(board.x).toBeLessThan(middle);
+  });
+
+  it('clears the doors’ frame, and so their leaves’ swing', () => {
+    // Their frame's outer edge; each leaf is hung inside it and swings
+    // into the room square to the wall, never over it.
+    const frame = middle - EQUIPMENT_OPENING / 2;
+    expect(board.footprint.maxX).toBeCloseTo(frame - ANNUNCIATOR_FRAME_GAP, 9);
+    expect(board.footprint.maxX).toBeLessThan(frame);
+  });
+
+  it('is worked from the open floor between the doors and sand filter 1', () => {
+    // Facing the south wall, its left is east, toward the doors.
+    const reach = reachOf(board);
+    const controls = (reach.minX + reach.maxX) / 2;
+    expect(controls).toBeGreaterThan(board.x);
+    expect(controls).toBeGreaterThan(filter1.footprint.maxX);
+    expect(controls).toBeLessThan(middle - EQUIPMENT_OPENING / 2);
+    expect(reach.maxX - reach.minX).toBeCloseTo(2 * REACH_HALF, 9);
+    expect(reach.maxX - reach.minX).toBeLessThan(
+      board.access.maxX - board.access.minX,
+    );
+    // Its windows go out over the filter.
+    expect(board.footprint.minX).toBeLessThan(filter1.footprint.maxX);
+  });
+});
 
 describe('the balance tanks', () => {
   it('stand below their pools’ decks, so the overflow falls to them', () => {

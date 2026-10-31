@@ -52,6 +52,8 @@ import { createSandFilter } from '../../components/plant/views/pumps-plant';
 import { machinePorts, tankFrame } from '../logic/machine-ports';
 import { isLive } from '../rooms/plant/exhibit';
 import { roomWorld } from '../../save/world-store';
+import { createLocationAnnunciator } from './location-annunciator';
+import type { LocationId } from '../../../game/plant/location-annunciators';
 import { plantTools } from '../../components/plant/views/plant-tools';
 import {
   createWashOTron,
@@ -324,8 +326,16 @@ function modelFor(
   if (pool && kind === 'pump-panel') return pumpPanelExhibit(pool).build(kit);
   // Each location's annunciator (mission 099), in its own place and in
   // the control room: the lounge's, the Olympic's, the wet hall's.
+  // One with its controls down its left (PL1-CP3) is the same board so laid out.
   if (kind === 'annunciator' && arg && arg in LOCATION_TITLES)
-    return byTitle(CONTROL, LOCATION_TITLES[arg]).build(kit);
+    return item.controls && item.controls !== 'bottom'
+      ? createLocationAnnunciator(
+          kit,
+          arg as LocationId,
+          typeof window === 'undefined' ? undefined : roomWorld(),
+          item.controls,
+        )
+      : byTitle(CONTROL, LOCATION_TITLES[arg]).build(kit);
   // The Olympic's balance tank panel, worked on the world's tank.
   if (kind === 'balance-tank-panel' && typeof window !== 'undefined')
     return worldBalanceTankPanel(kit);
