@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vite-plus/test';
 import { BRANDS, brandById } from './brands';
 
 describe('the brands', () => {
-  it('are thirty-four companies, each with an id and name of its own', () => {
-    expect(BRANDS).toHaveLength(34);
-    expect(new Set(BRANDS.map((b) => b.id)).size).toBe(34);
-    expect(new Set(BRANDS.map((b) => b.name)).size).toBe(34);
+  it('are thirty-three companies, each with an id and name of its own', () => {
+    expect(BRANDS).toHaveLength(33);
+    expect(new Set(BRANDS.map((b) => b.id)).size).toBe(33);
+    expect(new Set(BRANDS.map((b) => b.name)).size).toBe(33);
   });
 
   it('include the pool trade, each saying what good it does', () => {
-    const pool = BRANDS.slice(17, 25);
+    const pool = BRANDS.slice(16, 24);
     expect(pool.map((b) => b.name)).toContain('Splashonomics');
     for (const brand of pool) {
       expect(brand.tagline.length).toBeGreaterThan(0);

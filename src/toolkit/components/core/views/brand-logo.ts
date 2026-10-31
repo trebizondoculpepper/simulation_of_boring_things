@@ -1156,7 +1156,9 @@ export function drawBrandSheet(ctx: Ctx, brand: Brand) {
   ctx.fillStyle = '#333333';
   const facts = [
     brand.name,
-    `Founded ${brand.founded} · ${brand.country}`,
+    brand.defunct
+      ? `${brand.founded}–${brand.defunct} (defunct) · ${brand.country}`
+      : `Founded ${brand.founded} · ${brand.country}`,
     brand.makes,
     brand.promise,
   ];

@@ -2,9 +2,10 @@
  * The companies of the world of the VX3 and the Encabulator: who makes
  * what, as their brands would present them. The first ten are named
  * already (in the VX3 Simulator's component catalogue or on the
- * Encabulator's parts); the last six fill the gaps (who builds the line-up,
- * its PLC and its drive, its meters and screens, its oil, and who runs the
- * training), and Warden, whose mark was already on the fire panel, makes
+ * Encabulator's parts); the next five fill the gaps (who builds the
+ * line-up, its PLC and its drive, its meters and screens, and its oil; a
+ * training house, Meridale, was retired unused to make room for Aqualis,
+ * 2026-10-31), and Warden, whose mark was already on the fire panel, makes
  * the fire safety equipment. The last eight are the swimming-pool trade's
  * (Pool Plant's), though anyone may make anything: the money, the pumps,
  * the fittings, the filters and lights, the chemicals, the boilers, the
@@ -101,7 +102,6 @@ export type BrandId =
   | 'torvald'
   | 'kessler-moody'
   | 'oleander'
-  | 'meridale'
   | 'warden'
   | 'splashonomics'
   | 'grundflow'
@@ -128,6 +128,8 @@ export interface Brand {
   wordmark?: string;
   tagline: string;
   founded: number;
+  /** The year it ceased trading, if it has. */
+  defunct?: number;
   country: string;
   /** What it makes, for the brand sheet. */
   makes: string;
@@ -333,19 +335,6 @@ export const BRANDS: readonly Brand[] = [
     mark: 'drop',
     colours: ['#d4a017', '#2a5a2a', '#1b1b10'],
     type: 'slab',
-  },
-  {
-    id: 'meridale',
-    name: 'Meridale Training Solutions',
-    wordmark: 'Meridale',
-    tagline: 'Learning that sticks',
-    founded: 1998,
-    country: 'United Kingdom',
-    makes: 'Industrial training courses',
-    promise: 'Confident operators, safer plants',
-    mark: 'laurel',
-    colours: ['#5b3f8c', '#c7b8e0', '#1c1428'],
-    type: 'script',
   },
   {
     id: 'warden',
@@ -583,19 +572,25 @@ export const BRANDS: readonly Brand[] = [
     type: 'sans',
   },
   {
-    // The dosing console's software house (mission 113, the owner,
-    // 2026-10-31): a British maker of glossy touch-screen software for
-    // leisure centres, of the late 2000s, whose ClearDose Studio runs Hall
-    // 4's console on Penfold's desk. Our own invention.
+    // The Dr Aqualis Trio's maker (mission 114; the owner, 2026-10-31): an
+    // American engineering firm that promised radical solutions for the
+    // modern aquatic centre, over-promised and under-delivered, shipped a
+    // run of unreliable products (the Trio's Fenestra-based controller
+    // among them) and went bankrupt in 2014: the pool trade's Theranos.
+    // It also wrote ClearDose Studio, Hall 4's console (mission 113), so
+    // that exhibit's sponsorship dates from before the fall. Our own
+    // invention.
     id: 'aqualis',
     name: 'Aqualis Interactive',
     wordmark: 'aqualis',
-    tagline: 'Clear water, clear screens',
-    founded: 2003,
-    country: 'England',
+    tagline: 'Water, reimagined',
+    founded: 2001,
+    defunct: 2014,
+    country: 'United States',
     makes:
-      'Touch-screen control software for pools and leisure centres: ClearDose Studio, ClearView Leisure',
-    promise: 'Software as calm and clear as a well-kept pool',
+      'Radical water-quality systems for the modern aquatic centre: the Dr Aqualis Trio, Duo and Consultant; ClearDose Studio',
+    promise:
+      'A pool that diagnoses itself: every reading, from a single sample, in real time',
     mark: 'orb',
     colours: ['#1d86c6', '#86d143', '#0d2f4a'],
     type: 'sans',

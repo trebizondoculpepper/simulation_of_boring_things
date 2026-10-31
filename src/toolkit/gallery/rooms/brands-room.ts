@@ -57,8 +57,9 @@ const ALONG = [-9.6, -4.8, 0, 4.8, 9.6];
 // The north wall, clear of portals, takes one more.
 const NORTH = [-10, -6, -2, 2, 6, 10];
 const ENDS = [-4.5, -1.5, 1.5];
-// Seven, so every brand has a board (thirty, with Haulmark, prompt 097).
-const MIDDLE = [-9, -6, -3, 0, 3, 6, 9];
+// Eight, so every brand has a board (thirty-three, with Aqualis, mission
+// 114; Meridale retired to make room, 2026-10-31).
+const MIDDLE = [-10.5, -7.5, -4.5, -1.5, 1.5, 4.5, 7.5, 10.5];
 /** How far each face of a freestanding board stands off its middle. */
 const STAND_OFF = 0.03;
 const HANGS: Hang[] = [
