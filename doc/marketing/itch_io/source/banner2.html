@@ -1,0 +1,97 @@
+<html>
+  <head>
+    <style>
+      @font-face {
+        font-family: Antonio;
+        src: url(Antonio-Variable.ttf);
+        font-weight: 100 700;
+      }
+      html,
+      body {
+        margin: 0;
+        background: transparent;
+      }
+      #b {
+        width: 960px;
+        height: 320px;
+        position: relative;
+        overflow: hidden;
+        background: #02213a url(the-pool-background-caustics-2560x1600.jpg) 40%
+          30%/1300px auto;
+      }
+      #b .g {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          90deg,
+          #02213ad0 0%,
+          #02213a99 55%,
+          #02213a30 100%
+        );
+      }
+      #b .logo {
+        position: absolute;
+        left: 28px;
+        top: 20px;
+        height: 280px;
+        filter: drop-shadow(0 6px 14px #0008);
+      }
+      #b h1 {
+        position: absolute;
+        left: 316px;
+        top: 44px;
+        margin: 0;
+        font: 700 128px/1 Antonio;
+        color: #fff;
+        letter-spacing: 2px;
+        -webkit-text-stroke: 6px #02213a;
+        paint-order: stroke fill;
+        text-shadow: 0 6px 0 #1dabcd;
+      }
+      #b p {
+        position: absolute;
+        left: 324px;
+        top: 200px;
+        width: 330px;
+        margin: 0;
+        font: 500 24px/1.25 Antonio;
+        color: #f6c324;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        text-shadow: 0 2px 4px #000a;
+      }
+      .d {
+        position: absolute;
+        filter: drop-shadow(0 4px 8px #000a);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="b">
+      <div class="g"></div>
+      <img
+        class="d"
+        src="c90-2c-strainer.png"
+        style="left: 742px; top: 14px; height: 118px; transform: rotate(-8deg)"
+      />
+      <img
+        class="d"
+        src="c90-2b-filter.png"
+        style="left: 852px; top: 4px; height: 170px; transform: rotate(6deg)"
+      />
+      <img
+        class="d"
+        src="c90-2a-pump.png"
+        style="left: 712px; top: 168px; height: 126px; transform: rotate(-5deg)"
+      />
+      <img
+        class="d"
+        src="c90-2d-valve.png"
+        style="left: 868px; top: 186px; height: 118px; transform: rotate(9deg)"
+      />
+      <img class="logo" src="the-pool-logo.svg" />
+      <h1>THE POOL</h1>
+      <p>Run the plant behind an impossible swimming pool</p>
+    </div>
+  </body>
+</html>
