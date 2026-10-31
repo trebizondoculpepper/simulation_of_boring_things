@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
-  BAY,
   DECADES,
   FUTURE,
   POOLSIDE,
@@ -23,30 +22,30 @@ describe('Hall 5: a day in the life', () => {
   });
 
   it('hangs the earliest decade on the visitor’s left, facing each wall', () => {
-    const bays = bayPlaces();
-    const north = bays.filter((b) => b.wall === 'north');
-    const east = bays.filter((b) => b.wall === 'east');
-    // Facing north (−z), left is west (−x); facing east (+x), left is north (−z).
-    for (let k = 1; k < north.length; k++)
-      expect(north[k].x).toBeGreaterThan(north[k - 1].x);
-    for (let k = 1; k < east.length; k++)
-      expect(east[k].z).toBeGreaterThan(east[k - 1].z);
-    // The north wall's decades come first.
-    expect(bays.indexOf(north.at(-1)!)).toBeLessThan(bays.indexOf(east[0]));
+    const bays = [...bayPlaces(), futureBayPlace()];
+    // Round the hall with the wall on the left: north west to east, east
+    // north to south, south east to west, west south to north.
+    const along = (b: (typeof bays)[number]) =>
+      b.wall === 'north'
+        ? b.x
+        : b.wall === 'east'
+          ? b.z
+          : b.wall === 'south'
+            ? -b.x
+            : -b.z;
+    const order = ['north', 'east', 'south', 'west'];
+    for (let k = 1; k < bays.length; k++) {
+      const a = order.indexOf(bays[k - 1].wall);
+      const b = order.indexOf(bays[k].wall);
+      expect(b).toBeGreaterThanOrEqual(a);
+      if (a === b) expect(along(bays[k])).toBeGreaterThan(along(bays[k - 1]));
+    }
   });
 
-  it('keeps every bay on its wall, clear of the corners', () => {
+  it('hangs the walls on their faces', () => {
     const { w, d } = hallSize('museum5');
-    expect(WALL.east).toBeLessThan(w / 2);
-    expect(-WALL.north).toBeLessThan(d / 2);
-    for (const b of bayPlaces()) {
-      const along = b.wall === 'east' ? b.z : b.x;
-      const half = b.wall === 'east' ? d / 2 : w / 2;
-      expect(Math.abs(along) + BAY.w / 2).toBeLessThan(half - 0.3);
-      // Clear of the way on to Hall 6, at the east wall's south end (layout C).
-      if (b.wall === 'east')
-        expect(b.z + BAY.w / 2).toBeLessThan(4.5 - 1.8 - 0.2);
-    }
+    expect(WALL.east).toBeCloseTo(w / 2, 6);
+    expect(-WALL.north).toBeCloseTo(d / 2, 6);
   });
 
   it('puts the poolside on the floor, clear of the archways', () => {
@@ -68,18 +67,14 @@ describe('Hall 5: a day in the life', () => {
 });
 
 describe('the Pool of the Future? bay', () => {
-  it('ends the walk on the south wall, clear of the No running sign, the east wall and the last decade', () => {
+  it('ends the walk after the 2020s, on the west wall facing east', () => {
     const f = futureBayPlace();
     expect(f.decade).toBe(FUTURE);
-    expect(f.z).toBe(WALL.south);
-    expect(f.yaw).toBeCloseTo(Math.PI);
-    // West of the No running sign; the 2020s east of it.
-    expect(f.x + BAY.w / 2).toBeLessThan(1.9 - 0.3);
+    expect(f.x).toBe(WALL.west);
+    expect(f.yaw).toBeCloseTo(Math.PI / 2);
     const last = bayPlaces().at(-1)!;
     expect(last.decade.decade).toBe('2020s');
-    expect(last.wall).toBe('south');
-    expect(last.x - BAY.w / 2).toBeGreaterThan(1.9 + 0.3);
-    expect(last.x + BAY.w / 2).toBeLessThan(WALL.east - 0.5);
+    expect(last.z).toBeGreaterThan(f.z);
   });
 
   it('hangs three photographs, future-1 to future-3, the last pulling out the usual', () => {

@@ -24,15 +24,15 @@ Introduction: Before the first swimmer arrives, somebody has already been round 
 
 FOLLOW THE WATER
 
-1 The 1920s to the 1970s: north wall
+1 The 1920s to the 1970s: north and east walls
 
-2 The 1980s to today: east wall
+2 The 1980s to the Pool of the Future?: south and west walls
 
 3 What’s in the Skimmer?: the poolside
 
 Reset: Can’t break it: the big red RESET SIMULATION button fills the skimmer again.
 
-## RESET sign
+## RESET sign (on its post behind the RESET pedestal, beside the bin)
 
 Headline: Don’t worry, you can’t break anything!
 
@@ -130,7 +130,7 @@ Closing: Reg checks the skimmer and finds hair, a plaster and a hair grip. Some 
 
 TRY ME
 
-## Skimmer cut-away panel
+## Skimmer cut-away (on a lectern by the skimmer, at the water's edge)
 
 Heading: Inside a skimmer
 
@@ -138,7 +138,7 @@ Labels: LID · WEIR FLAP · BASKET · TO THE PUMP (capped) · WATER
 
 Caption: The weir flap floats on the water and lets only the top few millimetres in. The basket catches the big things before the pump. This one is dry: its suction line is capped.
 
-## Opening checks sheet
+## Opening checks sheet (south wall, between the 2000s and the 2010s)
 
 Heading: OPENING CHECKS
 

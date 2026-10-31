@@ -974,6 +974,9 @@ export const EXHIBIT_FOOTPRINTS: Partial<Record<MuseumHallId, Rect[]>> = {
     { minX: -10.2, maxX: 10.2, minZ: -9.2, maxZ: -4.3 },
     { minX: -10.2, maxX: -4.45, minZ: -9.2, maxZ: 4.0 },
   ],
+  // Hall 5's painted pool and its coping (the audit, 2026-10-31: two
+  // columns stood on the water's edge).
+  museum5: [{ minX: -4.9, maxX: 3.7, minZ: -0.1, maxZ: 4.9 }],
 };
 
 /** The columns on the warehouse's grid, before any exhibit's footprint is kept clear of them. */

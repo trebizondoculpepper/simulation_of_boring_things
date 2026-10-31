@@ -20,7 +20,6 @@ import {
   floorArrowTexture,
   lifebuoyStickerMaterial,
 } from '../../views/museum-hall';
-import { createPoolClock } from '../../../components/architectural/views/pool-clock';
 import { createWasteBin } from '../../../components/site-dressing/views/waste-bin';
 import { createBinTossing } from '../../../components/site-dressing/parts/bin-tossing';
 import type { TossBin } from '../../../components/site-dressing/parts/bin-tossing';
@@ -64,18 +63,25 @@ import { createSkimmerWell, drawOver } from '../../views/skimmer-well';
 import { createSkimmerCaustics } from '../../views/skimmer-caustics';
 import {
   BAY,
+  BAY_HANG,
+  ENTRANCE_PANEL,
   OPENING_CHECKS,
   POOLSIDE,
   DECK_LIFT,
   BIN_SIGN,
-  WALL,
+  RAIL,
+  RESET_POINT,
+  SKIMMER_LECTERN,
   bayPlaces,
   futureBayPlace,
   hall5Entrance,
+  hall5Openings,
+  onGalleryWall,
+  railRuns,
+  southSigns,
 } from '../../logic/museum-5-gallery';
 import type { Decade, PhotoLook } from '../../logic/museum-5-gallery';
 import { RESET_SIGN } from '../../logic/ideal-pool-plant-placards';
-import { localNow } from '../../logic/museum-time';
 import {
   createResetPedestal,
   createWallPanel,
@@ -92,8 +98,8 @@ import type {
 
 /**
  * Hall 5, "A Day in the Life" (107l): a poolman's duties through the
- * decades as a photographic exhibition round the north and east walls,
- * earliest on the visitor's left, and in the middle of the floor its
+ * decades as a photographic exhibition round all four walls, earliest
+ * on the visitor's left, and in the middle of the floor its
  * hands-on duty, "What's in the Skimmer?" (107f): a dry painted poolside
  * with a Certikind wall skimmer, its lid lifted aside, its finds taken
  * out one at a time and carried to a skip. The game is pure
@@ -117,7 +123,6 @@ function seededRandom(seed: number) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-const FACE_NORTH = Math.PI;
 const FACE_EAST = Math.PI / 2;
 const SANS = 'Arial, Helvetica, sans-serif';
 
@@ -346,42 +351,45 @@ function paintCutaway(c: CanvasRenderingContext2D, w: number, h: number) {
   c.font = `bold ${h * 0.07}px ${SANS}`;
   c.fillText('Inside a skimmer', w * 0.04, h * 0.085);
   const ox = w * 0.1;
-  const oy = h * 0.25;
+  const oy = h * 0.2;
+  // The diagram drawn shallower than it is wide, so that it ends above
+  // the caption (the audit, 2026-10-31: its water ran under the words).
+  const v = h * 0.8;
   // The pool's wall and its water, on the left.
   c.fillStyle = '#5fb0d6';
-  c.fillRect(ox, oy + h * 0.18, w * 0.25, h * 0.55);
+  c.fillRect(ox, oy + v * 0.18, w * 0.25, v * 0.55);
   c.fillStyle = '#d9e2e4';
-  c.fillRect(ox + w * 0.25, oy, w * 0.04, h * 0.73);
+  c.fillRect(ox + w * 0.25, oy, w * 0.04, v * 0.73);
   // The deck and the lid.
   c.fillStyle = '#c9c2b2';
-  c.fillRect(ox + w * 0.25, oy, w * 0.5, h * 0.05);
+  c.fillRect(ox + w * 0.25, oy, w * 0.5, v * 0.05);
   c.fillStyle = '#f4f4f0';
-  c.fillRect(ox + w * 0.36, oy - h * 0.02, w * 0.2, h * 0.03);
+  c.fillRect(ox + w * 0.36, oy - v * 0.02, w * 0.2, v * 0.03);
   // The body, the weir flap, the basket, the suction port capped.
   c.strokeStyle = '#16232b';
   c.lineWidth = w * 0.004;
-  c.strokeRect(ox + w * 0.29, oy + h * 0.05, w * 0.35, h * 0.5);
+  c.strokeRect(ox + w * 0.29, oy + v * 0.05, w * 0.35, v * 0.5);
   c.fillStyle = '#e8e4d8';
-  c.fillRect(ox + w * 0.25, oy + h * 0.14, w * 0.08, h * 0.14);
+  c.fillRect(ox + w * 0.25, oy + v * 0.14, w * 0.08, v * 0.14);
   c.fillStyle = '#16232b';
   c.save();
-  c.translate(ox + w * 0.29, oy + h * 0.15);
+  c.translate(ox + w * 0.29, oy + v * 0.15);
   c.rotate(0.35);
-  c.fillRect(0, 0, w * 0.007, h * 0.12);
+  c.fillRect(0, 0, w * 0.007, v * 0.12);
   c.restore();
   c.fillStyle = '#9aa6aa';
-  c.fillRect(ox + w * 0.37, oy + h * 0.22, w * 0.18, h * 0.2);
+  c.fillRect(ox + w * 0.37, oy + v * 0.22, w * 0.18, v * 0.2);
   c.fillStyle = '#16232b';
-  c.fillRect(ox + w * 0.44, oy + h * 0.55, w * 0.04, h * 0.12);
-  c.fillRect(ox + w * 0.42, oy + h * 0.67, w * 0.08, h * 0.02);
+  c.fillRect(ox + w * 0.44, oy + v * 0.55, w * 0.04, v * 0.12);
+  c.fillRect(ox + w * 0.42, oy + v * 0.67, w * 0.08, v * 0.02);
   c.font = `${h * 0.04}px ${SANS}`;
   const label = (t: string, x: number, y: number) =>
     c.fillText(t, x, y, w * 0.3);
-  label('LID', ox + w * 0.58, oy - h * 0.03);
-  label('WEIR FLAP', ox + w * 0.02, oy + h * 0.12);
-  label('BASKET', ox + w * 0.66, oy + h * 0.32);
-  label('TO THE PUMP (capped)', ox + w * 0.52, oy + h * 0.66);
-  label('WATER', ox + w * 0.05, oy + h * 0.5);
+  label('LID', ox + w * 0.58, oy - v * 0.03);
+  label('WEIR FLAP', ox + w * 0.02, oy + v * 0.12);
+  label('BASKET', ox + w * 0.66, oy + v * 0.32);
+  label('TO THE PUMP (capped)', ox + w * 0.52, oy + v * 0.66);
+  label('WATER', ox + w * 0.05, oy + v * 0.5);
   c.font = `italic ${h * 0.038}px ${SANS}`;
   c.fillStyle = '#4c5a62';
   wrapText(
@@ -511,7 +519,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   for (const b of [...bayPlaces(), futureBayPlace()]) {
     const bay = new Group();
     bay.name = `${b.decade.decade} photographs`;
-    const H = 1.25;
+    const H = BAY_HANG.h;
     const face = t.printed(BAY.w, H, paintBay(b.decade), 2048);
     face.mesh.position.set(0, 0, 0.012);
     bay.add(face.mesh);
@@ -557,7 +565,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
       // never covers the print (set decoration: the hall's own lamps light it).
       t.box(bay, brass, fw * 0.6, 0.03, 0.05, x, H / 2 + 0.06, 0.06);
     }
-    turnTo(bay, b.x, 1.65, b.z, b.yaw);
+    turnTo(bay, b.x, BAY_HANG.y, b.z, b.yaw);
     object.add(
       markComponent(still(bay), {
         name: `Photographs: ${b.decade.decade}, ${b.decade.strap}`,
@@ -565,10 +573,25 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
       }),
     );
   }
-  // The timeline rail, brass, at hand height along both walls.
+  // The timeline rail, brass, at hand height round the walls, its back on
+  // them, broken at each doorway (`railRuns`).
   const rail = new Group();
-  t.box(rail, brass, 12.8, 0.03, 0.03, -0.25, 0.92, WALL.north + 0.05);
-  t.box(rail, brass, 0.03, 0.03, 12.8, WALL.east - 0.05, 0.92, -0.25);
+  for (const run of railRuns(hall5Openings())) {
+    const a = onGalleryWall(run.wall, (run.from + run.to) / 2);
+    const len = run.to - run.from;
+    const along = run.wall === 'north' || run.wall === 'south';
+    const out = RAIL.size / 2;
+    t.box(
+      rail,
+      brass,
+      along ? len : RAIL.size,
+      RAIL.size,
+      along ? RAIL.size : len,
+      a.x + Math.sin(a.yaw) * out,
+      RAIL.y,
+      a.z + Math.cos(a.yaw) * out,
+    );
+  }
   object.add(
     markComponent(still(rail), { name: 'Timeline rail', decorative: true }),
   );
@@ -1183,49 +1206,104 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     refresh();
   };
 
-  // ---- The words: entrance, RESET, the skimmer's placard and cut-away, the opening checks ----
+  // ---- The words: entrance, RESET, the skimmer's cut-away lectern, the opening checks ----
   const entrance = createWallPanel(
     kit,
     'Entrance panel',
-    1.9,
-    1.5,
+    ENTRANCE_PANEL.w,
+    ENTRANCE_PANEL.h,
     paintEntrance(hall5Entrance(), 'Hall 5 · A Day in the Life'),
   );
-  turnTo(entrance, WALL.west, 1.65, -3.9, FACE_EAST);
-  object.add(still(entrance));
-  const resetSign = createWallPanel(
-    kit,
-    'RESET sign',
-    1.0,
-    0.56,
-    paintResetSign(RESET_SIGN),
+  turnTo(
+    entrance,
+    ENTRANCE_PANEL.x,
+    ENTRANCE_PANEL.y,
+    ENTRANCE_PANEL.z,
+    onGalleryWall('north', 0).yaw,
   );
-  turnTo(resetSign, WALL.west, 1.75, 3.5, FACE_EAST);
-  object.add(still(resetSign));
+  object.add(still(entrance));
+
+  // The RESET point beside the bin: its pedestal, and its sign on a post
+  // behind it, as the bin's is.
   const resetButton = createResetPedestal(kit, {
     reset: () => reset(),
     lit: () => sinceReset < 2.5,
   });
-  turnTo(resetButton.group, WALL.west + 0.45, DECK_LIFT, 3.5, FACE_EAST);
+  turnTo(
+    resetButton.group,
+    RESET_POINT.x,
+    DECK_LIFT,
+    RESET_POINT.z,
+    RESET_POINT.yaw,
+  );
   object.add(resetButton.group);
   for (const [o, use] of resetButton.parts.uses) uses.set(o, use);
   updates.push(resetButton.update);
-  footprint(WALL.west + 0.45, 3.5, 0.25);
-
-  const cutaway = createWallPanel(
+  footprint(RESET_POINT.x, RESET_POINT.z, 0.25);
+  const resetPost = new Group();
+  resetPost.name = 'RESET sign';
+  t.box(resetPost, t.paint('#2b3438', 0.5), 0.05, 1.2, 0.05, 0, 0.6, -0.03);
+  const resetSign = createWallPanel(
     kit,
-    'Skimmer cut-away',
-    1.4,
-    1.0,
-    paintCutaway,
+    'RESET sign face',
+    0.8,
+    0.45,
+    paintResetSign(RESET_SIGN),
   );
-  turnTo(cutaway, -3.4, 1.55, WALL.south, FACE_NORTH);
-  object.add(still(cutaway));
+  resetSign.position.set(0, 1.42, -0.005);
+  resetPost.add(resetSign);
+  // Behind the pedestal, so it reads over the button.
+  turnTo(
+    resetPost,
+    RESET_POINT.x + 0.32,
+    DECK_LIFT,
+    RESET_POINT.z,
+    RESET_POINT.yaw,
+  );
+  object.add(
+    markComponent(still(resetPost), { name: 'RESET sign', decorative: true }),
+  );
+
+  // "Inside a skimmer", on a lectern by the skimmer at the water's edge
+  // (`SKIMMER_LECTERN`, which says which way it faces and why).
+  const lectern = new Group();
+  lectern.name = 'Skimmer cut-away lectern';
+  {
+    const frame = t.paint('#2b3438', 0.5, 0.3);
+    t.box(lectern, frame, 0.36, 0.03, 0.3, 0, 0.015, -0.05);
+    t.box(lectern, frame, 0.07, 0.86, 0.07, 0, 0.45, -0.05);
+    const head = new Group();
+    head.position.set(0, 0.98, 0);
+    head.rotation.x = -0.62;
+    lectern.add(head);
+    const W = 0.9;
+    const H = W / 1.4;
+    t.box(head, frame, W + 0.04, H + 0.04, 0.03, 0, 0, -0.016);
+    const face = t.printed(W, H, paintCutaway, 1024);
+    face.mesh.position.z = 0.0005;
+    head.add(face.mesh);
+  }
+  turnTo(
+    lectern,
+    SKIMMER_LECTERN.x,
+    DECK_LIFT,
+    SKIMMER_LECTERN.z,
+    SKIMMER_LECTERN.yaw,
+  );
+  object.add(
+    markComponent(still(lectern), {
+      name: 'Placard: Inside a skimmer',
+      decorative: true,
+    }),
+  );
+  footprint(SKIMMER_LECTERN.x, SKIMMER_LECTERN.z, 0.2);
+
+  const signs = southSigns();
   const checks = createWallPanel(
     kit,
     'Opening checks sheet',
-    0.42,
-    0.6,
+    signs.checks.w,
+    signs.checks.h,
     (c, w, h) => {
       c.fillStyle = '#ffffff';
       c.fillRect(0, 0, w, h);
@@ -1249,13 +1327,19 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
       });
     },
   );
-  turnTo(checks, -1.8, 1.5, WALL.south, FACE_NORTH);
+  turnTo(
+    checks,
+    signs.checks.x,
+    signs.checks.y,
+    signs.checks.z,
+    signs.checks.yaw,
+  );
   object.add(still(checks));
   const noRunning = createWallPanel(
     kit,
     'No running sign',
-    0.4,
-    0.5,
+    signs.noRunning.w,
+    signs.noRunning.h,
     (c, w, h) => {
       c.fillStyle = '#ffffff';
       c.fillRect(0, 0, w, h);
@@ -1274,21 +1358,14 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
       c.fillText('No running', w / 2, h * 0.9);
     },
   );
-  turnTo(noRunning, 1.9, 1.6, WALL.south, FACE_NORTH);
+  turnTo(
+    noRunning,
+    signs.noRunning.x,
+    signs.noRunning.y,
+    signs.noRunning.z,
+    signs.noRunning.yaw,
+  );
   object.add(still(noRunning));
-
-  // ---- The pool clock (rule 2: the visitor's local time, ×1) ----
-  const clock = createPoolClock(kit, { dia: 0.7 });
-  turnTo(clock.group, -3.4, 2.75, WALL.south, FACE_NORTH);
-  object.add(
-    markComponent(clock.group, {
-      name: 'Pool clock',
-      status: () => 'shows the time now',
-    }),
-  );
-  updates.push((delta) =>
-    clock.show(localNow(), 1, delta > 0 ? Math.min(240, 1 / delta) : 60),
-  );
 
   // ---- Set decoration: the bench and the gloves on it ----
   const deco = new Group();
