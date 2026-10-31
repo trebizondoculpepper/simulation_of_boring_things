@@ -5,15 +5,15 @@ import {
   expect,
   it,
   vi,
-} from "vite-plus/test";
-import { Box3 } from "three";
-import type { Object3D } from "three";
-import { createPanelKit } from "../../../components/core/views/eighties-controls";
-import { hallArches } from "../../logic/museum-plan";
-import { buildHallExhibit } from "./hall-8-never-again";
+} from 'vite-plus/test';
+import { Box3 } from 'three';
+import type { Object3D } from 'three';
+import { createPanelKit } from '../../../components/core/views/eighties-controls';
+import { hallArches } from '../../logic/museum-plan';
+import { buildHallExhibit } from './hall-8-never-again';
 
 beforeEach(() => {
-  vi.stubGlobal("document", {
+  vi.stubGlobal('document', {
     // The photographs' loaders make an image; it never loads here.
     createElementNS: () => ({
       addEventListener() {},
@@ -42,7 +42,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 const MARGIN = 0.3;
 const APPROACH = 2.5;
-const arches = hallArches("museum8");
+const arches = hallArches('museum8');
 
 function boxes() {
   const exhibit = buildHallExhibit(createPanelKit());
@@ -55,22 +55,22 @@ function boxes() {
 
 /** An arch's span along its wall and its wall line, in the hall's frame. */
 const spanOf = (a: (typeof arches)[number]) =>
-  a.axis === "z"
+  a.axis === 'z'
     ? {
         line: a.frame.x,
-        across: "x" as const,
-        along: "z" as const,
+        across: 'x' as const,
+        along: 'z' as const,
         mid: a.frame.z,
       }
     : {
         line: a.frame.z,
-        across: "z" as const,
-        along: "x" as const,
+        across: 'z' as const,
+        along: 'x' as const,
         mid: a.frame.x,
       };
 
-describe("Hall 8 and its archways (the audit, 2026-10-31)", () => {
-  it("hangs nothing on a wall across an archway", () => {
+describe('Hall 8 and its archways (the audit, 2026-10-31)', () => {
+  it('hangs nothing on a wall across an archway', () => {
     for (const a of arches) {
       const s = spanOf(a);
       for (const { name, box } of boxes()) {
@@ -89,7 +89,7 @@ describe("Hall 8 and its archways (the audit, 2026-10-31)", () => {
   });
 
   it("keeps every lectern out of an archway's approach", () => {
-    const lecterns = boxes().filter((b) => b.name.endsWith("lectern"));
+    const lecterns = boxes().filter((b) => b.name.endsWith('lectern'));
     expect(lecterns).toHaveLength(6);
     for (const a of arches) {
       const s = spanOf(a);

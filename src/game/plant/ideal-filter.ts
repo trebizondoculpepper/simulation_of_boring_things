@@ -1,11 +1,11 @@
-import { solveNetwork } from "../sim/hydraulics";
-import type { NetLink, NetNode } from "../sim/hydraulics";
+import { solveNetwork } from '../sim/hydraulics';
+import type { NetLink, NetNode } from '../sim/hydraulics';
 import type {
   GlassInputs,
   GlassMode,
-} from "../../toolkit/components/plant/logic/sight-glass";
-import { WATERS, loseHeat, mix } from "../water/water-condition";
-import type { WaterCondition } from "../water/water-condition";
+} from '../../toolkit/components/plant/logic/sight-glass';
+import { WATERS, loseHeat, mix } from '../water/water-condition';
+import type { WaterCondition } from '../water/water-condition';
 
 /**
  * The ideal filter (the owner, 2026-10-25): one pressure sand filter model
@@ -145,13 +145,13 @@ export function bedSizing(spec: IdealFilterSpec, f: IdealFilterState) {
 
 /** The rig's valves: the two sources' and the filter's five. */
 export const RIG_VALVES = [
-  "clean",
-  "dirty",
-  "v1",
-  "v2",
-  "v3",
-  "v4",
-  "v5",
+  'clean',
+  'dirty',
+  'v1',
+  'v2',
+  'v3',
+  'v4',
+  'v5',
 ] as const;
 export type RigValve = (typeof RIG_VALVES)[number];
 
@@ -260,37 +260,37 @@ export function rigFlows(rig: FilterRig): RigFlows {
     z.bedDepth;
   const valve = (id: RigValve, from: string, to: string, extra = 0): NetLink =>
     rig.opening[id] < 0.02
-      ? { id, kind: "closed", from, to }
+      ? { id, kind: 'closed', from, to }
       : {
           id,
-          kind: "resistance",
+          kind: 'resistance',
           from,
           to,
           r: r(VALVE_LOSS) / rig.opening[id] ** 2 + extra,
         };
   const solve = (lifted: boolean) => {
     const nodes: NetNode[] = [
-      { id: "cleanSource", head: RIG_HEADS.source },
-      { id: "dirtySource", head: RIG_HEADS.source },
-      { id: "supply" },
-      { id: "top" },
-      { id: "bottom" },
-      { id: "outlet", head: RIG_HEADS.outlet },
-      { id: "waste", head: RIG_HEADS.waste },
+      { id: 'cleanSource', head: RIG_HEADS.source },
+      { id: 'dirtySource', head: RIG_HEADS.source },
+      { id: 'supply' },
+      { id: 'top' },
+      { id: 'bottom' },
+      { id: 'outlet', head: RIG_HEADS.outlet },
+      { id: 'waste', head: RIG_HEADS.waste },
     ];
     const links: NetLink[] = [
-      valve("clean", "cleanSource", "supply"),
-      valve("dirty", "dirtySource", "supply"),
-      valve("v1", "supply", "top"),
-      valve("v3", "supply", "bottom"),
-      valve("v2", "bottom", "outlet", r(serviceRun)),
-      valve("v4", "top", "waste", r(washRun, z.washFlow)),
-      valve("v5", "bottom", "waste", r(serviceRun)),
+      valve('clean', 'cleanSource', 'supply'),
+      valve('dirty', 'dirtySource', 'supply'),
+      valve('v1', 'supply', 'top'),
+      valve('v3', 'supply', 'bottom'),
+      valve('v2', 'bottom', 'outlet', r(serviceRun)),
+      valve('v4', 'top', 'waste', r(washRun, z.washFlow)),
+      valve('v5', 'bottom', 'waste', r(serviceRun)),
       {
-        id: "bed",
-        kind: "resistance",
-        from: "top",
-        to: "bottom",
+        id: 'bed',
+        kind: 'resistance',
+        from: 'top',
+        to: 'bottom',
         r: lifted ? liftR : bedR,
       },
     ];
@@ -308,7 +308,7 @@ export function rigFlows(rig: FilterRig): RigFlows {
   const valves = Object.fromEntries(
     RIG_VALVES.map((v) => [v, flow(v)]),
   ) as Record<RigValve, number>;
-  const bed = flow("bed");
+  const bed = flow('bed');
   const supplied = Math.max(0, valves.clean) + Math.max(0, valves.dirty);
   // The supply: the two sources' waters, mixed by their flows.
   const supply = mix([
@@ -513,7 +513,10 @@ export function portFlows(p: FilterPorts) {
 
 /** What a filter is doing: the same four words for every filter. */
 export type FilterActivity =
-  "backwashing" | "rinsing" | "filtering" | "standing";
+  | 'backwashing'
+  | 'rinsing'
+  | 'filtering'
+  | 'standing';
 
 /** Under this flow, m³/h, a port or bed is still. */
 export const STILL_FLOW = 0.5;
@@ -527,23 +530,23 @@ export const STILL_FLOW = 0.5;
  */
 export function filterActivity(p: FilterPorts): FilterActivity {
   const { bed } = portFlows(p);
-  if (bed < -STILL_FLOW) return "backwashing";
-  if (bed <= STILL_FLOW) return "standing";
+  if (bed < -STILL_FLOW) return 'backwashing';
+  if (bed <= STILL_FLOW) return 'standing';
   return p.rinse > STILL_FLOW && p.outlet <= STILL_FLOW
-    ? "rinsing"
-    : "filtering";
+    ? 'rinsing'
+    : 'filtering';
 }
 
 /** A process's ports, for plumbing that sets one whole (a cabinet's programme): its pump's flow by that way. */
 export function processPorts(
-  process: "service" | "backwash" | "rinse" | "off",
+  process: 'service' | 'backwash' | 'rinse' | 'off',
   flow: number,
 ): FilterPorts {
   const q = Math.max(0, flow);
-  if (process === "service") return { ...NO_PORT_FLOW, inlet: q, outlet: q };
-  if (process === "backwash")
+  if (process === 'service') return { ...NO_PORT_FLOW, inlet: q, outlet: q };
+  if (process === 'backwash')
     return { ...NO_PORT_FLOW, backwashIn: q, backwashOut: q };
-  if (process === "rinse") return { ...NO_PORT_FLOW, inlet: q, rinse: q };
+  if (process === 'rinse') return { ...NO_PORT_FLOW, inlet: q, rinse: q };
   return NO_PORT_FLOW;
 }
 
@@ -560,12 +563,12 @@ export const stepFilter = (
 /** Its sight glass's mode, from what it is doing. */
 export const glassModeOf = (a: FilterActivity): GlassMode =>
   (
-    ({
-      backwashing: "backwash",
-      rinsing: "rinse",
-      filtering: "service",
-      standing: "stopped",
-    }) as const
+    {
+      backwashing: 'backwash',
+      rinsing: 'rinse',
+      filtering: 'service',
+      standing: 'stopped',
+    } as const
   )[a];
 
 /** The rig's five valves' flows as the filter's ports. */
@@ -626,9 +629,9 @@ export const cleanFilter = (rig: FilterRig): FilterRig => ({
 
 /** The valves set for each process, the rest shut. */
 export const PROCESSES = {
-  service: ["dirty", "v1", "v2"],
-  backwash: ["clean", "v3", "v4"],
-  rinse: ["clean", "v1", "v5"],
+  service: ['dirty', 'v1', 'v2'],
+  backwash: ['clean', 'v3', 'v4'],
+  rinse: ['clean', 'v1', 'v5'],
   off: [],
 } as const satisfies Record<string, readonly RigValve[]>;
 export type FilterProcess = keyof typeof PROCESSES;
@@ -661,9 +664,9 @@ export function idealGlass(rig: FilterRig, flows: RigFlows): GlassInputs {
     dirt: rig.filter.dirt / z.dirtRef,
     channelling: rig.filter.fissuring,
     murk:
-      mode === "backwash"
+      mode === 'backwash'
         ? Math.min(1, flows.wasteDirt / 400)
-        : mode === "rinse"
+        : mode === 'rinse'
           ? Math.min(1, rig.filter.unsettled * 0.6)
           : 0,
   };

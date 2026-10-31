@@ -1,11 +1,11 @@
-import type { LoungeFlows } from "./lounge-valves";
+import type { LoungeFlows } from './lounge-valves';
 import {
   LOUNGE_SIZE,
   bedPasses,
   filterSizing,
   stepFilter,
-} from "./ideal-filter";
-import type { IdealFilterState } from "./ideal-filter";
+} from './ideal-filter';
+import type { IdealFilterState } from './ideal-filter';
 
 /**
  * The lounge's two filter beds, each the ideal filter (`ideal-filter.ts`,

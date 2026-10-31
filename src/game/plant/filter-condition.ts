@@ -1,10 +1,10 @@
-import { bedSizing, filterActivity } from "./ideal-filter";
+import { bedSizing, filterActivity } from './ideal-filter';
 import type {
   FilterActivity,
   FilterPorts,
   IdealFilterSpec,
   IdealFilterState,
-} from "./ideal-filter";
+} from './ideal-filter';
 
 /**
  * What a sand filter is doing, and how it seems, for its description (the
@@ -24,7 +24,7 @@ import type {
  */
 
 export type { FilterActivity };
-export type FilterDirt = "clean" | "dirty" | "very-dirty";
+export type FilterDirt = 'clean' | 'dirty' | 'very-dirty';
 
 export interface FilterCondition {
   activity: FilterActivity;
@@ -45,7 +45,7 @@ export function filterCondition(bed: {
 }): FilterCondition {
   const activity = filterActivity(bed.ports);
   const dirt: FilterDirt =
-    bed.dirt < 1 ? "clean" : bed.dirt < 2 ? "dirty" : "very-dirty";
+    bed.dirt < 1 ? 'clean' : bed.dirt < 2 ? 'dirty' : 'very-dirty';
   return { activity, dirt, pitted: bed.fissuring >= PITTED };
 }
 
@@ -65,9 +65,9 @@ export const filterConditionOf = (
 /** How it seems, as its sight glass would tell an operator: "seems clean". */
 function seems(c: FilterCondition): string {
   const dirt = {
-    clean: "seems clean",
-    dirty: "seems dirty",
-    "very-dirty": "seems very dirty",
+    clean: 'seems clean',
+    dirty: 'seems dirty',
+    'very-dirty': 'seems very dirty',
   }[c.dirt];
   return c.pitted ? `${dirt} and the sand is pitted` : dirt;
 }
@@ -78,8 +78,8 @@ function seems(c: FilterCondition): string {
  * very dirty and the sand is pitted", "standing, and seems clean".
  */
 export function filterConditionWords(c: FilterCondition): string {
-  if (c.activity === "backwashing" || c.activity === "rinsing")
+  if (c.activity === 'backwashing' || c.activity === 'rinsing')
     return c.activity;
-  const fine = c.dirt === "clean" && !c.pitted;
-  return `${c.activity}, ${fine ? "and" : "but"} ${seems(c)}`;
+  const fine = c.dirt === 'clean' && !c.pitted;
+  return `${c.activity}, ${fine ? 'and' : 'but'} ${seems(c)}`;
 }

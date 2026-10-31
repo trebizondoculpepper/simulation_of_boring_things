@@ -1,11 +1,11 @@
-import type { Expansion } from "../../../game/plant/plumbing-expansion";
-import * as M1 from "../../../game/plant/museum-1-heating";
-import * as M2 from "../../../game/plant/museum-2-clean-water";
-import * as M3 from "../../../game/plant/museum-3-dosing";
-import * as M4 from "../../../game/plant/museum-4-lab";
-import * as M6 from "../../../game/plant/museum-6-pumps";
-import * as M9 from "../../../game/plant/museum-9-plant";
-import type { MuseumHallId } from "./museum-plan";
+import type { Expansion } from '../../../game/plant/plumbing-expansion';
+import * as M1 from '../../../game/plant/museum-1-heating';
+import * as M2 from '../../../game/plant/museum-2-clean-water';
+import * as M3 from '../../../game/plant/museum-3-dosing';
+import * as M4 from '../../../game/plant/museum-4-lab';
+import * as M6 from '../../../game/plant/museum-6-pumps';
+import * as M9 from '../../../game/plant/museum-9-plant';
+import type { MuseumHallId } from './museum-plan';
 
 /**
  * Each museum hall's own model (`doc/museum-hall-model.md`): the enhanced
@@ -82,23 +82,23 @@ const SCHEMATICS: Partial<Record<MuseumHallId, HallSchematic>> = {
  * actually contains; a display hall that gains a machine must be
  * reclassified as a plant hall.
  */
-export const HALL_CLASS: Readonly<Record<MuseumHallId, "plant" | "display">> = {
-  museum0: "display",
-  museum1: "plant",
-  museum2: "plant",
-  museum3: "plant",
-  museum4: "plant",
-  museum5: "display",
-  museum6: "plant",
-  museum7: "display",
-  museum8: "display",
-  museum9: "plant",
+export const HALL_CLASS: Readonly<Record<MuseumHallId, 'plant' | 'display'>> = {
+  museum0: 'display',
+  museum1: 'plant',
+  museum2: 'plant',
+  museum3: 'plant',
+  museum4: 'plant',
+  museum5: 'display',
+  museum6: 'plant',
+  museum7: 'display',
+  museum8: 'display',
+  museum9: 'plant',
 };
 
 /** Kinds of node that stand for the world beyond the hall and are never drawn. */
 const UNSEEN_KINDS: ReadonlySet<string> = new Set([
-  "ideal-atmosphere",
-  "ideal-bather-source",
+  'ideal-atmosphere',
+  'ideal-bather-source',
 ]);
 
 /** The halls that have a model of their own. */
@@ -118,7 +118,7 @@ export function hallModel(id: MuseumHallId): HallModel | undefined {
     links: new Set(s.links.map((l) => l.id)),
     unseen: new Set(
       expansion.nodes
-        .filter((n) => UNSEEN_KINDS.has((n as { kind?: string }).kind ?? ""))
+        .filter((n) => UNSEEN_KINDS.has((n as { kind?: string }).kind ?? ''))
         .map((n) => n.id),
     ),
     instruments: new Set((s.instruments ?? []).map((i) => i.id)),
@@ -127,7 +127,9 @@ export function hallModel(id: MuseumHallId): HallModel | undefined {
 }
 
 export type HallBinding =
-  { node: string } | { fitting: string } | { link: string };
+  | { node: string }
+  | { fitting: string }
+  | { link: string };
 
 /** Whether a binding names something of its sort in the hall's model (an instrument counts as a node). */
 export function hallBound(
@@ -135,9 +137,9 @@ export function hallBound(
   model: HallModel | undefined,
 ): boolean {
   if (!binding || !model) return false;
-  if ("node" in binding)
+  if ('node' in binding)
     return model.nodes.has(binding.node) || model.instruments.has(binding.node);
-  if ("fitting" in binding) return model.fittings.has(binding.fitting);
+  if ('fitting' in binding) return model.fittings.has(binding.fitting);
   return model.links.has(binding.link);
 }
 

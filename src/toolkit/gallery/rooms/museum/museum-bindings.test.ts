@@ -1,5 +1,5 @@
-import { Mesh } from "three";
-import type { Object3D } from "three";
+import { Mesh } from 'three';
+import type { Object3D } from 'three';
 import {
   afterEach,
   beforeEach,
@@ -7,24 +7,24 @@ import {
   expect,
   it,
   vi,
-} from "vite-plus/test";
-import { createPanelKit } from "../../../components/core/views/eighties-controls";
+} from 'vite-plus/test';
+import { createPanelKit } from '../../../components/core/views/eighties-controls';
 import {
   componentOf,
   owningComponent,
-} from "../../../components/core/views/component-identity";
-import type { ComponentIdentity } from "../../../components/core/views/component-identity";
-import { MUSEUM_HALLS } from "../../logic/museum-plan";
-import type { MuseumHallId } from "../../logic/museum-plan";
+} from '../../../components/core/views/component-identity';
+import type { ComponentIdentity } from '../../../components/core/views/component-identity';
+import { MUSEUM_HALLS } from '../../logic/museum-plan';
+import type { MuseumHallId } from '../../logic/museum-plan';
 import {
   HALL_CLASS,
   hallBound,
   hallModel,
   modelComponents,
-} from "../../logic/museum-hall-model";
-import type { HallModel } from "../../logic/museum-hall-model";
-import { HALL_EXHIBITS } from "./exhibits";
-import { stubDocument } from "./walkways.test-support";
+} from '../../logic/museum-hall-model';
+import type { HallModel } from '../../logic/museum-hall-model';
+import { HALL_EXHIBITS } from './exhibits';
+import { stubDocument } from './walkways.test-support';
 
 /**
  * Every museum hall works as the plant rooms do (the owner, 2026-10-30;
@@ -48,7 +48,7 @@ function boundTo(
   if (!identity || !model) return undefined;
   if (identity.model && hallBound(identity.model, model)) {
     const [sort, id] = Object.entries(identity.model)[0];
-    return `${sort === "node" && model.instruments.has(id) ? "instrument" : sort}: ${id}`;
+    return `${sort === 'node' && model.instruments.has(id) ? 'instrument' : sort}: ${id}`;
   }
   const id = identity.tag ? model.byTag.get(identity.tag) : undefined;
   if (id === undefined) return undefined;
@@ -80,7 +80,7 @@ function audit(root: Object3D, model: HallModel | undefined) {
       owner?.identity.tag ??
       owner?.identity.name ??
       named?.name ??
-      "(unnamed mesh)";
+      '(unnamed mesh)';
     unbound.set(key, (unbound.get(key) ?? 0) + 1);
   });
   return { unbound: [...unbound.keys()].sort(), drawn };
@@ -96,9 +96,9 @@ async function built(id: MuseumHallId) {
   return exhibit;
 }
 
-describe("every plant hall is bound to its own model, as the plant rooms are", () => {
+describe('every plant hall is bound to its own model, as the plant rooms are', () => {
   for (const id of MUSEUM_HALLS) {
-    if (HALL_CLASS[id] === "display") {
+    if (HALL_CLASS[id] === 'display') {
       it.skip(`${id}: a display hall (photos, placards, specimens, signs), exempt from simulation and binding`, () => {});
       continue;
     }
@@ -128,8 +128,8 @@ describe("every plant hall is bound to its own model, as the plant rooms are", (
   }
 });
 
-describe("the display halls hold nothing of a plant hall", () => {
-  for (const id of MUSEUM_HALLS.filter((h) => HALL_CLASS[h] === "display"))
+describe('the display halls hold nothing of a plant hall', () => {
+  for (const id of MUSEUM_HALLS.filter((h) => HALL_CLASS[h] === 'display'))
     it(`${id}: has no model and draws nothing bound to one (else reclass it as a plant hall)`, async () => {
       expect(hallModel(id)).toBeUndefined();
       const exhibit = await built(id);

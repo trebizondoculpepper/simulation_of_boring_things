@@ -1,20 +1,20 @@
-import { NO_PORT_FLOW, portFlows } from "./ideal-filter";
-import type { FilterPorts } from "./ideal-filter";
-import { INSTALLED_VALVES } from "./installed-valves";
-import { MODEL_VALVES } from "./model-valves";
-import type { PlantServices } from "./services";
-import { circulating } from "./pools";
-import type { PoolsState } from "./pools";
-import type { MotorsState } from "./motor-starters";
-import { serviceAvailable } from "./services";
-import { strokeTime } from "../../toolkit/components/plant/logic/actuated-valve";
+import { NO_PORT_FLOW, portFlows } from './ideal-filter';
+import type { FilterPorts } from './ideal-filter';
+import { INSTALLED_VALVES } from './installed-valves';
+import { MODEL_VALVES } from './model-valves';
+import type { PlantServices } from './services';
+import { circulating } from './pools';
+import type { PoolsState } from './pools';
+import type { MotorsState } from './motor-starters';
+import { serviceAvailable } from './services';
+import { strokeTime } from '../../toolkit/components/plant/logic/actuated-valve';
 
 /** The nine installed valves on the lounge pool's filter and balance-tank pipework. */
 export const LOUNGE_VALVES = Object.values(INSTALLED_VALVES).filter(
   (valve) =>
-    valve.tag.startsWith("PL1-") &&
+    valve.tag.startsWith('PL1-') &&
     // Not the dosing quills' ball valves (prompt 089), worked by hand.
-    MODEL_VALVES.find((v) => v.id === valve.assetId)?.operator !== "lever",
+    MODEL_VALVES.find((v) => v.id === valve.assetId)?.operator !== 'lever',
 );
 const STROKE = strokeTime(0.09);
 const VALVE_BY_TAG = new Map(LOUNGE_VALVES.map((valve) => [valve.tag, valve]));
@@ -23,7 +23,7 @@ export function newLoungeValvePositions(): Record<string, number> {
   return Object.fromEntries(
     LOUNGE_VALVES.map(({ assetId, normal }) => [
       assetId,
-      normal === "open" ? 1 : 0,
+      normal === 'open' ? 1 : 0,
     ]),
   );
 }
@@ -40,11 +40,11 @@ export function stepLoungeValves(
   plant: PlantServices,
   dt: number,
 ): Record<string, number> {
-  const power = serviceAvailable(plant, "plant_pool_01", "power");
+  const power = serviceAvailable(plant, 'plant_pool_01', 'power');
   const next: Record<string, number> = {};
   for (const { assetId, normal } of LOUNGE_VALVES) {
-    const current = positions[assetId] ?? (normal === "open" ? 1 : 0);
-    const target = power && (commands[assetId] ?? normal === "open") ? 1 : 0;
+    const current = positions[assetId] ?? (normal === 'open' ? 1 : 0);
+    const target = power && (commands[assetId] ?? normal === 'open') ? 1 : 0;
     const travel = Math.max(0, dt) / STROKE;
     next[assetId] =
       target > current
@@ -116,20 +116,20 @@ export function loungeValveFlows(
   if (!running) return still;
   const at = (tag: string) => {
     const valve = VALVE_BY_TAG.get(tag)!;
-    return positions[valve.assetId] ?? (valve.normal === "open" ? 1 : 0);
+    return positions[valve.assetId] ?? (valve.normal === 'open' ? 1 : 0);
   };
   // What the running pumps deliver, each through its own discharge valve.
   const discharge = Math.max(
-    pumps.p1 ? at("PL1-P1-IV1") : 0,
-    pumps.p2 ? at("PL1-P2-IV1") : 0,
+    pumps.p1 ? at('PL1-P1-IV1') : 0,
+    pumps.p2 ? at('PL1-P2-IV1') : 0,
   );
   const filter = (n: 1 | 2) => {
     const v = (letters: string) => at(`PL1-F${n}-${letters}`);
     return {
-      inlet: v("IV1"),
-      outlet: v("IV2"),
-      backwash: v("BV1"),
-      drain: v("DV1"),
+      inlet: v('IV1'),
+      outlet: v('IV2'),
+      backwash: v('BV1'),
+      drain: v('DV1'),
     };
   };
   const f = [filter(1), filter(2)] as const;
@@ -163,7 +163,7 @@ export function loungeValveFlows(
       waste,
   );
   const drains = f.map((x, i) => Math.max(rinse[i], 3 * x.drain * waste));
-  const tankDrain = at("PL1-T1-DV1") * 5;
+  const tankDrain = at('PL1-T1-DV1') * 5;
   const toWaste =
     tankDrain +
     f.reduce((sum, _x, i) => sum + backwash[i] + dump[i] + drains[i], 0);
@@ -199,7 +199,7 @@ export function loungeFlowsOf(world: {
 }): LoungeFlows {
   return loungeValveFlows(
     world.loungeValvePositions,
-    circulating(world.pools.pool_01, world.plant, "pool_01", world.motors),
+    circulating(world.pools.pool_01, world.plant, 'pool_01', world.motors),
     loungePumpsRunning(world.motors),
     !world.wetHall?.inhibit,
   );
@@ -209,23 +209,23 @@ export function loungeFlowsOf(world: {
 export const loungeMeterReadings = (
   flows: LoungeFlows,
 ): Record<string, number> => ({
-  "filter-1": flows.filters[0],
-  "filter-2": flows.filters[1],
+  'filter-1': flows.filters[0],
+  'filter-2': flows.filters[1],
 });
 
 /** Which lounge pumps run, P-201A as P1 and P-201B as P2; both, where the starters are not known. */
 export const loungePumpsRunning = (motors?: MotorsState) => ({
-  p1: motors?.starters["P-201A"].running ?? true,
-  p2: motors?.starters["P-201B"].running ?? true,
+  p1: motors?.starters['P-201A'].running ?? true,
+  p2: motors?.starters['P-201B'].running ?? true,
 });
 
 /** Whether a lounge pump's own discharge valve is open enough to pass water. */
 export function loungeDischargeOpen(
   positions: Readonly<Record<string, number>>,
-  tag: "P-201A" | "P-201B",
+  tag: 'P-201A' | 'P-201B',
 ): boolean {
   const valve = VALVE_BY_TAG.get(
-    tag === "P-201A" ? "PL1-P1-IV1" : "PL1-P2-IV1",
+    tag === 'P-201A' ? 'PL1-P1-IV1' : 'PL1-P2-IV1',
   )!;
-  return (positions[valve.assetId] ?? (valve.normal === "open" ? 1 : 0)) > 0.05;
+  return (positions[valve.assetId] ?? (valve.normal === 'open' ? 1 : 0)) > 0.05;
 }

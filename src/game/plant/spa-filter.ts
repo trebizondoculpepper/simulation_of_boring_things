@@ -1,7 +1,7 @@
 import type {
   GlassInputs,
   GlassMode,
-} from "../../toolkit/components/plant/logic/sight-glass";
+} from '../../toolkit/components/plant/logic/sight-glass';
 import {
   bedPasses,
   filterActivity,
@@ -12,12 +12,12 @@ import {
   processPorts,
   stepFilter,
   washedOut,
-} from "./ideal-filter";
+} from './ideal-filter';
 import type {
   FilterPorts,
   IdealFilterSpec,
   IdealFilterState,
-} from "./ideal-filter";
+} from './ideal-filter';
 
 /**
  * A packaged spa cabinet's filter and its automatic backwash (the owner,
@@ -47,18 +47,18 @@ export const SPA_FILTERS = {
 } as const satisfies Record<string, IdealFilterSpec>;
 
 /** The schedules MODE steps through, in order. */
-export const SCHEDULES = ["24h", "12h", "6h", "off"] as const;
+export const SCHEDULES = ['24h', '12h', '6h', 'off'] as const;
 export type BackwashSchedule = (typeof SCHEDULES)[number];
 const EVERY: Record<BackwashSchedule, number> = {
-  "24h": 24 * 3600,
-  "12h": 12 * 3600,
-  "6h": 6 * 3600,
+  '24h': 24 * 3600,
+  '12h': 12 * 3600,
+  '6h': 6 * 3600,
   off: Infinity,
 };
 
 /** The programme's steps, and how long each takes, s. */
 export const PROGRAMME = { stopping: 10, backwash: 180, rinse: 45 } as const;
-export type FilterPhase = "filter" | keyof typeof PROGRAMME;
+export type FilterPhase = 'filter' | keyof typeof PROGRAMME;
 
 export interface SpaFilter {
   spec: IdealFilterSpec;
@@ -73,12 +73,12 @@ export interface SpaFilter {
 
 export const newSpaFilter = (
   spec: IdealFilterSpec,
-  schedule: BackwashSchedule = "24h",
+  schedule: BackwashSchedule = '24h',
 ): SpaFilter => ({
   spec,
   bed: newIdealFilter(),
   schedule,
-  phase: "filter",
+  phase: 'filter',
   // In service from the start: its UV long since warm.
   phaseTime: UV_WARM,
   // Its first wash at 02:00, in the night, when the spa is shut and the
@@ -105,17 +105,17 @@ export const SERVO_TRAVEL = 3;
  * wash's pressures; its WASH lamp lights. Pure.
  */
 export function washSignals(f: SpaFilter) {
-  const washing = f.phase !== "filter";
+  const washing = f.phase !== 'filter';
   return {
     washing,
     /** Its servo valves travelling now. */
     servos:
-      f.phase === "stopping" ||
-      (f.phase === "filter" && f.phaseTime < SERVO_TRAVEL),
+      f.phase === 'stopping' ||
+      (f.phase === 'filter' && f.phaseTime < SERVO_TRAVEL),
     /** Its pump's motor let run: not in the stop. */
-    pumpAllowed: f.phase !== "stopping",
+    pumpAllowed: f.phase !== 'stopping',
     /** Its pump's sound: lighter, faster, against the drain. */
-    pumpRate: washing && f.phase !== "stopping" ? 1.08 : 1,
+    pumpRate: washing && f.phase !== 'stopping' ? 1.08 : 1,
     dosing: !washing,
     heating: !washing,
     jets: !washing,
@@ -125,28 +125,28 @@ export function washSignals(f: SpaFilter) {
     gaugeBar: { filter: 0.7, backwash: 0.45, rinse: 0.6, stopping: 0 }[f.phase],
     /** Its sight glass, if it shows one: the backwash murky, the rinse clearing. */
     murk:
-      f.phase === "backwash"
+      f.phase === 'backwash'
         ? Math.max(0.2, 1 - f.phaseTime / PROGRAMME.backwash)
-        : f.phase === "rinse"
+        : f.phase === 'rinse'
           ? 0.2 * (1 - f.phaseTime / PROGRAMME.rinse)
           : 0,
   };
 }
 
-export type SpaFilterAction = { act: "mode" } | { act: "wash-now" };
+export type SpaFilterAction = { act: 'mode' } | { act: 'wash-now' };
 
 export function actOnSpaFilter(f: SpaFilter, a: SpaFilterAction): SpaFilter {
-  if (a.act === "mode")
+  if (a.act === 'mode')
     return {
       ...f,
       schedule:
         SCHEDULES[(SCHEDULES.indexOf(f.schedule) + 1) % SCHEDULES.length],
     };
-  return f.phase === "filter" ? { ...f, phase: "stopping", phaseTime: 0 } : f;
+  return f.phase === 'filter' ? { ...f, phase: 'stopping', phaseTime: 0 } : f;
 }
 
 /** Whether the programme lets its cabinet circulate to the spa: only while filtering. */
-export const filtering = (f: SpaFilter) => f.phase === "filter";
+export const filtering = (f: SpaFilter) => f.phase === 'filter';
 
 /**
  * The flows through it, from the pump's: filtering, down through the bed
@@ -165,9 +165,9 @@ export function spaFilterFlows(f: SpaFilter, pump: number, inDirt: number) {
     /** Dirt in what it gives, g/m³: the spa's water filtered, or what it washes out to drain. */
     outDirt: bed > 0 ? passes : 0,
     wasteDirt:
-      f.phase === "backwash"
+      f.phase === 'backwash'
         ? inDirt + washedOut(f.spec, f.bed, bed)
-        : f.phase === "rinse"
+        : f.phase === 'rinse'
           ? passes
           : 0,
   };
@@ -180,8 +180,8 @@ export function spaFilterFlows(f: SpaFilter, pump: number, inDirt: number) {
  * drain; stopping, none.
  */
 export function spaFilterPorts(f: SpaFilter, pump: number): FilterPorts {
-  if (f.phase === "stopping" || !(pump > 0)) return processPorts("off", 0);
-  return processPorts(f.phase === "filter" ? "service" : f.phase, pump);
+  if (f.phase === 'stopping' || !(pump > 0)) return processPorts('off', 0);
+  return processPorts(f.phase === 'filter' ? 'service' : f.phase, pump);
 }
 
 /** The filter `dt` seconds on: its programme, and its bed by the flow through it. */
@@ -197,20 +197,20 @@ export function stepSpaFilter(
   let { phase, phaseTime, sinceWash } = f;
   phaseTime += dt;
   sinceWash += dt;
-  if (phase === "filter") {
+  if (phase === 'filter') {
     if (sinceWash >= EVERY[f.schedule]) {
-      phase = "stopping";
+      phase = 'stopping';
       phaseTime = 0;
     }
   } else if (phaseTime >= PROGRAMME[phase]) {
     const next: Record<keyof typeof PROGRAMME, FilterPhase> = {
-      stopping: "backwash",
-      backwash: "rinse",
-      rinse: "filter",
+      stopping: 'backwash',
+      backwash: 'rinse',
+      rinse: 'filter',
     };
     phase = next[phase];
     phaseTime = 0;
-    if (phase === "filter") sinceWash = 0;
+    if (phase === 'filter') sinceWash = 0;
   }
   return { ...f, bed, phase, phaseTime, sinceWash };
 }
@@ -219,17 +219,17 @@ const clock = (s: number) => {
   const m = Math.floor(s / 60);
   const h = Math.floor(m / 60);
   return h > 0
-    ? `${h}:${String(m % 60).padStart(2, "0")}h`
-    : `${m}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+    ? `${h}:${String(m % 60).padStart(2, '0')}h`
+    : `${m}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 };
 
 /** Its line on its cabinet's display, the same on both cabinets. */
 export function spaFilterLine(f: SpaFilter): string {
-  if (f.phase !== "filter")
+  if (f.phase !== 'filter')
     return `${
-      { stopping: "WASH: STOP", backwash: "BACKWASH", rinse: "RINSE" }[f.phase]
+      { stopping: 'WASH: STOP', backwash: 'BACKWASH', rinse: 'RINSE' }[f.phase]
     } ${clock(PROGRAMME[f.phase] - f.phaseTime)}`;
-  if (f.schedule === "off") return "WASH OFF";
+  if (f.schedule === 'off') return 'WASH OFF';
   return `WASH ${f.schedule.toUpperCase()} IN ${clock(EVERY[f.schedule] - f.sinceWash)}`;
 }
 
@@ -255,7 +255,7 @@ export function spaFilterGlass(f: SpaFilter, pumping: boolean): GlassInputs {
 }
 
 /** The spas whose cabinets have these filters. */
-export type SpaPool = "pool_03" | "pool_04";
+export type SpaPool = 'pool_03' | 'pool_04';
 export type SpaFiltersState = Record<SpaPool, SpaFilter>;
 
 /** Both cabinets' filters, in service, a fresh day's wash due on each. */
@@ -284,4 +284,4 @@ export function stepSpaFilters(
 
 /** Its pump's flow to drain, m³/h, while it backwashes or rinses: its spa's design flow, with its cabinet powered. */
 export const spaWashFlow = (f: SpaFilter, powered: boolean, flow: number) =>
-  !filtering(f) && f.phase !== "stopping" && powered ? flow : 0;
+  !filtering(f) && f.phase !== 'stopping' && powered ? flow : 0;

@@ -1,15 +1,15 @@
-import { descriptionLocation } from "./room-names";
-import { GAS_ZONES } from "./gas";
-import type { GasZoneId } from "./gas";
-import { MOTORS, POOL_MOTORS } from "./motor-starters";
-import type { MotorTag } from "./motor-starters";
-import { POOL_IDS } from "./pools";
-import type { PoolId } from "./pools";
-import { equipmentKind } from "./equipment-kinds";
-import type { KindId, StatusPolicy } from "./equipment-kinds";
+import { descriptionLocation } from './room-names';
+import { GAS_ZONES } from './gas';
+import type { GasZoneId } from './gas';
+import { MOTORS, POOL_MOTORS } from './motor-starters';
+import type { MotorTag } from './motor-starters';
+import { POOL_IDS } from './pools';
+import type { PoolId } from './pools';
+import { equipmentKind } from './equipment-kinds';
+import type { KindId, StatusPolicy } from './equipment-kinds';
 
-import { filterConditionWords } from "./filter-condition";
-import type { FilterCondition } from "./filter-condition";
+import { filterConditionWords } from './filter-condition';
+import type { FilterCondition } from './filter-condition';
 /**
  * What each component is for, inferred rather than written item by item
  * (prompt 060; the owner, 2026-10-25: "Most of the time purpose should be
@@ -36,9 +36,9 @@ export type StatusBinding =
   | { motor: MotorTag }
   | { motors: readonly MotorTag[] }
   | { pool: PoolId }
-  | { wetHallTank: "breakTank" | "backwashTank" }
+  | { wetHallTank: 'breakTank' | 'backwashTank' }
   | { booster: true }
-  | { cabinet: "jacuzzi" }
+  | { cabinet: 'jacuzzi' }
   | { part: string }
   /** A valve, by its tag. */
   | { valve: string }
@@ -49,41 +49,41 @@ export type StatusBinding =
   /** A sand filter, by its battery's pool and its place in it (from 0). */
   | {
       filter: {
-        pool: "pool_01" | "pool_02" | "pool_03" | "pool_04";
+        pool: 'pool_01' | 'pool_02' | 'pool_03' | 'pool_04';
         index: number;
       };
     };
 
 /** An item's live state, resolved from the world, ready for its kind's wording. */
 export type ResolvedStatus =
-  | { policy: "motor"; running: boolean; tripped: boolean }
-  | { policy: "level"; fraction: number }
+  | { policy: 'motor'; running: boolean; tripped: boolean }
+  | { policy: 'level'; fraction: number }
   | {
-      policy: "pump-set";
+      policy: 'pump-set';
       pumps: readonly { tag: string; running: boolean; tripped: boolean }[];
     }
   | {
-      policy: "cabinet";
-      state: "tripped" | "circulating" | "no-flow" | "off" | "no-power";
+      policy: 'cabinet';
+      state: 'tripped' | 'circulating' | 'no-flow' | 'off' | 'no-power';
     }
-  | { policy: "booster"; running: boolean; tripped: boolean }
-  | { policy: "switch"; on: boolean }
-  | { policy: "valve"; open: boolean; partly?: true }
-  | { policy: "gas"; shown: string }
-  | { policy: "uv"; lit: boolean }
-  | { policy: "filter"; condition: FilterCondition };
+  | { policy: 'booster'; running: boolean; tripped: boolean }
+  | { policy: 'switch'; on: boolean }
+  | { policy: 'valve'; open: boolean; partly?: true }
+  | { policy: 'gas'; shown: string }
+  | { policy: 'uv'; lit: boolean }
+  | { policy: 'filter'; condition: FilterCondition };
 
 /** What a valve's link in its room's enhanced network says it isolates, in a description's words. */
 export interface ValveRoute {
   from: string;
   to: string;
   medium:
-    | "water"
-    | "heating water"
-    | "air"
-    | "gas"
-    | "sodium hypochlorite"
-    | "hydrochloric acid";
+    | 'water'
+    | 'heating water'
+    | 'air'
+    | 'gas'
+    | 'sodium hypochlorite'
+    | 'hydrochloric acid';
 }
 
 /** What a description is built from: one per described component. */
@@ -111,7 +111,7 @@ export interface DescriptionContext {
 
 /** The pool a pool plant room serves (plant_pool_02 → pool_02), if any. */
 const poolOfRoom = (room: string | undefined): PoolId | undefined => {
-  const pool = room?.replace(/^plant_/, "");
+  const pool = room?.replace(/^plant_/, '');
   return POOL_IDS.find((p) => p === pool);
 };
 
@@ -131,44 +131,44 @@ export function statusBindingFor(subject: {
 }): StatusBinding | undefined {
   const pool = poolOfRoom(subject.room);
   switch (subject.kind) {
-    case "pump":
+    case 'pump':
       return isMotor(subject.tag) ? { motor: subject.tag } : undefined;
-    case "pump-pair": {
+    case 'pump-pair': {
       const motors = pool ? POOL_MOTORS(pool) : [];
       return motors.length ? { motors } : undefined;
     }
-    case "balance-tank":
+    case 'balance-tank':
       return pool ? { pool } : undefined;
-    case "break-tank":
-      return { wetHallTank: "breakTank" };
-    case "backwash-tank":
-      return { wetHallTank: "backwashTank" };
-    case "booster-set":
+    case 'break-tank':
+      return { wetHallTank: 'breakTank' };
+    case 'backwash-tank':
+      return { wetHallTank: 'backwashTank' };
+    case 'booster-set':
       return { booster: true };
-    case "jacuzzi-pack":
-      return { cabinet: "jacuzzi" };
-    case "butterfly-valve":
-    case "gas-ball-valve":
-    case "valve":
+    case 'jacuzzi-pack':
+      return { cabinet: 'jacuzzi' };
+    case 'butterfly-valve':
+    case 'gas-ball-valve':
+    case 'valve':
       return { valve: subject.tag };
-    case "uv-unit":
+    case 'uv-unit':
       return pool ? { uv: pool } : undefined;
-    case "ozone-monitor":
+    case 'ozone-monitor':
       return subject.room && subject.room in GAS_ZONES
         ? { gasZone: subject.room as GasZoneId }
         : undefined;
-    case "cabinet-switch":
+    case 'cabinet-switch':
       return { part: subject.tag };
-    case "sand-filter": {
+    case 'sand-filter': {
       // The lounge's pair, the Olympic's battery and the jacuzzi's one keep
       // their beds in the world, each by its number in its tag (PL1-F2: the
       // lounge's second).
       const n = /-F(\d+)$/.exec(subject.tag);
       return n &&
-        (pool === "pool_01" ||
-          pool === "pool_02" ||
-          pool === "pool_03" ||
-          pool === "pool_04")
+        (pool === 'pool_01' ||
+          pool === 'pool_02' ||
+          pool === 'pool_03' ||
+          pool === 'pool_04')
         ? { filter: { pool, index: Number(n[1]) - 1 } }
         : undefined;
     }
@@ -182,9 +182,9 @@ export function ordinal(n: number): string {
   const tens = n % 100;
   const suffix =
     tens >= 11 && tens <= 13
-      ? "th"
-      : (({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[n % 10] ??
-        "th");
+      ? 'th'
+      : (({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ??
+        'th');
   return `${n}${suffix}`;
 }
 
@@ -260,7 +260,7 @@ export const powerPurpose = (destination: string) =>
 
 /** Common nouns in prose, preserving technical acronyms such as UV and BMS. */
 export function equipmentTypeInProse(type: string): string {
-  const first = type.split(" ")[0];
+  const first = type.split(' ')[0];
   return /^[A-Z0-9-]+$/.test(first)
     ? type
     : type[0].toLowerCase() + type.slice(1);
@@ -277,11 +277,11 @@ export function equipmentLine(
 ): string {
   const noun = equipmentTypeInProse(type);
   const where = descriptionLocation(location);
-  const line = `The ${of === 1 ? "only" : ordinal(place)} ${noun} in ${where}`;
+  const line = `The ${of === 1 ? 'only' : ordinal(place)} ${noun} in ${where}`;
   return status ? `${line}, currently ${status}` : line;
 }
 
-const onOff = (on: boolean) => (on ? "On" : "Off");
+const onOff = (on: boolean) => (on ? 'On' : 'Off');
 
 /** A resolved state in its kind's words, or none where the two do not match. */
 export function formatStatus(
@@ -290,39 +290,39 @@ export function formatStatus(
 ): string | undefined {
   if (!resolved || resolved.policy !== policy) return undefined;
   switch (resolved.policy) {
-    case "motor":
-    case "booster":
-      return resolved.tripped ? "Tripped" : onOff(resolved.running);
-    case "level": {
+    case 'motor':
+    case 'booster':
+      return resolved.tripped ? 'Tripped' : onOff(resolved.running);
+    case 'level': {
       const share = Math.min(1, Math.max(0, resolved.fraction));
       return `${Math.round(share * 100)} % full`;
     }
-    case "pump-set":
+    case 'pump-set':
       return resolved.pumps
-        .map((p) => `${p.tag} ${p.tripped ? "Tripped" : onOff(p.running)}`)
-        .join(", ");
-    case "cabinet":
+        .map((p) => `${p.tag} ${p.tripped ? 'Tripped' : onOff(p.running)}`)
+        .join(', ');
+    case 'cabinet':
       return {
-        tripped: "Tripped",
-        circulating: "Circulating",
-        "no-flow": "Running, no flow",
-        off: "Off",
-        "no-power": "Off, no power",
+        tripped: 'Tripped',
+        circulating: 'Circulating',
+        'no-flow': 'Running, no flow',
+        off: 'Off',
+        'no-power': 'Off, no power',
       }[resolved.state];
-    case "switch":
+    case 'switch':
       return onOff(resolved.on);
-    case "uv":
+    case 'uv':
       // On or Off: no fault is modelled, so never operational, tripped or
       // faulty (the owner, 2026-10-25: those words only for things that can fail).
       return onOff(resolved.lit);
-    case "filter": {
+    case 'filter': {
       const words = filterConditionWords(resolved.condition);
       return words[0].toUpperCase() + words.slice(1);
     }
-    case "gas":
+    case 'gas':
       // As its detector's display shows it: ppm, or O-R over its range.
-      return resolved.shown === "O-R"
-        ? "reading over its range (O-R)"
+      return resolved.shown === 'O-R'
+        ? 'reading over its range (O-R)'
         : `reading ${resolved.shown} ppm`;
   }
 }
@@ -337,26 +337,26 @@ export function describeComponent(
   context: DescriptionContext = {},
 ): string {
   const kind = equipmentKind(subject.kind);
-  const template = kind.template ?? "equipment";
-  if (template === "valve") {
+  const template = kind.template ?? 'equipment';
+  if (template === 'valve') {
     // What it isolates, and whether it is open now (the owner, 2026-10-25:
     // a thing that can be in several states says which).
-    const purpose = valvePurpose(subject.route) ?? "";
+    const purpose = valvePurpose(subject.route) ?? '';
     const state = context.status?.(subject);
     const now =
-      state?.policy === "valve"
-        ? `Currently ${state.partly ? "part open" : state.open ? "open" : "shut"}.`
-        : "";
-    return [purpose, now].filter(Boolean).join(" ");
+      state?.policy === 'valve'
+        ? `Currently ${state.partly ? 'part open' : state.open ? 'open' : 'shut'}.`
+        : '';
+    return [purpose, now].filter(Boolean).join(' ');
   }
-  if (template === "power" || subject.powerFor)
-    return subject.powerFor ? powerPurpose(subject.powerFor) : "";
+  if (template === 'power' || subject.powerFor)
+    return subject.powerFor ? powerPurpose(subject.powerFor) : '';
   const place = places.get(subject.key);
-  if (subject.unranked || !subject.location || !place) return "";
+  if (subject.unranked || !subject.location || !place) return '';
   // A filter says what the tank is doing in a clause of its own (the
   // owner, 2026-10-28: "the tank is filtering, and seems clean").
   const resolved = context.status?.(subject);
-  if (kind.status === "filter" && resolved?.policy === "filter")
+  if (kind.status === 'filter' && resolved?.policy === 'filter')
     return `${equipmentLine(
       place,
       kind.type,
@@ -365,7 +365,7 @@ export function describeComponent(
       ofKind.get(places)?.get(subject.key),
     )}: the tank is ${filterConditionWords(resolved.condition)}`;
   const status =
-    kind.status === "none" ? undefined : formatStatus(kind.status, resolved);
+    kind.status === 'none' ? undefined : formatStatus(kind.status, resolved);
   return equipmentLine(
     place,
     kind.type,
