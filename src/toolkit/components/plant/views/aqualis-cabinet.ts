@@ -19,6 +19,12 @@ import { createBrandBadge } from '../../core/views/brand-badge';
 import { createPs1Material } from '../../core/parts/ps1-material';
 import { createPartSet, selector } from '../../core/parts/parts';
 import { createGlassRotameter } from './small-flowmeters';
+import { piezoSounder } from '../../sound/audio/piezo-recordings';
+import type {
+  PiezoLoopMeaning,
+  PiezoOneShot,
+} from '../../sound/logic/piezo-beeps';
+import { partAudio } from '../../core/audio/part-audio';
 import { SCREEN } from '../../../../game/plant/aqualis-types';
 import type { Selector } from '../../../../game/plant/aqualis-types';
 import {
@@ -80,6 +86,8 @@ export interface CabinetHost {
   selector?(s: Selector): void;
   /** The sample inlet's valve opened or shut. */
   sampleValve?(open: boolean): void;
+  /** Its own power switch, at the top of the lower door, turned off or on. */
+  power?(on: boolean): void;
 }
 
 /** The screen's brightness: its white is this grey, under the bloom threshold (as the console's). */
@@ -764,6 +772,65 @@ export function createAqualisCabinet(
     0.0065,
     '#1b1b1b',
   );
+  // Its own power switch (the owner, 2026-10-31): a rotary switch near the
+  // top of the lower door, OFF · ON, on from the start; off and on again,
+  // it power-cycles the computer. On the door, it swings with it.
+  let mainOn = true;
+  const mainSwitch = parts.add(
+    selector(kit, {
+      positions: 2,
+      initial: 1,
+      bound: {
+        get value() {
+          return mainOn ? 1 : 0;
+        },
+        set: (k: number) => {
+          mainOn = k === 1;
+          host.power?.(mainOn);
+        },
+      },
+      legend: 'OFF · ON',
+      name: `${info.name} power switch`,
+    }),
+  );
+  const switchAt = { x: -w + 0.13, y: split - 0.1 };
+  t.box(
+    lowerDoor,
+    t.paint('#dfe4e7', 0.4),
+    0.11,
+    0.12,
+    0.004,
+    switchAt.x,
+    switchAt.y,
+    door / 2 + 0.002,
+  );
+  mainSwitch.object.position.set(
+    switchAt.x,
+    switchAt.y - 0.005,
+    door / 2 + 0.004,
+  );
+  lowerDoor.add(mainSwitch.object);
+  t.label(
+    lowerDoor,
+    'POWER',
+    switchAt.x,
+    switchAt.y + 0.045,
+    door / 2 + 0.0045,
+    0.009,
+    '#1b1b1b',
+  );
+  t.label(
+    lowerDoor,
+    'OFF  ON',
+    switchAt.x,
+    switchAt.y - 0.045,
+    door / 2 + 0.0045,
+    0.0065,
+    '#1b1b1b',
+  );
+  // Its piezo sounder, behind the upper door.
+  const sounder = piezoSounder({ pitch: 'high', room: 'small' }, group);
+  let looping: PiezoLoopMeaning | null = null;
   // The status lamps, each with its legend under it.
   const leds = new Map<LedId, ReturnType<typeof t.led>>();
   for (const l of LEDS) {
@@ -907,6 +974,25 @@ export function createAqualisCabinet(
     get powered() {
       return powered;
     },
+    /** Its own power switch's position. */
+    get mainSwitchOn() {
+      return mainOn;
+    },
+    /** Set its own power switch, as a turn of it would (without telling the host). */
+    setMainSwitch(on: boolean) {
+      mainOn = on;
+    },
+    /** Its piezo sounder: a one-shot beep. */
+    beep(meaning: PiezoOneShot) {
+      sounder.play(meaning);
+    },
+    /** Its piezo sounder held on a looping cadence, or silent (null). */
+    beepLoop(meaning: PiezoLoopMeaning | null) {
+      // `hold` restarts what it holds, so only on a change.
+      if (meaning === looping) return;
+      looping = meaning;
+      partAudio.hold(sounder, meaning ? sounder.loop(meaning) : null, group);
+    },
     /**
      * Switch it on or off: off, its backlight is out and its screen a
      * black glossy panel, Dr Aqualis's overlay hidden, its drawings held
@@ -1044,6 +1130,7 @@ export function createAqualisCabinet(
       }
     },
     dispose() {
+      partAudio.hold(sounder, null);
       parts.dispose();
       bootInset.dispose();
     },

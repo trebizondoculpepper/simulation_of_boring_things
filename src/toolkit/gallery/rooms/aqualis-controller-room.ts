@@ -149,10 +149,21 @@ export function startAqualisControllerRoom(canvas: HTMLCanvasElement) {
   room.add(sign);
 
   // ---- The cabinet ---------------------------------------------------------------
+  // The cabinet's supply (the wall board's switch) and its own power switch,
+  // both on from the start (the owner, 2026-10-31).
+  let supplyOn = true;
+  let mainOn = true;
+  /** The crash the piezo last answered. */
+  let beeperCrash: unknown = null;
   const cabinet = createAqualisCabinet(kit, {
     screenTouch: (x, y) => host.screenTouch(x, y),
     selector: (s) => host.setSelector(s),
     sampleValve: (open) => host.sampleValve(open),
+    // Its own power switch and the wall's supply in series: either off, it is off.
+    power: (on) => {
+      mainOn = on;
+      host.setPower(supplyOn && mainOn);
+    },
   });
   cabinet.setSelector(host.selector());
   cabinet.group.position.set(CAB.x, 0, CAB.z);
@@ -614,9 +625,12 @@ export function startAqualisControllerRoom(canvas: HTMLCanvasElement) {
       initial: 1,
       bound: {
         get value() {
-          return host.powered() ? 1 : 0;
+          return supplyOn ? 1 : 0;
         },
-        set: (k: number) => host.setPower(k === 1),
+        set: (k: number) => {
+          supplyOn = k === 1;
+          host.setPower(supplyOn && mainOn);
+        },
       },
       legend: 'OFF · ON',
       name: 'Aqualis cabinet supply switch',
@@ -918,6 +932,17 @@ export function startAqualisControllerRoom(canvas: HTMLCanvasElement) {
     cabinet.setLeds(host.leds());
     cabinet.setSampleFlow(host.sampleLh());
     cabinet.setPower(host.powered());
+    // Its piezo (the owner, 2026-10-31): a blue screen gives one failure
+    // beep and falls silent; a glitch beeps like a PC/XT's keyboard buffer
+    // full, on and on, until its power goes.
+    const crash = host.crashed() ? host.os().crash : null;
+    if (crash !== beeperCrash) {
+      beeperCrash = crash;
+      if (crash?.kind === 'stop') cabinet.beep('deny');
+    }
+    cabinet.beepLoop(
+      crash?.kind === 'glitch' && host.powered() ? 'buffer-full' : null,
+    );
     if (host.drawScreen(cabinet.context)) cabinet.screenChanged();
     // Its boot's live element, on its own small canvas over the screen.
     cabinet.showBoot(host.bootFrame(), TRIO_BOOT_DRAW);
