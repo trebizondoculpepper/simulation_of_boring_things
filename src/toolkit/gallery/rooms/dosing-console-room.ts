@@ -36,7 +36,13 @@ import {
   toFreePlay,
 } from '../../../game/plant/museum-4-challenge';
 import type { Hall4Game } from '../../../game/plant/museum-4-challenge';
-import { CYCLED_STATES, DEMO_STATES, demoView } from '../logic/dosing-console';
+import {
+  CYCLED_STATES,
+  DEMO_STATES,
+  demoCloseness,
+  demoView,
+} from '../logic/dosing-console';
+import { gameCloseness } from '../logic/water-closeness';
 import { CELEBRATION_SECONDS } from '../logic/console-celebration';
 import type { DemoState } from '../logic/dosing-console';
 import { createConsoleSounds } from '../views/console-sounds';
@@ -122,6 +128,7 @@ export function startDosingConsoleRoom(canvas: HTMLCanvasElement) {
     sound: sounds.play,
     titles: CHALLENGES.map((c) => c.title),
     scenario: () => (demo ? demoView(demoState()) : scenarioView(game)),
+    closeness: () => (demo ? demoCloseness(demoState()) : gameCloseness(game)),
     caption: () => (demo ? null : caption),
     left: () =>
       demo

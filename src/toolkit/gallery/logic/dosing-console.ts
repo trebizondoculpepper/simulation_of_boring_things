@@ -17,6 +17,7 @@ import {
   scenarioView,
 } from '../../../game/plant/museum-4-challenge';
 import type { Hall4Game } from '../../../game/plant/museum-4-challenge';
+import { gameCloseness } from './water-closeness';
 import type { SizeIndex } from '../../../game/plant/museum-4-doses';
 import type {
   Level,
@@ -200,6 +201,8 @@ export interface ScenarioScreen {
   /** The narration's words while it plays, or null. */
   caption: { kind: NarrationKind; text: string } | null;
   pressed: string | null;
+  /** How close the water is to balanced, 0..1 in 2 % steps (`water-closeness.ts`), or null in free play. */
+  closeness: number | null;
 }
 
 export interface ChemicalScreen {
@@ -464,6 +467,7 @@ export function scenarioScreen(
   view: ScenarioView,
   caption: ScenarioScreen['caption'],
   titles: readonly string[] = CHALLENGES.map((c) => c.title),
+  closeness: number | null = null,
 ): ScenarioScreen {
   const scenarioIds = new Set(
     scenarioRegions({
@@ -475,6 +479,7 @@ export function scenarioScreen(
       confirmReset: s.confirmReset,
       caption: null,
       pressed: null,
+      closeness: null,
     }).map((r) => r.id),
   );
   return {
@@ -486,6 +491,7 @@ export function scenarioScreen(
     confirmReset: s.confirmReset,
     caption,
     pressed: s.pressed && scenarioIds.has(s.pressed) ? s.pressed : null,
+    closeness: view.kind === 'free' ? null : closeness,
   };
 }
 
@@ -497,7 +503,13 @@ export function consoleScreens(
 ) {
   const left = g.card ? dosesLeft(g) : null;
   return {
-    scenario: scenarioScreen(s, scenarioView(g), caption),
+    scenario: scenarioScreen(
+      s,
+      scenarioView(g),
+      caption,
+      undefined,
+      gameCloseness(g),
+    ),
     chemical: chemicalScreen(s),
     dose: doseScreen(s, left, canDose(g)),
   };
@@ -513,6 +525,8 @@ export const DEMO_STATES = [
   // The won and out screens with their celebration and commiseration playing over them, again and again.
   'celebrate',
   'commiserate',
+  // A challenge partway to balanced, its closeness bar half full.
+  'partway',
 ] as const;
 export type DemoState = (typeof DEMO_STATES)[number];
 /** The states `?console=cycle` steps through. */
@@ -521,7 +535,13 @@ export const CYCLED_STATES: readonly DemoState[] = DEMO_STATES.slice(0, 5);
 /** A demonstration state's scenario view, from the first card. */
 export function demoView(asked: DemoState, heldSeconds = 2520): ScenarioView {
   const state =
-    asked === 'celebrate' ? 'won' : asked === 'commiserate' ? 'out' : asked;
+    asked === 'celebrate'
+      ? 'won'
+      : asked === 'commiserate'
+        ? 'out'
+        : asked === 'partway'
+          ? 'challenge'
+          : asked;
   if (state === 'free') return { kind: 'free', swimmers: 20 };
   const c = CHALLENGES[0];
   return {
@@ -532,8 +552,23 @@ export function demoView(asked: DemoState, heldSeconds = 2520): ScenarioView {
     goal: c.goal,
     level: 'journeyman',
     par: c.pars.journeyman,
-    used: state === 'challenge' ? 0 : state === 'holding' ? 1 : 2,
+    used:
+      asked === 'partway'
+        ? 1
+        : state === 'challenge'
+          ? 0
+          : state === 'holding'
+            ? 1
+            : 2,
     held: state === 'holding' ? heldSeconds : state === 'won' ? 3600 : null,
     out: state === 'out' ? ['pH'] : state === 'challenge' ? ['pH'] : [],
   };
+}
+
+/** A demonstration state's closeness bar (`water-closeness.ts`), or null where none shows. */
+export function demoCloseness(asked: DemoState): number | null {
+  if (asked === 'free') return null;
+  if (asked === 'challenge') return 0;
+  if (asked === 'partway') return 0.56;
+  return asked === 'out' || asked === 'commiserate' ? 0.4 : 1;
 }

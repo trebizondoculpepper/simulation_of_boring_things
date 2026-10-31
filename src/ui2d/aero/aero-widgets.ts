@@ -562,6 +562,75 @@ export function drawProgressBar(
   });
 }
 
+/**
+ * A score bar: a recessed glass track washed faintly red to amber to green
+ * along its length, the score's share of it lit in that gradient at full
+ * strength with a glossy highlight, a label over it. `fraction` 0..1.
+ */
+export function drawScoreBar(
+  ctx: Ctx,
+  r: Rect,
+  fraction: number,
+  label: string,
+) {
+  const sweep = (alpha: number) => {
+    const g = ctx.createLinearGradient(r.x, 0, r.x + r.w, 0);
+    const [red, amber, green] = [
+      AERO.tints.red[2],
+      AERO.tints.amber[1],
+      AERO.tints.green[1],
+    ];
+    g.addColorStop(0, red);
+    g.addColorStop(0.5, amber);
+    g.addColorStop(1, green);
+    ctx.globalAlpha = alpha;
+    return g;
+  };
+  ctx.save();
+  rounded(ctx, r, r.h / 2);
+  const well = ctx.createLinearGradient(0, r.y, 0, r.y + r.h);
+  well.addColorStop(0, 'rgba(20,60,90,0.35)');
+  well.addColorStop(1, 'rgba(255,255,255,0.5)');
+  ctx.fillStyle = well;
+  ctx.fill();
+  ctx.fillStyle = sweep(0.28);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = AERO.glassEdge;
+  ctx.stroke();
+  const f = Math.max(0, Math.min(1, fraction));
+  if (f > 0) {
+    const inner = {
+      x: r.x + 2,
+      y: r.y + 2,
+      w: Math.max(r.h - 4, (r.w - 4) * f),
+      h: r.h - 4,
+    };
+    rounded(ctx, inner, inner.h / 2);
+    ctx.fillStyle = sweep(1);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = 'rgba(40,40,20,0.35)';
+    ctx.stroke();
+    ctx.clip();
+    const gloss = ctx.createLinearGradient(0, inner.y, 0, inner.y + inner.h);
+    gloss.addColorStop(0, 'rgba(255,255,255,0.85)');
+    gloss.addColorStop(0.48, 'rgba(255,255,255,0.25)');
+    gloss.addColorStop(0.5, 'rgba(255,255,255,0)');
+    gloss.addColorStop(1, 'rgba(255,255,255,0.18)');
+    ctx.fillStyle = gloss;
+    ctx.fillRect(inner.x, inner.y, inner.w, inner.h);
+  }
+  ctx.restore();
+  drawText(ctx, label, r.x + r.w / 2, r.y + r.h / 2 + 1, {
+    size: Math.round(r.h * 0.5),
+    weight: 600,
+    align: 'center',
+    glow: true,
+    maxWidth: r.w - 16,
+  });
+}
+
 /** A big status banner: a tinted glass slab, a headline and lines beneath. */
 export function drawBanner(
   ctx: Ctx,

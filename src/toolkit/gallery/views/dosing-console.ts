@@ -64,6 +64,8 @@ import type { ConsoleSound } from '../logic/console-sounds';
 export interface ConsoleHost {
   /** The engine's scenario view now. */
   scenario(): ScenarioView;
+  /** How close the water is to balanced, 0..1 (`water-closeness.ts`), or null; no bar if absent. */
+  closeness?(): number | null;
   /** The narration's words while they show, or null. */
   caption(): { kind: NarrationKind; text: string } | null;
   /** Doses left (null in free play) and whether DOSE would be taken. */
@@ -176,6 +178,7 @@ export function createDosingConsole(kit: PanelKit, host: ConsoleHost) {
       host.scenario(),
       host.caption(),
       host.titles,
+      host.closeness?.() ?? null,
     ),
     chemical: chemicalScreen(state),
     dose: doseScreen(state, host.left(), host.ready()),

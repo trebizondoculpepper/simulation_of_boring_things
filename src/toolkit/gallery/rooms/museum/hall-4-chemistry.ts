@@ -61,6 +61,7 @@ import { touchPoint } from '../../../controls/input/touch-point';
 import { createConsoleSounds } from '../../views/console-sounds';
 import { CELEBRATION_SECONDS } from '../../logic/console-celebration';
 import { CONSOLE, createDosingConsole } from '../../views/dosing-console';
+import { gameCloseness } from '../../logic/water-closeness';
 import {
   BALANCE_TANK,
   BEAM,
@@ -520,6 +521,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     sound: sounds.play,
     titles: CHALLENGES.map((c) => c.title),
     scenario: () => scenarioView(game),
+    closeness: () => gameCloseness(game),
     caption: () => caption,
     left: () => (game.card ? dosesLeft(game) : null),
     ready: () => canDose(game),

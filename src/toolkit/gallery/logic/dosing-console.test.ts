@@ -111,6 +111,19 @@ describe("Hall 4's dosing console screens", () => {
     expect(v.dose.left).toBe(CHALLENGES[0].pars.pro);
   });
 
+  it('carry the closeness bar in a challenge, none in free play, and redraw on its 2 % steps', () => {
+    const s = newConsole();
+    expect(consoleScreens(s, newGame(), null).scenario.closeness).toBeNull();
+    const g = startCard(newGame(), CHALLENGES[0], 'pro');
+    expect(consoleScreens(s, g, null).scenario.closeness).toBe(0);
+    expect(
+      scenarioScreen(s, demoView('free'), null, [], 0.5).closeness,
+    ).toBeNull();
+    const at = (c: number) =>
+      scenarioKey(scenarioScreen(s, demoView('partway'), null, [], c));
+    expect(at(0.56)).not.toBe(at(0.58));
+  });
+
   it('change each screen’s key exactly when what it shows changes', () => {
     const s = newConsole();
     const k = chemicalKey(chemicalScreen(s));

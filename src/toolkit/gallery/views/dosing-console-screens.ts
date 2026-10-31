@@ -6,7 +6,7 @@ import {
   drawGlossyButton,
   drawList,
   drawMakerStrip,
-  drawProgressBar,
+  drawScoreBar,
   drawScrollArrow,
   drawSegmented,
   drawText,
@@ -134,14 +134,14 @@ export function drawScenarioScreen(ctx: Ctx, m: ScenarioScreen) {
     });
     const held =
       v.held === null ? null : Math.floor(v.held / HOLD_STEP) * HOLD_STEP;
-    drawProgressBar(
+    // How close the water is to balanced, red to green; what is still out, or the hold.
+    drawScoreBar(
       ctx,
       L.progress,
-      held === null ? 0 : held / HOLD,
+      held === null ? (m.closeness ?? 0) : 1,
       held === null
         ? `OUT OF RANGE · ${v.out.join(', ')}`
         : `IN RANGE · HOLDING ${labClock(held)} / ${labClock(HOLD)}`,
-      held === null ? 'grey' : 'amber',
     );
     button(ctx, m, 'reset', L.reset, 'RESET', 'grey');
     button(ctx, m, 'abandon', L.abandon, 'FREE PLAY', 'aqua');
