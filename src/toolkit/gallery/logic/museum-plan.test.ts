@@ -10,6 +10,7 @@ import {
   hallInterior,
   insideFaceRuns,
   hallLiftOpening,
+  hallFireExitOpening,
   hallLiftPlace,
   archToSee,
   hallId,
@@ -357,10 +358,11 @@ describe('Hall 0’s tiles (107-1, 2026-10-28)', () => {
     const perimeter = 2 * (inner.maxX - inner.minX + inner.maxZ - inner.minZ);
     const length = (runs: { from: number; to: number }[]) =>
       runs.reduce((s, r) => s + r.to - r.from, 0);
-    // Its doorways, and the freight lift's opening (mission 108).
+    // Its doorways, the freight lift's opening (mission 108) and the fire exit.
     const doors =
       hallArches('museum0').reduce((s, a) => s + a.w, 0) +
-      (hallLiftOpening('museum0')?.w ?? 0);
+      (hallLiftOpening('museum0')?.w ?? 0) +
+      (hallFireExitOpening('museum0')?.w ?? 0);
     expect(length(insideFaceRuns('museum0', 0))).toBeCloseTo(
       perimeter - doors,
       6,

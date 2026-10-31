@@ -47,6 +47,8 @@ import {
   PAINTED_POOL,
   PANEL,
   beyondAt,
+  MUSEUM_HALLS,
+  LIFEBUOY_STICKER,
   comingSoonPanel,
   hall0Ladder,
   ARCH_CROWN,
@@ -464,19 +466,13 @@ export function hall0TrimGeometry(): {
 }
 
 /**
- * A glossy sticker of a lifebuoy on Hall 0's west wall (the owner,
- * 2026-10-28; moved from the west wall for the lift, 2026-10-30), south
- * of the archway into Hall 1 (moved there, 2026-10-31): set decoration, not a real lifebuoy, 0.75 m across, red and
- * white quarters and its grab line, 1 mm proud of the tiles and drawn after
- * them (renderOrder, polygon offset) so it never z-fights. In the museum's
+ * A glossy sticker of a lifebuoy on Hall 0's west wall (`LIFEBUOY_STICKER`
+ * in `museum-plan.ts`): set decoration, not a real lifebuoy, red and white
+ * quarters and its grab line, 1 mm proud of the tiles and drawn after them
+ * (renderOrder, polygon offset) so it never z-fights. In the museum's
  * coordinates; its texture is made by `lifebuoyStickerTexture`.
  */
-/**
- * Hall 0's lifebuoy sticker, on the west wall south of the archway into
- * Hall 1, where the owner put it (2026-10-31): its size, height and place
- * along the wall from the wall's middle (z in the hall's frame).
- */
-export const LIFEBUOY_STICKER = { size: 0.75, y: 1.95, along: 4.8 } as const;
+export { LIFEBUOY_STICKER };
 export function lifebuoyStickerGeometry() {
   const west = hallWalls('museum0').find((w) => w.side === 'west')!;
   const u = (west.from + west.to) / 2 + LIFEBUOY_STICKER.along;
@@ -1379,6 +1375,26 @@ function paintTitleWall(c: CanvasRenderingContext2D, w: number, h: number) {
 }
 
 /** Hall 0's welcome panel. */
+/** A small count as its word, for a panel's heading. */
+function countWord(n: number): string {
+  const words = [
+    'NO',
+    'ONE',
+    'TWO',
+    'THREE',
+    'FOUR',
+    'FIVE',
+    'SIX',
+    'SEVEN',
+    'EIGHT',
+    'NINE',
+    'TEN',
+    'ELEVEN',
+    'TWELVE',
+  ];
+  return words[n] ?? String(n);
+}
+
 function paintWelcome(c: CanvasRenderingContext2D, w: number, h: number) {
   const b = HALL_BRIEFS.museum0;
   c.fillStyle = BRAND.colours.ground;
@@ -1436,7 +1452,7 @@ function paintWelcome(c: CanvasRenderingContext2D, w: number, h: number) {
   c.fillStyle = BRAND.colours.ink;
   c.font = font(h * 0.022, 700);
   c.fillText(
-    'THE ROUTE: NINE HALLS ROUND THE COURTYARD, AND BACK HERE',
+    `THE ROUTE: ${countWord(MUSEUM_HALLS.length - 1)} HALLS, AND BACK HERE`,
     pad,
     h * 0.8,
   );
@@ -1769,8 +1785,9 @@ export function createMuseumHall(
   for (const wall of hallWalls(id)) {
     const openings = openingsOn(id, wall, viewer);
     const windows = wallWindows(id, wall);
-    const beyond = beyondAt(wall, (wall.from + wall.to) / 2);
-    const tiledBoth = welcome && beyond !== 'hall';
+    // Hall 0's walls are tiled all round (the owner, 2026-10-31), the
+    // ones the plan has facing other halls too.
+    const tiledBoth = welcome;
     plan.add(
       wallRun(
         wall.axis,

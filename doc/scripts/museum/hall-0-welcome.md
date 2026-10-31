@@ -37,9 +37,9 @@ THE BIG IDEA: The simplest thing in the world, diving in, takes a world of engin
 TRY THIS FIRST:
 
 - Look for the water in this room. (There is none: it is paint.)
-- Follow the arrows north through the doorway and find out what is behind the tiles.
+- Follow the arrows west through the archway and find out what is behind the tiles.
 
-Route heading: THE ROUTE: FIVE HALLS ROUND THE COURTYARD, AND BACK HERE
+Route heading: THE ROUTE: NINE HALLS, AND BACK HERE
 
 Route strip: 1 Warm water · 2 Clean water · 3 Safe water · 4 The chemistry of pools · 5 A Day in the Life · 6 Grundflow’s Amazing World of Pumps · 7 Grout: The Unsung Hero of the Aquatics World · 8 Never again: putting safety first · 9 The whole plant
 

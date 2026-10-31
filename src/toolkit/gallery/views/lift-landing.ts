@@ -213,7 +213,7 @@ export function installLiftLanding(o: LiftLandingOptions) {
   );
   sign.position.set(0, LIFT_DOOR.height + 0.62, 0.012);
   root.add(sign);
-  // The call button, to the right of the doors as one faces them, on a
+  // The call button, to the left of the doors as one faces them, on a
   // stainless plate at 1.1 m: on the wall beside the frame, or on the
   // frame's jamb where the wall is narrow.
   const lift = () => store.world.value.lifts[o.lift];

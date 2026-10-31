@@ -1162,6 +1162,31 @@ export function ringNeighbours(id: MuseumHallId): [MuseumHallId, MuseumHallId] {
 }
 
 /**
+ * Hall 0's fire exit door, to the stair down: on its north wall, opposite
+ * the PLANTROOMS title wall, with the lift (the owner, 2026-10-30: "the
+ * door to room one is much too close to the fire exit ... put ... the fire
+ * exit, and the elevator on the same side"), east of its middle; along
+ * the wall from the hall's middle.
+ */
+export const FIRE_EXIT = { wall: 'north' as const, along: 1.4, w: 1.1, h: 2.1 };
+
+/** Its frame's width each side of its leaf (`createFireExitDoor`). */
+export const FIRE_EXIT_FRAME = 0.06;
+
+/** Hall 0's fire exit door in its wall, in the museum's plan: its middle along the wall, its width with its frame, and its head. */
+export function hallFireExitOpening(id: MuseumHallId) {
+  if (id !== 'museum0') return null;
+  const wall = hallWalls(id).find((w) => w.side === FIRE_EXIT.wall)!;
+  const o = hallOrigin(id);
+  return {
+    wall,
+    u: (wall.axis === 'x' ? o.x : o.z) + FIRE_EXIT.along,
+    w: FIRE_EXIT.w + 2 * FIRE_EXIT_FRAME,
+    top: FIRE_EXIT.h + FIRE_EXIT_FRAME,
+  };
+}
+
+/**
  * The freight lift's floor-4 landing (mission 108): on Hall 0's north
  * wall, with the fire exit (the owner, 2026-10-30, layout C: it was on the
  * west wall, now the doorway into Hall 1's), 4 m west of the wall's
@@ -1200,7 +1225,7 @@ export function hallLiftPlace(id: MuseumHallId): LiftPlace | null {
  * Hall 0's tiled trim (the owner, 2026-10-28: "make the welcome hall look
  * like a pool room with a tiled floor and wall"): the runs along the
  * inside face of each of its walls from height `y` up `h`, in the museum's plan,
- * broken where a doorway or window crosses that height (a band, or the
+ * broken where a doorway, window, the lift or the fire exit crosses that height (a band, or the
  * cove at the deck, `y` 0, broken by the doorways).
  */
 export function insideFaceRuns(
@@ -1227,6 +1252,9 @@ export function insideFaceRuns(
     const lift = hallLiftOpening(id);
     if (lift && lift.wall.side === wall.side && y < lift.top)
       gaps.push([lift.u - lift.w / 2, lift.u + lift.w / 2]);
+    const exit = hallFireExitOpening(id);
+    if (exit && exit.wall.side === wall.side && y < exit.top)
+      gaps.push([exit.u - exit.w / 2, exit.u + exit.w / 2]);
     gaps.sort((p, q) => p[0] - q[0]);
     let at = wall.from + t;
     for (const [a, b] of gaps) {
@@ -1237,6 +1265,14 @@ export function insideFaceRuns(
   }
   return out;
 }
+
+/**
+ * Hall 0's lifebuoy sticker (the owner, 2026-10-28), on the west wall
+ * south of the archway into Hall 1, where the owner put it (2026-10-31):
+ * its size, the height of its middle, and its place along the wall from
+ * the wall's middle (z in the hall's frame), clear of the archway.
+ */
+export const LIFEBUOY_STICKER = { size: 0.75, y: 1.95, along: 4.8 } as const;
 
 /** Hall 0's two bands of coloured tiles round its walls: their foot and depth, metres. */
 export const HALL0_BANDS = [

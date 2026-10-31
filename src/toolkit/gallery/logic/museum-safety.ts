@@ -15,6 +15,7 @@ import {
   previousHall,
   ringDistance,
   wallWindows,
+  FIRE_EXIT,
 } from './museum-plan';
 import type {
   HallWall,
@@ -173,14 +174,8 @@ export function exitArch(id: MuseumHallId): MuseumArch | null {
     : (hallArches(id).find((a) => a.to === to) ?? null);
 }
 
-/**
- * Hall 0's fire exit door, to the stair down: on its north wall, opposite
- * the PLANTROOMS title wall, with the lift (the owner, 2026-10-30: "the
- * door to room one is much too close to the fire exit ... put ... the fire
- * exit, and the elevator on the same side"), east of its middle; along
- * the wall from the hall's middle.
- */
-export const FIRE_EXIT = { wall: 'north' as const, along: 1.4, w: 1.1, h: 2.1 };
+/** Hall 0's fire exit door (`museum-plan.ts`, where the tiled cove leaves a gap for it). */
+export { FIRE_EXIT };
 
 /**
  * Where the lift will be (the owner, 2026-10-28; not built yet): a large
@@ -573,18 +568,28 @@ export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
     // Medical, by the fire exit: the defibrillator, the first-aid kit and its sign.
     put('aed', exitWall, doorU + 3.6, HEIGHTS.aed);
     put('first-aid', exitWall, doorU + 4.8, HEIGHTS.notice);
-    // Hung inside the doorway into Hall 1, back to back: to those coming
-    // in from the museum, the fire exit on their left; to those by the
-    // pool, ahead and to the right.
+    // Hung inside the doorway into Hall 1, back to back, each face's arrow
+    // pointing at the fire exit as its reader sees it (`arrowTo`): to
+    // those coming in from the museum, on their left; to those in the
+    // hall, facing the archway, to their right and a little behind.
     const toHall1 = hallArches(id)[0];
     const hang = {
       x: o.x + toHall1.frame.x + toHall1.into[0] * 1.2,
       z: o.z + toHall1.frame.z + toHall1.into[1] * 1.2,
     };
     const facingIn = Math.atan2(toHall1.into[0], toHall1.into[1]);
+    const exitAt =
+      exitWall.axis === 'x'
+        ? { x: doorU, z: exitWall.line }
+        : { x: exitWall.line, z: doorU };
+    const toExit = [exitAt.x - hang.x, exitAt.z - hang.z] as const;
+    const walkingIn = toHall1.into;
+    const facingOut = [-walkingIn[0], -walkingIn[1]] as const;
     for (const [yaw, arrow] of [
-      [facingIn + Math.PI, 'left'],
-      [facingIn, 'up-right'],
+      // Read by those walking in (facing into the hall).
+      [facingIn + Math.PI, arrowTo(walkingIn, toExit[0], toExit[1])],
+      // Read from the hall (facing out through the archway).
+      [facingIn, arrowTo(facingOut, toExit[0], toExit[1])],
     ] as const)
       out.push({
         kind: 'exit-hanging',
@@ -636,7 +641,9 @@ export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
     for (const [lx, lz] of [
       [-3, 3],
       [3, -3],
-      [0, 0],
+      // Off the caustics projector's ceiling plate and drop pole at the
+      // middle, between the light strips at x ±1.5.
+      [0, 1.5],
       [-6, -5],
       [-6, 5],
     ])
