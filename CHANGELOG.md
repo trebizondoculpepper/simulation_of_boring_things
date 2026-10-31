@@ -4,6 +4,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-31
+
 - The Lounge's and the Olympic's dosing is now each pool's Dr Aqualis Trio, in the world's logic (not yet drawn): their graph (the cabinet, a sample point before the filters, its line and return to the balance tank, control links to every dosing pump, alarms, power; CO₂ left unlinked), an adapter matching the Trio's control ports to every kind of metering pump, and the Trios stepped with the world, driving the real pumps (`WORLD_VERSION` 61, saves migrated). The spas keep the old controller.
 - CO₂ dosing, as pure logic (not yet drawn or in the world): the loading bay's cylinder banks (mission 109's supply) feed a building line through a master valve to a wall port in each plant room; each room's CO₂ valve controller (a 300 g/h solenoid panel for the Lounge, a 2 kg/h mass flow controller for the Olympic) is driven by its Dr Aqualis Trio over 4–20 mA and a release contact; CO₂ detectors at the UK workplace limits shut the dosing and trip the master valve.
 - The engineer's office: a 1990s cantilever wall shelf over the desk, Pool Simulator 97 face-out on it; the software boxes can be picked up, turned to read every face, put back, or dropped into the Gateway 3000 carton, whose flaps no longer clip; Beige Accounting's box is now Leisure Centre Ledger 3.1, an accounting system; the room's title card is gone and its desk socket drops straight to just under the dado.
@@ -1018,7 +1020,8 @@ The first release. It has no operator's manual yet: that comes in a later releas
 - Walking from one room to the next no longer recompiles every shader of the room arrived in.
 - The corridor posters load on the published site.
 
-[Unreleased]: https://github.com/trebizondoculpepper/the_pool/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/trebizondoculpepper/the_pool/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/trebizondoculpepper/the_pool/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/trebizondoculpepper/the_pool/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/trebizondoculpepper/the_pool/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/trebizondoculpepper/the_pool/compare/v0.4.0...v0.5.0
