@@ -9,6 +9,9 @@ import {
   SPEED,
   WON_SHOWN,
   canDose,
+  classifyRoute,
+  dosesInWords,
+  narrationWords,
   doseGame,
   labClock,
   newGame,
@@ -135,5 +138,40 @@ describe('the slow drift', () => {
     );
     expect(g.outcome).toBe('playing');
     expect(g.heldSince).toBeNull();
+  });
+
+  it("records the visitor's doses, and forgets them on a new card or free play", () => {
+    const card = CHALLENGES[0];
+    let g = startCard(newGame(), card, 'journeyman');
+    g = doseGame(doseGame(g, 'hcl', 2), 'fresh', 1);
+    expect(g.given).toEqual([
+      { tank: 'hcl', size: 2 },
+      { tank: 'fresh', size: 1 },
+    ]);
+    expect(startCard(g, card, 'pro').given).toEqual([]);
+  });
+
+  it('classifies a win close to no route as other, and words it generically', () => {
+    const card = CHALLENGES.find((c) => c.id === 'acid-overdose')!;
+    const doses = [{ tank: 'calciumChloride', size: 4 }] as const;
+    expect(classifyRoute(card, 'journeyman', doses)).toEqual({ kind: 'other' });
+    const g = { ...startCard(newGame(), card, 'journeyman'), given: doses };
+    const w = narrationWords(g, 'explanation')!;
+    expect(w.route.kind).toBe('other');
+    expect(w.text).toContain('Huge calcium chloride');
+    expect(w.text).toContain('better solution');
+    expect(dosesInWords([...doses, { tank: 'fresh', size: 0 }])).toBe(
+      'Huge calcium chloride and Tiny fresh water',
+    );
+  });
+
+  it('prefers the stored solution to an alternative on a tie, the nearer route otherwise', () => {
+    const card = CHALLENGES.find((c) => c.id === 'acid-overdose')!;
+    expect(
+      classifyRoute(card, 'journeyman', card.solutions.journeyman),
+    ).toEqual({ kind: 'solution' });
+    expect(
+      classifyRoute(card, 'journeyman', [{ tank: 'hypo', size: 4 }]),
+    ).toEqual({ kind: 'also', index: 0 });
   });
 });

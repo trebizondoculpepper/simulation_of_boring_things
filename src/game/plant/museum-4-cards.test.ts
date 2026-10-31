@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { CHALLENGES } from './museum-4-cards';
-import { BANDS, HOLD, outOfBand, replay } from './museum-4-challenge';
+import {
+  BANDS,
+  HOLD,
+  narrationWords,
+  outOfBand,
+  replay,
+} from './museum-4-challenge';
 import type { Level } from './museum-4-challenge';
 import { readWater } from './museum-4-lab';
-import { DOSES, SIZES, doseWords } from './museum-4-doses';
+import { DOSES, SIZES, doseOf, doseWords } from './museum-4-doses';
 import { fuzzCases } from './museum-4-solver';
 import { doseKey, partials } from './museum-4-challenge.test-support';
 
@@ -66,6 +72,35 @@ describe("Hall 4's first set of challenge cards", () => {
             .map((p) => `${level}: ${doseKey(p.doses)}`);
           expect(won).toEqual([]);
         }
+      });
+
+      it("closes a win by its stored solution with the level's explanation", () => {
+        for (const level of LEVELS) {
+          const g = replay(card, level, card.solutions[level]);
+          expect(g.given).toEqual(card.solutions[level]);
+          const w = narrationWords(g, 'explanation')!;
+          expect(w.route.kind).toBe('solution');
+          expect(w.text).toBe(card.explanation[level]);
+        }
+      });
+
+      it('words each alternative route: what was used, and a better solution', () => {
+        for (const level of LEVELS)
+          (card.alsoWins?.[level] ?? []).forEach((alt, index) => {
+            const t = alt.explanation;
+            expect(t).toMatch(/^Yes: /);
+            expect(t).toContain(' worked because ');
+            expect(t.toLowerCase()).toContain('better solution');
+            for (const d of alt.doses) expect(t).toContain(doseOf(d.tank).name);
+            const g = replay(card, level, alt.doses);
+            if (g.outcome !== 'won') return;
+            const w = narrationWords(g, 'explanation')!;
+            expect(w.route, `${level} ${index}`).toEqual({
+              kind: 'also',
+              index,
+            });
+            expect(w.text).toBe(t);
+          });
       });
 
       it('has two genuinely different routes', () => {

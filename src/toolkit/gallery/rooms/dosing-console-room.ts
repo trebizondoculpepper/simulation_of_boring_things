@@ -24,7 +24,7 @@ import {
 import { createFirstPerson } from '../../controls/input/first-person';
 import { CHALLENGES } from '../../../game/plant/museum-4-cards';
 import {
-  cardWords,
+  narrationWords,
   canDose,
   doseGame,
   dosesLeft,
@@ -250,10 +250,9 @@ export function startDosingConsoleRoom(canvas: HTMLCanvasElement) {
       const n = game.narration;
       if (n && n.seq !== seenSeq && game.card) {
         seenSeq = n.seq;
-        caption = {
-          kind: n.kind,
-          text: cardWords(game.card, n.kind, game.level),
-        };
+        // On a win, the words of the route the visitor took.
+        const words = narrationWords(game, n.kind)!;
+        caption = { kind: n.kind, text: words.text };
         // The explanation waits under the celebration, then shows its full time.
         captionLeft =
           CAPTION_SECONDS +

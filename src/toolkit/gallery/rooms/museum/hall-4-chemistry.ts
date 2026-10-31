@@ -42,7 +42,7 @@ import type {
 } from '../../../../game/plant/museum-4-lab';
 import { CHALLENGES } from '../../../../game/plant/museum-4-cards';
 import {
-  cardWords,
+  narrationWords,
   canDose,
   doseGame,
   dosesLeft,
@@ -848,20 +848,22 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       const n = game.narration;
       if (n && n.seq !== seenSeq && game.card) {
         seenSeq = n.seq;
-        caption = {
-          kind: n.kind,
-          text: cardWords(game.card, n.kind, game.level),
-        };
+        // On a win, the words of the route the visitor took.
+        const words = narrationWords(game, n.kind)!;
+        caption = { kind: n.kind, text: words.text };
         // The explanation waits under the celebration, then shows its full time.
         captionLeft =
           CAPTION_SECONDS +
           (n.kind === 'explanation' ? CELEBRATION_SECONDS.won : 0);
+        // Only the stored solution's explanation has a recorded clip.
         narrate(
-          CARD_NARRATION[game.card.id]?.[
-            n.kind !== 'clue' && game.level === 'pro'
-              ? (`${n.kind}Pro` as const)
-              : n.kind
-          ] ?? '',
+          words.route.kind !== 'solution'
+            ? ''
+            : (CARD_NARRATION[game.card.id]?.[
+                n.kind !== 'clue' && game.level === 'pro'
+                  ? (`${n.kind}Pro` as const)
+                  : n.kind
+              ] ?? ''),
         );
       }
       captionLeft -= delta;

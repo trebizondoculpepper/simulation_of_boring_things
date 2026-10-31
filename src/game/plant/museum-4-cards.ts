@@ -55,6 +55,8 @@ export const CHALLENGES: readonly ChallengeCard[] = [
           ],
           reason:
             'Fresh mains water dilutes the pH down and brings its own alkalinity, with a little acid: a real, if wasteful, route.',
+          explanation:
+            'Yes: Small hydrochloric acid and Huge fresh water worked because the mains water dilutes the pH down and brings its own alkalinity, with a little acid to help, but it runs a great deal of water to waste and must be heated. A better solution would bring the pH down without touching the alkalinity and then rebuild the buffer, with no water wasted.',
         },
         {
           doses: [
@@ -63,6 +65,8 @@ export const CHALLENGES: readonly ChallengeCard[] = [
           ],
           reason:
             'Carbon dioxide down, then soda ash rebuilding the alkalinity: a sound buffer route by another alkali.',
+          explanation:
+            'Yes: Large carbon dioxide and Huge soda ash worked because the carbon dioxide brings the pH down and the soda ash rebuilds the alkalinity, but soda ash is a strong alkali and pushes the pH back up as it goes. A better solution would rebuild the buffer with an alkali that hardly moves the pH, so less carbon dioxide is needed and the pH stays put.',
         },
       ],
     },
@@ -112,6 +116,8 @@ export const CHALLENGES: readonly ChallengeCard[] = [
           ],
           reason:
             'Soda ash raises the alkalinity too, if pushing the pH with it.',
+          explanation:
+            'Yes: two Huge soda ash doses worked because soda ash raises the alkalinity, but it is a strong alkali and pushes the pH up with it. A better solution would raise the buffer while hardly moving the pH, in a single dose.',
         },
         {
           doses: [
@@ -120,6 +126,8 @@ export const CHALLENGES: readonly ChallengeCard[] = [
           ],
           reason:
             'Mains water carries its own alkalinity: dilution restores the buffer, at a cost in water.',
+          explanation:
+            'Yes: two Huge fresh water doses worked because mains water carries its own alkalinity and dilution restores the buffer, but it runs a great deal of water to waste and must be heated. A better solution would raise the alkalinity directly, in one dose and with no water wasted.',
         },
         {
           doses: [
@@ -127,6 +135,8 @@ export const CHALLENGES: readonly ChallengeCard[] = [
             { tank: 'fresh', size: 4 },
           ],
           reason: 'Soda ash and mains water both bring alkalinity.',
+          explanation:
+            'Yes: Huge soda ash and Huge fresh water worked because both bring alkalinity, but the soda ash pushes the pH up and the fresh water runs to waste. A better solution would raise the buffer while hardly moving the pH, in a single dose.',
         },
       ],
       pro: [
@@ -137,6 +147,8 @@ export const CHALLENGES: readonly ChallengeCard[] = [
           ],
           reason:
             'Mains water brings hardness as well as alkalinity, so it can stand in for the calcium chloride.',
+          explanation:
+            'Yes: Large sodium bicarbonate and Huge fresh water worked because the bicarbonate rebuilds the alkalinity and the mains water brings hardness as well, but it runs a great deal of water to waste and must be heated. A better solution would raise the hardness directly, with no water wasted.',
         },
       ],
     },
@@ -177,6 +189,8 @@ export const CHALLENGES: readonly ChallengeCard[] = [
           doses: [{ tank: 'hypo', size: 4 }],
           reason:
             'Huge hypochlorite is strongly alkaline and lifts the pH alone; true chemistry, but it superchlorinates the pool (flagged to the owner).',
+          explanation:
+            'Yes: Huge sodium hypochlorite worked because it is strongly alkaline and lifts the pH on its own, but it superchlorinates the pool, which must stay shut until the chlorine falls. A better solution would rebuild the alkalinity the acid ate, so the pH rises gently and holds, with the chlorine left alone.',
         },
         {
           doses: [
@@ -184,6 +198,8 @@ export const CHALLENGES: readonly ChallengeCard[] = [
             { tank: 'sodaAsh', size: 3 },
           ],
           reason: 'Soda ash lifts the pH; the hypochlorite helps.',
+          explanation:
+            'Yes: Large sodium hypochlorite and Large soda ash worked because the soda ash lifts the pH and the alkaline hypochlorite helps, but it puts in far more chlorine than the pool needs and the soda ash jumps the pH rather than rebuilding the buffer. A better solution would rebuild the alkalinity the acid ate, so the pH rises gently and holds.',
         },
         {
           doses: [
@@ -192,6 +208,8 @@ export const CHALLENGES: readonly ChallengeCard[] = [
           ],
           reason:
             'Soda ash lifts the pH and the alkalinity, in steps or overshot and brought back with acid: a sound if less gentle buffer route.',
+          explanation:
+            'Yes: Large soda ash and Medium soda ash worked because soda ash lifts the pH and the alkalinity, but it is a strong alkali, so the pH jumps rather than rising gently. A better solution would rebuild the buffer with an alkali that hardly moves the pH, in a single dose.',
         },
         {
           doses: [
@@ -200,6 +218,8 @@ export const CHALLENGES: readonly ChallengeCard[] = [
           ],
           reason:
             'Mains water dilutes the acid and brings its own alkalinity: dilution, at a cost in water.',
+          explanation:
+            'Yes: two Huge fresh water doses worked because mains water dilutes the acid and brings its own alkalinity, but it runs a great deal of water to waste and must be heated. A better solution would rebuild the alkalinity the acid ate in a single dose, with no water wasted.',
         },
       ],
     },
@@ -326,6 +346,8 @@ export const CHALLENGES: readonly ChallengeCard[] = [
           ],
           reason:
             'Breakpoint chlorination: a shock dose burns off the chloramines, the acid holding the pH; the classic alternative to dilution.',
+          explanation:
+            'Yes: Huge sodium hypochlorite and Medium hydrochloric acid worked because the shock dose burns off the chloramines and the acid holds the pH, but it superchlorinates the pool, which must stay shut until the chlorine falls, and some combined chlorine will not burn off. A better solution would dilute the combined chlorine away, keeping a little free chlorine working, so the pool can stay open.',
         },
         {
           doses: [
@@ -333,6 +355,8 @@ export const CHALLENGES: readonly ChallengeCard[] = [
             { tank: 'fresh', size: 4 },
           ],
           reason: 'Dilution alone, without the top-up.',
+          explanation:
+            'Yes: Large fresh water and Huge fresh water worked because dilution carries the combined chlorine away, but it runs even more water to waste and leaves the free chlorine to the mains. A better solution would dilute once, with a small top-up of chlorine to keep the free chlorine working.',
         },
         {
           doses: [
@@ -341,6 +365,8 @@ export const CHALLENGES: readonly ChallengeCard[] = [
           ],
           reason:
             'Breakpoint chlorination with granules: a double shock burns off the chloramines.',
+          explanation:
+            'Yes: two Huge calcium hypochlorite doses worked because the double shock burns off the chloramines, but it superchlorinates the pool, which must stay shut until the chlorine falls, and it adds hardness with it. A better solution would dilute the combined chlorine away, keeping a little free chlorine working, so the pool can stay open.',
         },
       ],
       pro: [
@@ -352,6 +378,8 @@ export const CHALLENGES: readonly ChallengeCard[] = [
           ],
           reason:
             'One step less bicarbonate still rebuilds the alkalinity enough: plausibly close.',
+          explanation:
+            'Yes: Tiny sodium hypochlorite, Large sodium bicarbonate and Huge fresh water worked because the fresh water dilutes the combined chlorine away and the bicarbonate puts back the alkalinity, but the buffer comes back only just in range. A better solution would put back all the alkalinity the busy week used up, so the pH holds firm.',
         },
         {
           doses: [
@@ -360,6 +388,8 @@ export const CHALLENGES: readonly ChallengeCard[] = [
           ],
           reason:
             'Twice the dilution: the mains water brings back the alkalinity too.',
+          explanation:
+            'Yes: two Huge fresh water doses worked because the dilution carries the combined chlorine away and the mains water brings back the alkalinity too, but it runs twice the water to waste and must all be heated. A better solution would dilute once, top up the free chlorine and rebuild the buffer directly.',
         },
       ],
     },
@@ -407,6 +437,8 @@ export const CHALLENGES: readonly ChallengeCard[] = [
           ],
           reason:
             'Bicarbonate in place of soda ash rebuilds the alkalinity: the Pool Pro route without the fresh water.',
+          explanation:
+            'Yes: Huge sodium bicarbonate and Huge calcium chloride worked because the calcium chloride raises the hardness and the bicarbonate rebuilds the alkalinity, bringing the balance into range. That is a sound route; a better solution would also leave every other reading right as well.',
         },
         {
           doses: [
@@ -415,6 +447,8 @@ export const CHALLENGES: readonly ChallengeCard[] = [
           ],
           reason:
             'Huge chlorine is alkaline enough to stand in for the soda ash, if superchlorinating.',
+          explanation:
+            'Yes: Huge sodium hypochlorite and Huge calcium chloride worked because the calcium chloride raises the hardness and the alkaline hypochlorite lifts the pH enough to bring the balance into range, but it superchlorinates the pool, which must stay shut until the chlorine falls. A better solution would rebuild the alkalinity with an alkali, leaving the chlorine alone.',
         },
       ],
     },

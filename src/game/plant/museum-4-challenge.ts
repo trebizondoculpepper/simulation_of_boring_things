@@ -6,7 +6,7 @@ import {
   water,
 } from './museum-4-lab';
 import type { Hall4Readings, Hall4State, TankId } from './museum-4-lab';
-import { doseAmount } from './museum-4-doses';
+import { doseAmount, doseWords, sizeShare } from './museum-4-doses';
 import type { SizeIndex } from './museum-4-doses';
 import type { PoolChemistry } from '../water/pool-chemistry';
 
@@ -118,11 +118,22 @@ export interface ChallengeCard {
    * Other routes that win at a level and are chemically sound, each with
    * its reason (the partial-solution tests accept a winner close to one).
    */
-  alsoWins?: Partial<
-    Record<Level, readonly { doses: readonly Dose[]; reason: string }[]>
-  >;
+  alsoWins?: Partial<Record<Level, readonly AlsoWin[]>>;
   /** How far this card's bands were relaxed and why, or null if not at all. */
   relaxed: string | null;
+}
+
+/** A declared alternative winning route. */
+export interface AlsoWin {
+  doses: readonly Dose[];
+  /** Why it is accepted (for the record and the tests). */
+  reason: string;
+  /**
+   * Shown on a win by this route, in the owner's shape: "Yes: <what they
+   * used> worked because <reason>, but <its cost>. A better solution would
+   * <benefit>." (the owner, 2026-10-31). No recorded clip.
+   */
+  explanation: string;
 }
 
 export type NarrationKind = 'briefing' | 'clue' | 'explanation';
@@ -136,6 +147,8 @@ export interface Hall4Game {
   card: ChallengeCard | null;
   level: Level;
   used: number;
+  /** The doses the visitor gave on this card, in order. */
+  given: readonly Dose[];
   /** Lab seconds the level's readings came into band, or null. */
   heldSince: number | null;
   lastDose: number;
@@ -171,6 +184,7 @@ export function newGame(now = 0): Hall4Game {
     card: null,
     level: 'journeyman',
     used: 0,
+    given: [],
     heldSince: null,
     lastDose: 0,
     outcome: 'playing',
@@ -192,6 +206,7 @@ export const toFreePlay = (g: Hall4Game): Hall4Game => ({
   lab: withSwimmers(g.lab, FREE_SWIMMERS),
   card: null,
   used: 0,
+  given: [],
   heldSince: null,
   outcome: 'playing',
   shown: 0,
@@ -219,6 +234,7 @@ export function startCard(
       card,
       level,
       used: 0,
+      given: [],
       heldSince: null,
       lastDose: lab.seconds,
       outcome: 'playing',
@@ -237,6 +253,120 @@ export const cardWords = (
   kind: NarrationKind,
   level: Level,
 ) => (kind === 'clue' ? card.clue : card[kind][level]);
+
+/**
+ * Chemicals that do the same job are one family (the two chlorines; the
+ * three acids): a route is matched by each family's total, each dose its
+ * share of its tank's largest sensible dose (`sizeShare`).
+ */
+const FAMILY: Partial<Record<TankId, string>> = {
+  hypo: 'chlorine',
+  calHypo: 'chlorine',
+  hcl: 'acid',
+  bisulphate: 'acid',
+  co2: 'acid',
+};
+const family = (t: TankId) => FAMILY[t] ?? t;
+
+const totals = (doses: readonly Dose[]) => {
+  const m = new Map<string, number>();
+  for (const d of doses)
+    m.set(family(d.tank), (m.get(family(d.tank)) ?? 0) + sizeShare(d.size));
+  return m;
+};
+
+/**
+ * Whether `doses` are close to `route` (the owner, 2026-10-31): for every
+ * family the route uses, at least the route's total less one size step (a
+ * √10); a family added on top only spends a dose.
+ */
+export function closeTo(doses: readonly Dose[], route: readonly Dose[]) {
+  const got = totals(doses);
+  for (const [f, need] of totals(route))
+    if ((got.get(f) ?? 0) < need / Math.sqrt(10) - 1e-9) return false;
+  return true;
+}
+
+/** How unlike `route` the doses are: each family's log-ratio, a missing one counting 10. */
+function routeDistance(doses: readonly Dose[], route: readonly Dose[]) {
+  const a = totals(doses);
+  const b = totals(route);
+  let d = 0;
+  for (const f of new Set([...a.keys(), ...b.keys()])) {
+    const x = a.get(f);
+    const y = b.get(f);
+    d += x && y ? Math.abs(Math.log10(x / y)) : 10;
+  }
+  return d;
+}
+
+/** Which route a win took: the level's stored solution, a declared alternative (its index), or neither. */
+export type WinRoute =
+  | { kind: 'solution' }
+  | { kind: 'also'; index: number }
+  | { kind: 'other' };
+
+/**
+ * The visitor's route on `card` at `level`: of the stored solution and the
+ * level's `alsoWins` routes, those the doses are close to, the nearest
+ * (the stored solution winning a tie); `other` if close to none.
+ */
+export function classifyRoute(
+  card: ChallengeCard,
+  level: Level,
+  doses: readonly Dose[],
+): WinRoute {
+  const routes: { route: WinRoute; doses: readonly Dose[] }[] = [
+    { route: { kind: 'solution' }, doses: card.solutions[level] },
+    ...(card.alsoWins?.[level] ?? []).map((w, index) => ({
+      route: { kind: 'also', index } as const,
+      doses: w.doses,
+    })),
+  ];
+  let best: WinRoute = { kind: 'other' };
+  let bestD = Infinity;
+  for (const r of routes)
+    if (closeTo(doses, r.doses)) {
+      const d = routeDistance(doses, r.doses);
+      if (d < bestD - 1e-9) [best, bestD] = [r.route, d];
+    }
+  return best;
+}
+
+/** The doses as words: "Huge soda ash and Large calcium chloride". */
+export function dosesInWords(doses: readonly Dose[]) {
+  const w = doses.map((d) => doseWords(d.tank, d.size));
+  return w.length < 2
+    ? (w[0] ?? 'nothing')
+    : `${w.slice(0, -1).join(', ')} and ${w[w.length - 1]}`;
+}
+
+/**
+ * The words of the game's last narration of `kind`: on a win, those of the
+ * route the visitor took (`classifyRoute`), the level's explanation for its
+ * stored solution. Null with no card.
+ */
+export function narrationWords(
+  g: Hall4Game,
+  kind: NarrationKind,
+): { text: string; route: WinRoute } | null {
+  if (!g.card) return null;
+  const solution = { kind: 'solution' } as const;
+  if (kind !== 'explanation')
+    return { text: cardWords(g.card, kind, g.level), route: solution };
+  const route = classifyRoute(g.card, g.level, g.given);
+  if (route.kind === 'also')
+    return {
+      text: g.card.alsoWins![g.level]![route.index].explanation,
+      route,
+    };
+  if (route.kind === 'other')
+    return {
+      text: `It worked: ${dosesInWords(g.given)} brought the water into range. But there is a better solution, one that puts the fault right more gently and leaves every other reading right as well.`,
+      route,
+    };
+  return { text: cardWords(g.card, kind, g.level), route };
+}
 
 /** The readings a level must bring into band on `card`. */
 export const required = (card: ChallengeCard, level: Level) =>
@@ -272,6 +402,7 @@ export function doseGame(
     ...g,
     lab,
     used: g.used + 1,
+    given: [...g.given, { tank, size }],
     lastDose: lab.seconds,
     lastDosed: { tank, ago: 0 },
   };
