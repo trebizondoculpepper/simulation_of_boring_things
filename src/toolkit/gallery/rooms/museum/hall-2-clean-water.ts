@@ -125,6 +125,7 @@ import {
 } from '../../views/museum-exhibit';
 import type { MimicState } from '../../../components/industrial-control/logic/mimic';
 import type { HallExhibit } from './exhibits';
+import { hallInterior } from '../../logic/museum-plan';
 
 /**
  * Hall 2, "Clean water" (107b): the pool's water strained through sand,
@@ -143,9 +144,15 @@ import type { HallExhibit } from './exhibits';
  * the hall's frame, metres.
  */
 
-/** The east and south walls' faces, where their panels hang. */
-const EAST = 7.66;
-const SOUTH = 6.66;
+/**
+ * The east and south walls' faces, where their panels hang flush, in the
+ * exhibit's own frame: the hall as it stands now (layout C,
+ * `hallInterior`), less the shift that carries the L into its corner
+ * (`PLANT_SHIFT`), so that the walls, not the panels, stop the walker.
+ */
+const INSIDE = hallInterior('museum2');
+const EAST = (INSIDE.maxX - INSIDE.minX) / 2 - PLANT_SHIFT.x;
+const SOUTH = (INSIDE.maxZ - INSIDE.minZ) / 2 - PLANT_SHIFT.z;
 const FACE_WEST = -Math.PI / 2;
 const FACE_EAST = Math.PI / 2;
 const FACE_NORTH = Math.PI;
@@ -909,7 +916,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       test: () => {},
       reset: () => act({ type: 'monitor-reset' }),
     });
-    turnTo(monitor.group, EAST, 1.15, -2.9, FACE_WEST);
+    turnTo(monitor.group, EAST, 1.15, -1.0, FACE_WEST);
     object.add(
       describe(
         monitor.group,
@@ -1160,7 +1167,9 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       }),
     },
   });
-  turnTo(board.group, 5.6, 1.5, SOUTH, FACE_NORTH);
+  // Found by the walls' test (it has no name of its own).
+  board.group.userData.onWall = 'Hall 2 mimic board';
+  turnTo(board.group, 6.5, 1.5, SOUTH, FACE_NORTH);
   object.add(board.group);
   take(board.parts);
 
@@ -1172,11 +1181,11 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     2.0,
     paintActivity({ ...activity, reset: hall2Entrance().reset }),
   );
-  turnTo(card, 2.8, 1.58, SOUTH, FACE_NORTH);
+  turnTo(card, 2.0, 1.58, SOUTH, FACE_NORTH);
   object.add(still(card));
 
   const clock = createPoolClock(kit, { dia: 0.75 });
-  turnTo(clock.group, 4.5, 3.1, SOUTH, FACE_NORTH);
+  turnTo(clock.group, 5.4, 3.1, SOUTH, FACE_NORTH);
   object.add(
     markComponent(clock.group, {
       name: 'Pool clock, showing the plant’s time',
@@ -1184,7 +1193,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     }),
   );
   const timeBox = new Group();
-  turnTo(timeBox, 6.0, 3.2, SOUTH, FACE_NORTH);
+  timeBox.userData.onWall = 'Plant time display';
+  turnTo(timeBox, 6.9, 3.2, SOUTH, FACE_NORTH);
   t.box(timeBox, t.paint('#25343a', 0.5), 0.62, 0.22, 0.04, 0, 0, 0.02);
   const timeLcd = createCharacterLcd(kit, {
     columns: 16,
@@ -1220,7 +1230,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       );
     },
   );
-  turnTo(clockPlaque, 6.0, 2.85, SOUTH, FACE_NORTH);
+  turnTo(clockPlaque, 6.9, 2.85, SOUTH, FACE_NORTH);
   object.add(still(clockPlaque));
   let timeShown = '';
   let timeDue = 0;
@@ -1266,7 +1276,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       'Hall 2 · Clean water',
     ),
   );
-  turnTo(entrance, EAST, 1.65, 5.55, FACE_WEST);
+  turnTo(entrance, EAST, 1.65, 7.0, FACE_WEST);
   object.add(still(entrance));
   const resetSign = createWallPanel(
     kit,
@@ -1275,17 +1285,17 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     0.56,
     paintResetSign(RESET_SIGN),
   );
-  turnTo(resetSign, EAST, 1.75, 3.95, FACE_WEST);
+  turnTo(resetSign, EAST, 1.75, 4.8, FACE_WEST);
   object.add(still(resetSign));
   const resetButton = createResetPedestal(kit, {
     reset: () => reset(localNow()),
     lit: () => state.sinceReset < 2.5,
   });
-  turnTo(resetButton.group, EAST - 0.45, 0, 3.95, FACE_WEST);
+  turnTo(resetButton.group, EAST - 0.45, 0, 4.8, FACE_WEST);
   object.add(resetButton.group);
   take(resetButton.parts);
   updates.push(resetButton.update);
-  footprint(EAST - 0.45, 3.95, 0.25);
+  footprint(EAST - 0.45, 4.8, 0.25);
   const settings = createWallPanel(
     kit,
     'Filter settings card',
@@ -1293,7 +1303,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     1.0,
     paintSettings(filterSettingsCard()),
   );
-  turnTo(settings, EAST, 1.6, 2.65, FACE_WEST);
+  turnTo(settings, EAST, 1.6, 2.9, FACE_WEST);
   object.add(still(settings));
 
   // ---- The placards, at the plant's edge by each station ----

@@ -139,6 +139,28 @@ export const EXIT_WAY = Object.fromEntries(
 export const exitWay = (id: MuseumHallId) => EXIT_WAY[id];
 
 /** The doorway a room is left by on the escape route. */
+/**
+ * The arrow an escape sign shows to someone walking along `facing` (a unit
+ * vector in plan) towards a way out `dx`, `dz` from the sign (BS 5499-4):
+ * straight on when it is nearly ahead, up and to the side when it is ahead
+ * but off to one side (a corner hall's way out, in its end wall's corner),
+ * and to the side when it is beside them.
+ */
+export function arrowTo(
+  facing: readonly [number, number],
+  dx: number,
+  dz: number,
+): ExitArrow {
+  const ahead = dx * facing[0] + dz * facing[1];
+  // To the right of someone facing (fx, fz), y up: (−fz, fx).
+  const right = -dx * facing[1] + dz * facing[0];
+  const angle = Math.atan2(right, ahead);
+  const deg = Math.abs(angle) * (180 / Math.PI);
+  if (deg < 20) return 'up';
+  const side = angle > 0 ? 'right' : 'left';
+  return deg < 65 ? (`up-${side}` as ExitArrow) : side;
+}
+
 export function exitArch(id: MuseumHallId): MuseumArch | null {
   const to = EXIT_WAY[id];
   return to === 'stair'
@@ -389,6 +411,8 @@ export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
     const across = ax.across;
     const exitAlong =
       (exit.at.x - o.x) * along[0] + (exit.at.z - o.z) * along[1];
+    const exitAcross =
+      (exit.at.x - o.x) * across[0] + (exit.at.z - o.z) * across[1];
     for (const s of [-ax.length / 4, ax.length / 4]) {
       const toward = Math.sign(exitAlong - s) || 1;
       // The street side's track: the courtyard side has the panels.
@@ -401,7 +425,16 @@ export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
         z: o.z + along[1] * s + across[1] * c,
         // Its face away from the way out, towards those coming.
         yaw: Math.atan2(-along[0] * toward, -along[1] * toward),
-        arrow: 'up',
+        // Straight on to a way out in the middle of the hall's end; to
+        // one off in a corner (a corner hall's, layout C), towards it.
+        arrow:
+          Math.abs(exitAcross) < ax.width / 4
+            ? 'up'
+            : arrowTo(
+                [along[0] * toward, along[1] * toward],
+                exit.at.x - (o.x + along[0] * s + across[0] * c),
+                exit.at.z - (o.z + along[1] * s + across[1] * c),
+              ),
       });
     }
   }

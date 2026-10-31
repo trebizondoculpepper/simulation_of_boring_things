@@ -9,6 +9,7 @@ import {
   exitArch,
   safetyLayer,
   safetySolids,
+  arrowTo,
 } from './museum-safety';
 import {
   MUSEUM_JOINS,
@@ -60,8 +61,15 @@ describe('the museum’s safety and services layer', () => {
       }
       for (const f of layer.filter((g) => g.kind === 'exit-hanging')) {
         if (!exit) continue;
-        // Straight on, its face towards those walking to the way out.
-        expect(f.arrow).toBe('up');
+        // Its arrow towards the way out (straight on, or up and to the
+        // side when it is off in a corner), its face towards those
+        // walking to it.
+        const facing: [number, number] = [-Math.sin(f.yaw), -Math.cos(f.yaw)];
+        if (f.arrow !== 'up')
+          expect(f.arrow, id).toBe(
+            arrowTo(facing, exit.at.x - f.x, exit.at.z - f.z),
+          );
+        if (id === 'museum2') expect(f.arrow, id).not.toBe('up');
         const n = [Math.sin(f.yaw), Math.cos(f.yaw)];
         const ax = hallAxes(id).along;
         const o = hallOrigin(id);

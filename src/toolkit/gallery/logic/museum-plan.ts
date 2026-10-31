@@ -933,6 +933,37 @@ function archAlong(id: MuseumHallId, a: MuseumArch) {
  */
 export function hallColumns(id: MuseumHallId): { x: number; z: number }[] {
   if (id === 'museum0' || isBlackBox(id)) return [];
+  const footprint = EXHIBIT_FOOTPRINTS[id] ?? [];
+  const r = COLUMN_SPAN + COLUMN_CLEARANCE;
+  return gridColumns(id).filter(
+    (c) =>
+      !footprint.some(
+        (f) =>
+          c.x + r > f.minX &&
+          c.x - r < f.maxX &&
+          c.z + r > f.minZ &&
+          c.z - r < f.maxZ,
+      ),
+  );
+}
+
+/**
+ * Where a hall's exhibit stands, in the hall's own coordinates, so that no
+ * column is put up through it: a column whose widest part and clearance
+ * would come into one of these rectangles is left out (the beams over it
+ * span on to the next). Hall 2's L, along its west and north walls, its
+ * lecterns at its edge included (the audit, 2026-10-30: columns through
+ * lectern 7, the ozone bay and the contact tank's pipe).
+ */
+export const EXHIBIT_FOOTPRINTS: Partial<Record<MuseumHallId, Rect[]>> = {
+  museum2: [
+    { minX: -10.2, maxX: 10.2, minZ: -9.2, maxZ: -4.3 },
+    { minX: -10.2, maxX: -4.45, minZ: -9.2, maxZ: 4.0 },
+  ],
+};
+
+/** The columns on the warehouse's grid, before any exhibit's footprint is kept clear of them. */
+function gridColumns(id: MuseumHallId): { x: number; z: number }[] {
   const { length, width } = hallAxes(id);
   const sideArches = hallArches(id).filter((a) => {
     const { across } = hallAxes(id);
