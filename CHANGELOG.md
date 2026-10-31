@@ -6,6 +6,8 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Changed
 
+- The Dr Aqualis Trio's touch screen works in the plant rooms (they had not passed the touch's point to it); rooms hand a use on with its hit through one helper, `useOnHit`.
+- Console stand-ins for features not yet designed (the owner's rule): `dose <pool> <chemical> <amount>` hand-doses through the real chemistry (bicarbonate, soda ash, calcium chloride, thiosulphate, bisulphate in kg; hypochlorite and acid in litres; CO₂ in grams), `chemicals` lists them with their units, and `test_kit <pool>` reads the pool as a poolside test kit would.
 - The Dr Aqualis Trio installed in Plant Rooms 1 and 2: in the Lounge on the south wall beside the equipment doors, in the Olympic in PL2-CP2's place; its sample line, return, control and alarm cables and supply drawn from the graph; its screen, Dr Aqualis, knobs, door, sample pump and sounds bound to the world; the annunciators grown (24 and 30 windows), their chlorine and pH read from its analyser; the bridge's panels rebuilt. The old sampling controller is retired.
 - PL1-CP1's backwash pit interlock: while the pit's high-high inhibit holds its inlet shut, the lounge's valves to waste (each filter's backwash and drain, the balance tank's drain) are driven shut and refused if opened; they stay shut once it clears until opened again.
 - The engineer's software boxes redrawn as period products, designed with Codex: Macrosoft Pool Simulator 97 a floodlit, chrome-lettered mid-90s simulation; Chlorine Quest II a painted adventure with a dungareed poolman hero and its own lettering; Lido Tycoon and DEEP END bright and over-promising; the business boxes tidied.
