@@ -59,18 +59,22 @@ import {
   EAST,
   FRESH_SPOUT,
   LECTERNS,
+  LECTERNS_PARKED,
+  PARKED_Y,
   MANIFOLD,
   MIMIC_AT,
   NORTH,
-  WEST,
   POOL,
   POT,
   PRINTER,
   PUMP,
   READOUT,
   RESET,
+  RESET_LECTERN_BACK,
   TANK_Z,
+  TANK_LIFT,
   BUND,
+  STAND,
   TEE,
   STANDS,
   fittingPlaces,
@@ -117,8 +121,15 @@ import type { HallExhibit } from './exhibits';
 
 const FACE_SOUTH = 0;
 const FACE_WEST = -Math.PI / 2;
-const FACE_EAST = Math.PI / 2;
-const FACE_NORTH = Math.PI;
+
+/**
+ * TEMPORARY, for the owner's review of the second layout (2026-10-31):
+ * the hall's pipework (the header, the dosing lines, the pump's suction
+ * and discharge, the injection line, the make-up's spout and the sample
+ * line) is left out of the scene until the hall is re-plumbed for the
+ * new positions. Set false again when `pipeRuns` is re-laid.
+ */
+const PIPES_DEFERRED = true;
 
 const turnTo = (o: Object3D, x: number, y: number, z: number, yaw: number) => {
   o.position.set(x, y, z);
@@ -189,9 +200,54 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     BUND.h,
     BUND.maxZ - BUND.minZ,
     (BUND.minX + BUND.maxX) / 2,
-    BUND.h / 2,
+    TANK_LIFT + BUND.h / 2,
     (BUND.minZ + BUND.maxZ) / 2,
   );
+  // The stand: a welded steel frame, its chequer-plate deck carrying the
+  // bund, on box-section legs at its corners and every 1.5 m, braced.
+  const stand = new Group();
+  object.add(
+    markComponent(stand, {
+      name: "Chemical tanks' steel stand",
+      decorative: true,
+    }),
+  );
+  const steel = t.paint('#3f5866', 0.55, 0.5);
+  const sw = STAND.maxX - STAND.minX;
+  const sd = STAND.maxZ - STAND.minZ;
+  const sx = (STAND.minX + STAND.maxX) / 2;
+  const sz = (STAND.minZ + STAND.maxZ) / 2;
+  t.box(
+    stand,
+    t.paint('#6d7478', 0.5, 0.6),
+    sw,
+    0.012,
+    sd,
+    sx,
+    STAND.h - 0.006,
+    sz,
+  );
+  for (const z of [STAND.minZ + 0.03, STAND.maxZ - 0.03])
+    t.box(stand, steel, sw, 0.1, 0.06, sx, STAND.h - 0.062, z);
+  const bays = Math.ceil(sw / 1.5);
+  for (let k = 0; k <= bays; k++) {
+    const x = STAND.minX + 0.03 + (k * (sw - 0.06)) / bays;
+    for (const z of [STAND.minZ + 0.03, STAND.maxZ - 0.03]) {
+      t.box(
+        stand,
+        steel,
+        0.06,
+        STAND.h - 0.11,
+        0.06,
+        x,
+        (STAND.h - 0.11) / 2,
+        z,
+      );
+      t.box(stand, steel, 0.14, 0.01, 0.14, x, 0.005, z);
+    }
+    t.box(stand, steel, 0.05, 0.05, sd - 0.06, x, 0.15, sz);
+  }
+  object.add(still(stand));
   for (const tank of TANKS) {
     const view = createChemicalTank(kit, {
       code: tank.code,
@@ -200,7 +256,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       colour: tank.colour,
       hazards: tank.hazards,
     });
-    turnTo(view.group, tankX(tank.id), BUND.h, TANK_Z, FACE_SOUTH);
+    turnTo(view.group, tankX(tank.id), TANK_LIFT + BUND.h, TANK_Z, FACE_SOUTH);
     view.group.traverse((o) => (o.userData.live = true));
     object.add(
       markComponent(view.group, {
@@ -220,7 +276,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   }
 
   // ---- The pipes ----
-  for (const run of pipeRuns()) {
+  for (const run of PIPES_DEFERRED ? [] : pipeRuns()) {
     const chem = run.edge.startsWith('dose.') && run.edge !== 'dose.fresh';
     const pipe = createPipe('pvc-pressure', run.od, run.points, {
       colour:
@@ -269,18 +325,19 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     0.03,
     '#16191b',
   );
-  object.add(
-    still(
-      markComponent(manifold, {
-        name: `${TAGS['header']} dosing header`,
-        model: { node: 'header' },
-        status: () =>
-          state().delivering && state().delivering!.tank !== 'fresh'
-            ? 'carrying a dose to the pot'
-            : 'idle',
-      }),
-    ),
-  );
+  if (!PIPES_DEFERRED)
+    object.add(
+      still(
+        markComponent(manifold, {
+          name: `${TAGS['header']} dosing header`,
+          model: { node: 'header' },
+          status: () =>
+            state().delivering && state().delivering!.tank !== 'fresh'
+              ? 'carrying a dose to the pot'
+              : 'idle',
+        }),
+      ),
+    );
 
   // ---- The fittings on the lines ----
   const places = fittingPlaces();
@@ -411,14 +468,15 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   const spout = new Group();
   t.cyl(spout, t.paint('#4d5a63', 0.5), 0.042, 0.08, 0, 0.04, 0);
   spout.position.set(FRESH_SPOUT.x, FRESH_SPOUT.y, FRESH_SPOUT.z);
-  object.add(
-    still(
-      markComponent(spout, {
-        name: `Pipe: ${LINK_NAMES['dose.fresh']} spout`,
-        model: { link: 'dose.fresh' },
-      }),
-    ),
-  );
+  if (!PIPES_DEFERRED)
+    object.add(
+      still(
+        markComponent(spout, {
+          name: `Pipe: ${LINK_NAMES['dose.fresh']} spout`,
+          model: { link: 'dose.fresh' },
+        }),
+      ),
+    );
 
   // ---- The desk, its mimic, the teleprinter, LAB TIME ----
   const tankIds = TANKS.map((x) => x.id);
@@ -488,7 +546,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       }),
     },
   });
-  turnTo(board.group, WEST, MIMIC_AT.y, MIMIC_AT.z, FACE_EAST);
+  turnTo(board.group, MIMIC_AT.x, MIMIC_AT.y, NORTH, FACE_SOUTH);
   board.group.userData.onWall = 'Hall 4 mimic board';
   // The mimic panel is in the model (M4-MP1), its lamps, readouts and
   // buttons bound through it.
@@ -713,13 +771,23 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     paintResetSign(RESET_SIGN),
   );
   // Its back flush to the wall behind the pedestal.
-  resetSign.position.set(0, 1.55, -0.24);
+  // On a lectern just behind the pedestal, tilted toward the visitor at
+  // RESET (the owner, 2026-10-31).
+  const resetLectern = new Group();
+  resetLectern.name = 'RESET sign lectern';
+  const lecternFrame = t.paint('#2b3438', 0.5, 0.3);
+  t.box(resetLectern, lecternFrame, 0.36, 0.03, 0.3, 0, 0.015, 0);
+  t.box(resetLectern, lecternFrame, 0.07, 0.95, 0.07, 0, 0.475, 0);
+  resetSign.position.set(0, 1.25, 0.03);
+  resetSign.rotation.x = -0.45;
+  resetLectern.add(resetSign);
+  resetLectern.position.set(0, 0, -RESET_LECTERN_BACK);
   const resetButton = createResetPedestal(kit, {
     reset: () => reset(localNow()),
     lit: () => sinceReset < 2.5,
   });
-  turnTo(resetButton.group, RESET.x, 0, RESET.z, FACE_NORTH);
-  resetButton.group.add(resetSign);
+  turnTo(resetButton.group, RESET.x, 0, RESET.z, FACE_SOUTH);
+  resetButton.group.add(resetLectern);
   // The exhibit's RESET: it restarts the simulation, it works no plant.
   object.add(
     markComponent(resetButton.group, {
@@ -733,7 +801,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   for (const p of hall4Placards()) {
     const at = LECTERNS[p.station!];
     const lectern = createLectern(kit, p);
-    turnTo(lectern, at.x, 0, at.z, at.yaw);
+    turnTo(lectern, at.x, LECTERNS_PARKED ? PARKED_Y : 0, at.z, at.yaw);
     object.add(still(lectern));
   }
 

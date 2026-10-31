@@ -7,13 +7,11 @@ import { hallColumns, hallInterior, hallOrigin } from './museum-plan';
  * (the hall's middle the origin, y up), which stands turned half round
  * about the hall's middle (`STANDS`, layout C), so that here north (−z)
  * is the hall's south wall and the archways are on the +z side. The
- * owner's layout (2026-10-31): the dosing desk front and centre before
- * the arrival archway, the tanks a metre behind it, the teleprinter to
- * its right, the pool against the hall's west wall between the Balance
- * Beam and the readout board, the pump, pot and tee between the tanks
- * and the pool, the mimic on the hall's east wall, RESET in the middle of
- * its north wall, a lectern at each station along the way round. Each
- * pipe is one of the schematic's links. The exhibit turns all this, and
+ * owner's layout (2026-10-31, revised the same day; see `TANK_LIFT`): the
+ * tanks raised at the back, the desk before them, the pool on the hall's
+ * west wall, the pump in its far corner, the mimic on its east wall,
+ * RESET beside the desk, a lectern at each station along the way round.
+ * Each pipe is one of the schematic's links. The exhibit turns all this, and
  * `placedFootprints` gives its footprints turned.
  */
 export const STANDS = { turn: Math.PI } as const;
@@ -55,27 +53,64 @@ export const WEST = INTERIOR.minX;
 export const SOUTH = INTERIOR.maxZ;
 
 /**
- * The owner's layout (2026-10-31), as the hall stands: the dosing desk
- * front and centre before the arriving visitor, its operating side toward
- * the arrival archway; the tanks a metre behind it, seen over and past it;
- * the teleprinter to the right of the desk as the visitor stands at it;
- * the ideal pool against the west wall, the Balance Beam and the readout
- * board on either side of it behind; the mimic on the east wall; RESET in
- * the middle of the north wall. Here, turned, everything is negated.
+ * The owner's second layout (2026-10-31), as the hall stands: the tanks at
+ * the back, a metre out from the hall's south wall (NORTH here, opposite
+ * the arrival archway), under its two courtyard windows and centred on
+ * them, lifted 0.6 m on a steel stand with the bund on its deck as a drip
+ * tray; the desk 2 m in front of them on their centre line, its operating
+ * side toward the visitor, the teleprinter on the operator's right, RESET
+ * and its sign's lectern on the left; the pump in the far right corner;
+ * the readout board and the Balance Beam side by side on the west wall;
+ * the mimic on the east wall. Here, turned, everything is negated.
  */
-export const DESK = { x: ARRIVAL_X - 0.5, z: 3.3, w: 2.0, d: 0.75 } as const;
-export const TANK_Z = 1.7;
+const TANKS_MID = 0.3;
+export const TANK_LIFT = 0.6;
+export const TANK_Z = NORTH + 1.75;
 export const tankX = (id: TankId) =>
-  1.2 + TANKS.findIndex((t) => t.id === id) * 0.6;
+  TANKS_MID +
+  (TANKS.findIndex((t) => t.id === id) - (TANKS.length - 1) / 2) * 0.6;
+const TANKS_HALF = ((TANKS.length - 1) * 0.6) / 2 + 0.35;
 export const BUND = {
-  minX: 1.2 - 0.35,
-  maxX: 1.2 + (TANKS.length - 1) * 0.6 + 0.35,
+  minX: TANKS_MID - TANKS_HALF,
+  maxX: TANKS_MID + TANKS_HALF,
   minZ: TANK_Z - 0.45,
   maxZ: TANK_Z + 0.45,
   h: 0.1,
 } as const;
-/** The mimic on the east wall as the hall stands (WEST here), its middle. */
-export const MIMIC_AT = { z: 0, y: 2.3 } as const;
+/**
+ * The steel stand under the bund, its deck at `TANK_LIFT`: a metre out from
+ * the back wall (the owner, 2026-10-31), leaving a clear service space
+ * behind for the dosing manifold when the hall is re-plumbed.
+ */
+export const STAND = {
+  minX: BUND.minX,
+  maxX: BUND.maxX,
+  minZ: NORTH + 1.1,
+  maxZ: BUND.maxZ,
+  h: TANK_LIFT,
+} as const;
+/** The desk 2 m in front of the stand (the owner, 2026-10-31), centred on the tanks, its operator's back to the arrival. */
+export const DESK = {
+  x: TANKS_MID,
+  z: STAND.maxZ + 2 + 0.375,
+  w: 2.0,
+  d: 0.75,
+} as const;
+/**
+ * Where the pipework was laid for (the first layout): re-plumbing for the
+ * tanks' new place is deferred by the owner (2026-10-31), so the lines,
+ * header and fittings stay put for now.
+ */
+const PLUMBED = { tankZ: 1.7, readoutZ: -5.2 } as const;
+const plumbedTankX = (id: TankId) =>
+  1.2 + TANKS.findIndex((t) => t.id === id) * 0.6;
+/**
+ * The mimic ("The map") on the back wall (the owner, 2026-10-31), flush,
+ * behind the tanks and centred on them, its middle: 3.0 × 1.4 m, its foot
+ * at 2.65 m, over the tanks' tops (2.3 m) as read from the desk, its head
+ * at 4.05 m, under the windows' sills (4.2 m).
+ */
+export const MIMIC_AT = { x: TANKS_MID, y: 3.35 } as const;
 export const PRINTER = { x: DESK.x + 1.6, z: DESK.z } as const;
 /** The teleprinter on its own stand, as drawn: its footprint about `PRINTER`. */
 export const PRINTER_FOOT = { hw: 0.33, minZ: -0.06, maxZ: 0.5 } as const;
@@ -86,36 +121,61 @@ export const PRINTER_FOOT = { hw: 0.33, minZ: -0.06, maxZ: 0.5 } as const;
 export const POOL = { x: 6.4, z: -2.0, w: 3.4, d: 2.4, h: 1.3 } as const;
 const POOL_FRONT = POOL.x - POOL.d / 2;
 /**
- * The pump, between the tanks and the pool, its suction toward the pool,
- * turned half round: its front toward the hall's south half and the
- * visitor coming round the tanks. Its footprint as drawn, about `PUMP`,
- * its set's length along x.
+ * The pump M4-P1, with its valves and flowmeter as a unit, in the far
+ * right corner (the owner, 2026-10-31): the back wall's east end here,
+ * facing into the room (+z), its set's length along x. Its pipes are not
+ * yet re-laid (deferred by the owner): they still run to where it was.
  */
-export const PUMP = { x: 3.4, z: 0.4, yaw: Math.PI } as const;
+export const PUMP = { x: EAST - 1.25, z: NORTH + 0.6, yaw: 0 } as const;
+/** Which way the pump's set runs along x: −1 faced into the room, +1 turned half round. */
+const PUMP_DIR = PUMP.yaw === 0 ? -1 : 1;
 export const PUMP_FOOT = { hw: 1.05, hd: 0.4, h: 1.44 } as const;
 /**
  * The pump's nozzles, as drawn (`createEndSuctionPump`, turned half
  * round): its axial suction toward the pool, its discharge flange on top.
  */
-export const PUMP_SUCTION = { x: PUMP.x + 1.0, y: 0.68, z: PUMP.z } as const;
-export const PUMP_DISCHARGE = {
-  x: PUMP.x + 0.57,
-  y: 1.26,
-  z: PUMP.z - 0.12,
+export const PUMP_SUCTION = {
+  x: PUMP.x + PUMP_DIR * 1.0,
+  y: 0.68,
+  z: PUMP.z,
 } as const;
+export const PUMP_DISCHARGE = {
+  x: PUMP.x + PUMP_DIR * 0.57,
+  y: 1.26,
+  z: PUMP.z - PUMP_DIR * 0.12,
+} as const;
+/** The pump's nozzles where its pipes were laid for (the first layout). */
+const PLUMBED_SUCTION = { x: 4.4, y: 0.68, z: 0.4 } as const;
+const PLUMBED_DISCHARGE = { x: 3.97, y: 1.26, z: 0.28 } as const;
 /** The dosing pot, in front of the header's end, and the tee by the pool. */
 export const POT = { x: 5.6, z: 0.85, r: 0.2, h: 0.8 } as const;
 export const TEE = { x: 5.6, z: 0.0, r: 0.07, h: 0.16 } as const;
 /** The readout board on the west wall, south of the pool as the hall stands. */
-export const READOUT = { z: -5.2, y: 2.35, h: 1.5, w: 2.96 } as const;
-/** The Balance Beam against the west wall, north of the pool as the hall stands, facing into the hall. */
-export const BEAM = { x: EAST - 0.25, z: 0.7 } as const;
-export const CARDS_BOARD = { x: -4.3, y: 2.3 } as const;
+/**
+ * The readout board and the Balance Beam side by side, as a group centred
+ * on the hall's west wall (EAST here: on the right of a visitor arriving
+ * from Hall 3 and facing the tanks), the owner, 2026-10-31. The board
+ * hangs above the pool's rim; the beam stands beside the pool.
+ */
+const GROUP_GAP = 0.05;
+const BEAM_W = 1.9;
+const READOUT_W = 2.96;
+const GROUP_W = READOUT_W + GROUP_GAP + BEAM_W;
+export const READOUT = {
+  z: -GROUP_W / 2 + READOUT_W / 2,
+  y: 2.35,
+  h: 1.5,
+  w: READOUT_W,
+} as const;
+export const BEAM = { x: EAST - 0.25, z: GROUP_W / 2 - BEAM_W / 2 } as const;
+export const CARDS_BOARD = { x: -5.0, y: 2.3 } as const;
 /**
  * RESET, in the middle of the north wall as the hall stands, flush to it,
  * between the archways' approaches, facing into the hall.
  */
-export const RESET = { x: 0, z: SOUTH - 0.25 } as const;
+export const RESET = { x: DESK.x - 1.7, z: DESK.z } as const;
+/** The RESET sign's lectern, just behind the pedestal (toward the tanks). */
+export const RESET_LECTERN_BACK = 0.42;
 /** A lectern's footprint as drawn, facing +z: its tilted head overhangs its post. */
 export const LECTERN_FOOT = { hw: 0.47, hd: 0.21 } as const;
 /**
@@ -125,12 +185,20 @@ export const LECTERN_FOOT = { hw: 0.47, hd: 0.21 } as const;
  * readout, the challenge cards.
  */
 export const LECTERNS: Record<number, { x: number; z: number; yaw: number }> = {
-  1: { x: DESK.x - 1.55, z: DESK.z + 0.1, yaw: 0 },
-  2: { x: 0.5, z: TANK_Z + 0.9, yaw: 0 },
+  1: { x: DESK.x + 2.6, z: DESK.z + 0.1, yaw: 0 },
+  2: { x: BUND.minX - 0.65, z: TANK_Z + 0.9, yaw: 0 },
   3: { x: POOL_FRONT - 0.9, z: POOL.z, yaw: -Math.PI / 2 },
-  4: { x: POOL_FRONT + 0.2, z: READOUT.z + 0.2, yaw: -Math.PI / 2 },
+  4: { x: EAST - 0.9, z: 0.2, yaw: -Math.PI / 2 },
   5: { x: CARDS_BOARD.x, z: NORTH + 1.3, yaw: 0 },
 };
+/**
+ * TEMPORARY, for the owner's review of the second layout (2026-10-31):
+ * the station lecterns are parked out of bounds, far below the floor, and
+ * their footprints taken off the floor. Set false to bring them back.
+ */
+export const LECTERNS_PARKED = true;
+/** Where a parked lectern is put: well out of the hall and out of sight. */
+export const PARKED_Y = -50;
 /** A lectern's footprint, turned with it. */
 export function lecternFoot(l: { x: number; z: number; yaw: number }) {
   const across = Math.abs(Math.sin(l.yaw)) > 0.5;
@@ -155,7 +223,7 @@ const SUCTION_X = 6.3;
 export const MANIFOLD = {
   minX: 1.2 - 0.05,
   maxX: 1.2 + (TANKS.length - 2) * 0.6 + 0.15,
-  z: TANK_Z - 0.4,
+  z: PLUMBED.tankZ - 0.4,
   y: Y,
   od: 0.05,
 } as const;
@@ -169,15 +237,15 @@ type V3 = [number, number, number];
 /** Each link's run, in the hall's frame. */
 export function pipeRuns(): { edge: LinkId; od: number; points: V3[] }[] {
   const runs: { edge: LinkId; od: number; points: V3[] }[] = [];
-  const back = TANK_Z - 0.57;
+  const back = PLUMBED.tankZ - 0.57;
   for (const t of TANKS) {
-    const x = tankX(t.id);
+    const x = plumbedTankX(t.id);
     if (t.id === 'fresh')
       runs.push({
         edge: 'dose.fresh',
         od: 0.06,
         points: [
-          [x, 0.16, TANK_Z],
+          [x, 0.16, PLUMBED.tankZ],
           [x, 0.16, back],
           // Up behind the tanks, overhead to the pool, down to its spout.
           [x, OVERHEAD, back],
@@ -190,7 +258,7 @@ export function pipeRuns(): { edge: LinkId; od: number; points: V3[] }[] {
         edge: `dose.${t.id}` as LinkId,
         od: 0.025,
         points: [
-          [x, H, TANK_Z],
+          [x, H, PLUMBED.tankZ],
           [x, H, MANIFOLD.z],
           [x, Y, MANIFOLD.z],
         ],
@@ -219,18 +287,18 @@ export function pipeRuns(): { edge: LinkId; od: number; points: V3[] }[] {
     edge: 'poolOut',
     od: 0.11,
     points: [
-      [SUCTION_X, PUMP_SUCTION.y, POOL.z + POOL.w / 2],
-      [SUCTION_X, PUMP_SUCTION.y, PUMP_SUCTION.z],
-      [PUMP_SUCTION.x, PUMP_SUCTION.y, PUMP_SUCTION.z],
+      [SUCTION_X, PLUMBED_SUCTION.y, POOL.z + POOL.w / 2],
+      [SUCTION_X, PLUMBED_SUCTION.y, PLUMBED_SUCTION.z],
+      [PLUMBED_SUCTION.x, PLUMBED_SUCTION.y, PLUMBED_SUCTION.z],
     ],
   });
   runs.push({
     edge: 'poolDischarge',
     od: 0.11,
     points: [
-      [PUMP_DISCHARGE.x, PUMP_DISCHARGE.y, PUMP_DISCHARGE.z],
-      [PUMP_DISCHARGE.x, OVER, PUMP_DISCHARGE.z],
-      [TEE.x, OVER, PUMP_DISCHARGE.z],
+      [PLUMBED_DISCHARGE.x, PLUMBED_DISCHARGE.y, PLUMBED_DISCHARGE.z],
+      [PLUMBED_DISCHARGE.x, OVER, PLUMBED_DISCHARGE.z],
+      [TEE.x, OVER, PLUMBED_DISCHARGE.z],
       [TEE.x, OVER, TEE.z],
       [TEE.x, Y + TEE.h / 2, TEE.z],
     ],
@@ -243,7 +311,7 @@ export function pipeRuns(): { edge: LinkId; od: number; points: V3[] }[] {
       [TEE.x, Y, POOL.z + POOL.w / 2],
     ],
   });
-  const sampleZ = READOUT.z + READOUT.w / 2 - 0.3;
+  const sampleZ = PLUMBED.readoutZ + READOUT.w / 2 - 0.3;
   runs.push({
     edge: 'sample',
     od: 0.015,
@@ -277,30 +345,30 @@ export function fittingPlaces(): Record<
       edge: `dose.${t.id}` as LinkId,
       at:
         t.id === 'fresh'
-          ? [tankX(t.id), 0.16, TANK_Z - 0.4]
-          : [tankX(t.id), H, TANK_Z - 0.31],
+          ? [tankX(t.id), TANK_LIFT + 0.16, TANK_Z - 0.4]
+          : [tankX(t.id), TANK_LIFT + H, TANK_Z - 0.31],
       along: [0, 0, -1],
     };
   places['pump.suction'] = {
     edge: 'poolOut',
-    at: [PUMP_SUCTION.x + 0.45, PUMP_SUCTION.y, PUMP_SUCTION.z],
-    along: [-1, 0, 0],
+    at: [PUMP_SUCTION.x + PUMP_DIR * 0.45, PUMP_SUCTION.y, PUMP_SUCTION.z],
+    along: [-PUMP_DIR, 0, 0],
   };
   places['pump.nrv'] = {
     edge: 'poolDischarge',
-    at: [PUMP_DISCHARGE.x + 0.3, OVER, PUMP_DISCHARGE.z],
-    along: [1, 0, 0],
+    at: [PUMP_DISCHARGE.x + PUMP_DIR * 0.3, OVER, PUMP_DISCHARGE.z],
+    along: [PUMP_DIR, 0, 0],
   };
   places['pump.discharge'] = {
     edge: 'poolDischarge',
-    at: [PUMP_DISCHARGE.x + 0.75, OVER, PUMP_DISCHARGE.z],
-    along: [1, 0, 0],
+    at: [PUMP_DISCHARGE.x + PUMP_DIR * 0.75, OVER, PUMP_DISCHARGE.z],
+    along: [PUMP_DIR, 0, 0],
   };
   places['flow'] = {
     edge: 'poolDischarge',
-    at: [TEE.x, 0.9, TEE.z],
-    along: [0, -1, 0],
-    upright: true,
+    // With the pump, on its discharge beyond the valves.
+    at: [PUMP_DISCHARGE.x + PUMP_DIR * 1.2, OVER, PUMP_DISCHARGE.z],
+    along: [PUMP_DIR, 0, 0],
   };
   return places;
 }
@@ -314,7 +382,7 @@ export function footprints() {
     maxZ: z + hd,
   });
   return [
-    { minX: BUND.minX, maxX: BUND.maxX, minZ: BUND.minZ, maxZ: BUND.maxZ },
+    { minX: STAND.minX, maxX: STAND.maxX, minZ: STAND.minZ, maxZ: STAND.maxZ },
     r(DESK.x, DESK.z, DESK.w / 2, DESK.d / 2),
     {
       minX: PRINTER.x - PRINTER_FOOT.hw,
@@ -326,8 +394,8 @@ export function footprints() {
     r(PUMP.x, PUMP.z, PUMP_FOOT.hw, PUMP_FOOT.hd),
     r(POOL.x, POOL.z, POOL.d / 2, POOL.w / 2),
     r(BEAM.x, BEAM.z, 0.25, 0.95),
-    r(RESET.x, RESET.z, 0.25, 0.25),
-    ...Object.values(LECTERNS).map(lecternFoot),
+    r(RESET.x, RESET.z - 0.17, 0.5, 0.45),
+    ...(LECTERNS_PARKED ? [] : Object.values(LECTERNS).map(lecternFoot)),
   ];
 }
 
@@ -350,8 +418,8 @@ export function nodeShape(node: string): Shape {
   if (node.startsWith('tank.')) {
     const x = tankX(node.slice(5) as TankId);
     return box(
-      [x - 0.22, BUND.h, TANK_Z - 0.22],
-      [x + 0.22, 1.6, TANK_Z + 0.25],
+      [x - 0.22, TANK_LIFT + BUND.h, TANK_Z - 0.22],
+      [x + 0.22, TANK_LIFT + 1.6, TANK_Z + 0.25],
     );
   }
   switch (node) {
