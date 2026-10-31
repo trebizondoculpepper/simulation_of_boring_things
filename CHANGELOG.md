@@ -4,6 +4,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Sand filters' windows show the bed as it looks: compacted sand against the glass, its surface line, the surface receding into the dark tank; dirt thickening the line into a brown-to-black sludge band; pitting dipping the line, opening hollows and running grime down into the sand; backwash, rinse and lost sand. They redraw only when the bed visibly changes, and pass the component bench.
 - LCDs wash out off-angle as real twisted-nematic panels do: a lighter, greyer picture with some colour left, narrower from above and below, instead of one flat colour; backlit panels can go dark when off. The Dr Aqualis Trio's screen is one, and its base is now opaque, its insides drawn only while its door is open.
 - The Dr Aqualis Trio's demonstration: a button on its settings screen sets it showing off its pages for five minutes, Dr Aqualis talking the visitor round, before it goes back to its normal cycle; a touch ends it sooner.
 - Mission 114, the Dr Aqualis Trio dosing controller, begun in dev58: a test rig (an ideal pool, a simple loop, ideal hypochlorite, acid and CO₂ dosing with their own REMOTE · MANUAL · OFF selectors, eleven water scenarios), the cabinet's sampler, controller (AUTO, HAND, OFF over whichever channels are connected, OFFLINE with the reason), advisor (Dr Aqualis's diagnosis, Show dose amounts, alarms), its screen's pages (Pumps, Water, Dr Aqualis, Settings) and Dr Aqualis himself, drawn and animated in five moods.
