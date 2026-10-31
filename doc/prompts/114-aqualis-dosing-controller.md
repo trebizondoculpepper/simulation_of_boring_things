@@ -37,7 +37,7 @@ The interface leans into early-2000s skeuomorphism: brushed metal and glass, glo
 - **The game loop** (the owner, 2026-10-31): the player comes to this screen for clues to what will put the water right. Dr Aqualis's diagnosis is the clue, Show dose the answer for anyone stuck; the fixing is the player's (the automatically dosed chemicals by AUTO or HAND, the rest by hand).
 
 - **Diagnosis and direction, not prescriptions** (the owner chose this): the advice says what is wrong and which chemical puts it right ("Alkalinity low (62 mg/l): the pH will be unstable. Raise the alkalinity with sodium bicarbonate."), not how much. A **Show dose** button reveals the exact amount for anyone stuck, worked out through the real chemistry model at the pool's real volume (the Hall 4 dose table and solver, `src/game/plant/museum-4-doses.ts`, `museum-4-solver.ts`, are the place to start; the amounts belong in that chemical's own unit). Advice for hand-dosed chemicals points at where they go: the balance tank, or the pool itself.
-- **Dr Aqualis**, an animated helper in the spirit of Microsoft Agent, an original character and not a copy of any Microsoft one: an anthropomorphic water drop with eyes and a face (the owner, 2026-10-31): the Aqualis water-drop logo come to life, a glossy, blobby, animated blue droplet in a white lab coat with a head mirror and a stethoscope. He gives the advice in speech bubbles. Animations, at no more than 10 Hz and redrawn only while they play: idle (a gentle bob), concerned (a frown, tapping his clipboard), alarmed (wide eyes, a little jump), pleased (a thumbs up when the water is good), pointing (at the reading his advice is about).
+- **Dr Aqualis**, an animated helper in the spirit of Microsoft Agent, an original character and not a copy of any Microsoft one: an anthropomorphic water drop with eyes and a face (the owner, 2026-10-31): the Aqualis water-drop logo come to life, a glossy, blobby, animated blue droplet in a white lab coat with a head mirror and a stethoscope. He gives the advice in written speech bubbles only: no narration and no synthesised speech (the owner, 2026-10-31). Animations, at no more than 10 Hz and redrawn only while they play: idle (a gentle bob), concerned (a frown, tapping his clipboard), alarmed (wide eyes, a little jump), pleased (a thumbs up when the water is good), pointing (at the reading his advice is about).
 - **Readings**: what the three screens show between them: every reading the analyser has, with its band and target, each channel's state and demand, and the selector's position.
 
 ## The hand-dosing game to come (not this mission)
@@ -53,5 +53,3 @@ Later, a separate mission: the player picks up containers of chemicals into an i
 5. Installed for the Olympic pool and the Lounge pool.
 
 ## Open questions for the owner
-
-- Whether Dr Aqualis speaks (narrated clips) or only shows speech bubbles.
