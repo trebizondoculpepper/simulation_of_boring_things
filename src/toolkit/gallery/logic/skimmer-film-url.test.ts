@@ -4,7 +4,12 @@ import { filmStep, skimmerFilmUrl } from './skimmer-film-url';
 describe('skimmerFilmUrl', () => {
   it('leaves the film alone when absent', () => {
     const url = skimmerFilmUrl('?room=museum5');
-    expect(url).toEqual({ reveal: false, speed: 1, fixedStep: null });
+    expect(url).toEqual({
+      reveal: false,
+      speed: 1,
+      fixedStep: null,
+      style: null,
+    });
     expect(filmStep(url, 0.016)).toBe(0.016);
   });
 
@@ -18,6 +23,17 @@ describe('skimmerFilmUrl', () => {
 
   it('ignores nonsense', () => {
     const url = skimmerFilmUrl('?skimmer=yes&filmSpeed=-1&filmFps=abc');
-    expect(url).toEqual({ reveal: false, speed: 1, fixedStep: null });
+    expect(url).toEqual({
+      reveal: false,
+      speed: 1,
+      fixedStep: null,
+      style: null,
+    });
+  });
+
+  it('picks a film by name, or none', () => {
+    expect(skimmerFilmUrl('?skimmerFilm=lob').style).toBe('lob');
+    expect(skimmerFilmUrl('?skimmerFilm=corkscrew').style).toBe('corkscrew');
+    expect(skimmerFilmUrl('?skimmerFilm=loop').style).toBe(null);
   });
 });

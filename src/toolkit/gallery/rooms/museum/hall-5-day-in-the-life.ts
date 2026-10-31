@@ -54,11 +54,18 @@ import {
 } from '../../logic/skimmer-reveal';
 import { filmStep, skimmerFilmUrl } from '../../logic/skimmer-film-url';
 import {
+  CINEMATIC,
+  FILM_STYLES,
   LENS_50_FOV,
   cinematicFrame,
   lidPose,
+  pickAnother,
 } from '../../logic/skimmer-cinematic';
-import type { CinematicPhase, Pose } from '../../logic/skimmer-cinematic';
+import type {
+  CinematicPhase,
+  FilmStyle,
+  Pose,
+} from '../../logic/skimmer-cinematic';
 import { createSkimmerWell, drawOver } from '../../views/skimmer-well';
 import { createSkimmerCaustics } from '../../views/skimmer-caustics';
 import {
@@ -825,6 +832,8 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
     index: number | null;
     t: number;
     start: Pose;
+    /** How the suspense is filmed (`FilmStyle`). */
+    style: FilmStyle;
     phase: CinematicPhase;
     /** The walker's field of view, degrees, to zoom from and back to. */
     fov: number;
@@ -881,8 +890,13 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
       Math.sin(pitch),
       -Math.cos(yaw) * Math.cos(pitch),
     );
+  /** The last film played, so the next is another (`pickAnother`). */
+  let lastStyle = -1;
   const startFilm = (i: number | null, cam: Camera) => {
     if (!view?.film) return false;
+    lastStyle = filmUrl.style
+      ? FILM_STYLES.indexOf(filmUrl.style)
+      : pickAnother(FILM_STYLES.length, lastStyle, Math.random);
     const at = object.worldToLocal(cam.getWorldPosition(new Vector3()));
     const into = object.getWorldQuaternion(new Quaternion()).invert();
     const d = cam.getWorldDirection(new Vector3()).applyQuaternion(into);
@@ -896,6 +910,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
         yaw: Math.atan2(d.x, -d.z),
         pitch: Math.asin(Math.max(-1, Math.min(1, d.y))),
       },
+      style: FILM_STYLES[lastStyle],
       phase: 'suspense',
       fov: (cam as PerspectiveCamera).fov,
       portable:
@@ -942,7 +957,7 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   const stepFilm = (delta: number, cam: Camera | null) => {
     if (!film || !view?.film) return;
     film.t += filmStep(filmUrl, delta);
-    const f = cinematicFrame(film.t, film.start);
+    const f = cinematicFrame(film.t, film.start, CINEMATIC, film.style);
     const i = film.index;
     const prop = i === null ? null : props[i];
     if (f.phase !== film.phase) {

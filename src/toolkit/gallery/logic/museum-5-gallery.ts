@@ -511,19 +511,24 @@ export const POOLSIDE = {
 } as const;
 
 /**
- * The "Inside a skimmer" cut-away, on a lectern at the water's edge just
- * west of the skimmer (the owner, 2026-10-31: off the wall, by the
- * skimmer). By the facing rule (`doc/museum-hall-model.md`) its front
- * faces into the room: north, the way the visitor comes along the deck,
- * turned 20° east towards the skimmer, so that whoever reads it stands
- * by the TRY ME arrow with the skimmer at their left hand. `yaw` turns
- * its +z (its front) to (sin yaw, cos yaw).
+ * The "Inside a skimmer" cut-away, on a lectern at the deck's west end
+ * (the owner, 2026-10-31: moved from beside the skimmer, where the
+ * skimmer's films flew the camera through it): 0.45 m in from the deck's
+ * edge, north of the water, clear of the walk round the walls. By the
+ * facing rule (`doc/museum-hall-model.md`) its front faces into the room,
+ * east along the deck towards the skimmer, so whoever reads it has the
+ * skimmer before them beyond it. `yaw` turns its +z (its front) to
+ * (sin yaw, cos yaw).
  */
-export const SKIMMER_LECTERN = {
-  x: POOLSIDE.skimmer.x - 0.95,
-  z: POOLSIDE.skimmer.z - 0.25,
-  yaw: Math.PI - (20 * Math.PI) / 180,
-} as const;
+export const SKIMMER_LECTERN = (() => {
+  const x = POOLSIDE.deck.minX + 0.45;
+  const z = -1.0;
+  return {
+    x,
+    z,
+    yaw: Math.atan2(POOLSIDE.skimmer.x - x, POOLSIDE.skimmer.z - z),
+  } as const;
+})();
 
 /**
  * The RESET SIMULATION pedestal and its sign, beside the bin (the owner,

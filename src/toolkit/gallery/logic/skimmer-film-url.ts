@@ -4,8 +4,12 @@
  * (Hall 5, `?room=museum5`, or dev53) can play it; `filmSpeed=0.25` runs
  * it at a quarter speed; `filmFps=10` advances it exactly 1/10 s per
  * frame drawn, whatever the clock says, so a headless browser captures
- * every frame alike. Absent, the film runs as it always has. Pure.
+ * every frame alike; `skimmerFilm=lob` (or `orbit`, `corkscrew`) plays
+ * that film every time rather than one at random. Absent, the film runs
+ * as it always has. Pure.
  */
+import { FILM_STYLES } from './skimmer-cinematic';
+import type { FilmStyle } from './skimmer-cinematic';
 
 export interface SkimmerFilmUrl {
   /** Start the film at once. */
@@ -14,6 +18,8 @@ export interface SkimmerFilmUrl {
   speed: number;
   /** Seconds of film per frame drawn, fixed; null to follow the clock. */
   fixedStep: number | null;
+  /** The film to play every time, or null for one at random. */
+  style: FilmStyle | null;
 }
 
 const positive = (text: string | null) => {
@@ -30,6 +36,7 @@ export function skimmerFilmUrl(search: string): SkimmerFilmUrl {
     reveal: q.get('skimmer') === 'reveal',
     speed: positive(q.get('filmSpeed')) ?? 1,
     fixedStep: fps === null ? null : 1 / fps,
+    style: FILM_STYLES.find((f) => f === q.get('skimmerFilm')) ?? null,
   };
 }
 

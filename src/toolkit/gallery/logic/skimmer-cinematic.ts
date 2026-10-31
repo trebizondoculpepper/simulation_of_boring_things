@@ -1,4 +1,5 @@
 import { LOOK_UP, REVEAL, revealFrame } from './skimmer-reveal';
+import { corkscrewEye, lobEye } from './skimmer-lob';
 
 /**
  * Dev53's skimmer cinematic (the owner, 2026-10-29), a trial of the
@@ -56,6 +57,25 @@ export const LENS_50_FOV = (2 * Math.atan(24 / 2 / 50) * 180) / Math.PI;
 export const ZOOM = 1;
 /** Where the lid lies when off: beside the skimmer, metres along +x. */
 export const LID_ASIDE = 0.35;
+
+/**
+ * How the suspense is filmed (the owner, 2026-10-31): the orbit round
+ * and down; the lob, flown along a slow parabola into the skimmer's
+ * mouth; the corkscrew, a dive straight down over it, turning three
+ * times (`skimmer-lob.ts`). Each ends as the suspense does, where the
+ * whip up to the find begins.
+ */
+export type FilmStyle = 'orbit' | 'lob' | 'corkscrew';
+export const FILM_STYLES: readonly FilmStyle[] = ['orbit', 'lob', 'corkscrew'];
+
+/**
+ * How tall the caustics stand while the find is shown, as a share of
+ * their full height (the owner, 2026-10-31: they seemed to stop as the
+ * find came out). The whip leaves the eye low, looking up, so only the
+ * shafts' faded tips were in the shot; standing taller, their bright
+ * middles rise past the bottom of the frame and they play on.
+ */
+export const REVEAL_RISE = 2.4;
 
 export type CinematicPhase = 'suspense' | 'reveal' | 'replace' | 'done';
 
@@ -130,6 +150,7 @@ export function cinematicFrame(
   t: number,
   start: Pose,
   timing: CinematicTiming = CINEMATIC,
+  style: FilmStyle = 'orbit',
 ): CinematicFrame {
   const { suspense, reveal, replace } = timing;
   // Round the skimmer from where the walker stands.
@@ -156,10 +177,17 @@ export function cinematicFrame(
       pitch: lerp(start.pitch, look.pitch, b),
     };
   };
+  /** The suspense's eye, in this film's style. */
+  const filmed = (t: number): Pose =>
+    style === 'lob'
+      ? lobEye(t, start, suspense)
+      : style === 'corkscrew'
+        ? corkscrewEye(t, start, suspense)
+        : orbit(t);
   if (t < suspense) {
     return {
       phase: 'suspense',
-      eye: orbit(t),
+      eye: filmed(t),
       rest: null,
       zoom: ease(t / ZOOM),
       lid: ease(t / LIFT),
@@ -176,7 +204,7 @@ export function cinematicFrame(
     // up to look across it, overshooting a little and correcting. The
     // find pops and turns as the reveal's does.
     const f = revealFrame(REVEAL.suspense + shown, 0);
-    const was = orbit(suspense);
+    const was = filmed(suspense);
     const to = {
       x: Math.sin(end) * REVEAL_EYE.radius,
       y: REVEAL_EYE.height,
@@ -196,7 +224,7 @@ export function cinematicFrame(
       rest,
       zoom: 1,
       lid: 1,
-      rise: 1,
+      rise: lerp(1, REVEAL_RISE, ease(shown / WHIP)),
       glow: 1,
       size: f.size,
       spin: f.spin,
@@ -213,7 +241,7 @@ export function cinematicFrame(
       rest: null,
       zoom: 1 - k,
       lid: 1 - k,
-      rise: 1,
+      rise: REVEAL_RISE,
       glow: 1 - k,
       size: 0,
       spin: 0,

@@ -1,3 +1,4 @@
+import { ORBIT_MAX } from './skimmer-cinematic';
 import { describe, expect, it } from 'vite-plus/test';
 import {
   BAY,
@@ -214,17 +215,25 @@ describe('Hall 5’s walls', () => {
 });
 
 describe('Hall 5’s poolside', () => {
-  it('stands the skimmer’s lectern at the water’s edge, near the skimmer, facing into the room', () => {
-    const { skimmer, water, coping } = POOLSIDE;
+  it('stands the skimmer’s lectern at the deck’s west end, facing the skimmer, clear of its films', () => {
+    const { skimmer, water, coping, deck } = POOLSIDE;
     const l = SKIMMER_LECTERN;
-    expect(Math.hypot(l.x - skimmer.x, l.z - skimmer.z)).toBeLessThan(1.2);
-    // On the deck, off the coping, within a metre of the water's edge.
-    expect(l.z + 0.25).toBeLessThan(water.minZ - coping);
-    expect(water.minZ - coping - l.z).toBeLessThan(1);
-    // Its front faces the room (north, −z) and turns towards the skimmer.
+    // On the deck, off the walk round the walls, off the water and its coping.
+    expect(l.x - 0.25).toBeGreaterThan(deck.minX);
+    expect(l.x - deck.minX).toBeLessThan(0.8);
+    expect(
+      l.x + 0.25 < water.minX - coping || l.z + 0.25 < water.minZ - coping,
+    ).toBe(true);
+    // Far outside the orbit's widest circle.
+    expect(Math.hypot(l.x - skimmer.x, l.z - skimmer.z)).toBeGreaterThan(
+      ORBIT_MAX + 1,
+    );
+    // Its front faces the skimmer.
     const front = [Math.sin(l.yaw), Math.cos(l.yaw)];
-    expect(front[1]).toBeLessThan(-0.8);
-    expect(front[0] * (skimmer.x - l.x)).toBeGreaterThan(0);
+    const to = [skimmer.x - l.x, skimmer.z - l.z];
+    expect(
+      (front[0] * to[0] + front[1] * to[1]) / Math.hypot(to[0], to[1]),
+    ).toBeGreaterThan(0.99);
   });
 
   it('puts the RESET button beside the bin', () => {
