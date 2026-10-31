@@ -8,6 +8,13 @@ import {
   READING_LABELS,
   SCREEN,
 } from '../../../../game/plant/aqualis-types';
+import {
+  DEMO_SECONDS,
+  demoAdvice,
+  demoChannels,
+  demoReadings,
+  demoScene,
+} from './aqualis-demo';
 import type {
   Advice,
   Alarm,
@@ -80,6 +87,8 @@ export interface DisplayState {
   /** The region glowing from a press, and for how long. */
   pressed: string | null;
   glow: number;
+  /** Seconds into the demonstration, or null when it is not running. */
+  demo: number | null;
 }
 
 export function newDisplay(): DisplayState {
@@ -93,6 +102,7 @@ export function newDisplay(): DisplayState {
     showDose: false,
     pressed: null,
     glow: 0,
+    demo: null,
   };
 }
 
@@ -119,7 +129,21 @@ export type DisplayEffect =
 
 /** The display `dt` seconds on: the cycle turns while it is untouched. */
 export function tickDisplay(s: DisplayState, dt: number): DisplayState {
-  let { page, onPage, idle, glow, pressed, advice, showDose } = s;
+  let { page, onPage, idle, glow, pressed, advice, showDose, demo } = s;
+  if (demo !== null) {
+    demo += dt;
+    if (demo >= DEMO_SECONDS)
+      return {
+        ...s,
+        demo: null,
+        page: 'pumps',
+        onPage: 0,
+        idle: Infinity,
+        advice: 0,
+        showDose: false,
+      };
+    return { ...s, demo };
+  }
   idle += dt;
   onPage += dt;
   if (glow > 0) {
@@ -133,7 +157,7 @@ export function tickDisplay(s: DisplayState, dt: number): DisplayState {
     advice = 0;
     showDose = false;
   }
-  return { ...s, page, onPage, idle, glow, pressed, advice, showDose };
+  return { ...s, page, onPage, idle, glow, pressed, advice, showDose, demo };
 }
 
 // ---- Layout ----------------------------------------------------------------------------
@@ -218,6 +242,8 @@ export const SETTINGS = {
     plus: { x: 548, y: 154 + i * 92, w: 70, h: 52 } as Rect,
   })),
   rowH: 34,
+  /** The demonstration's button, on the Pool dynamics tab. */
+  demo: { x: 16, y: 372, w: 230, h: 46 } as Rect,
 };
 
 /** Every region the page now answers. */
@@ -225,6 +251,11 @@ export function displayRegions(
   s: DisplayState,
   inputs: DisplayInputs,
 ): Region[] {
+  // The demonstration: a touch anywhere ends it.
+  if (s.demo !== null)
+    return [
+      { id: 'demo-exit', rect: { x: 0, y: 0, w: SCREEN.w, h: SCREEN.h } },
+    ];
   const regions: Region[] = tabRects().map((t) => ({
     id: `tab:${t.page}`,
     rect: t.rect,
@@ -263,6 +294,7 @@ export function displayRegions(
           { id: `dyn+:${key}`, rect: d.plus },
         );
       });
+    if (s.tab === 'dynamics') regions.push({ id: 'demo', rect: SETTINGS.demo });
     else {
       regions.push(
         { id: 'row-', rect: SETTINGS.up },
@@ -341,7 +373,20 @@ export function pressDisplay(
   let effect: DisplayEffect | null = null;
   const [verb, arg] = id.split(':');
   const settings = inputs.settings;
-  if (verb === 'tab') {
+  if (verb === 'demo') {
+    state = { ...state, demo: 0 };
+  } else if (verb === 'demo-exit') {
+    state = {
+      ...state,
+      demo: null,
+      page: 'pumps',
+      onPage: 0,
+      advice: 0,
+      showDose: false,
+      pressed: null,
+      glow: 0,
+    };
+  } else if (verb === 'tab') {
     state = {
       ...state,
       page: arg as Page,
@@ -466,6 +511,8 @@ export interface DisplayModel {
   tab: SettingsTab;
   pressed: string | null;
   selector: Selector;
+  /** The demonstration is running. */
+  demo: boolean;
   status: { text: string; alarms: number; tint: 'green' | 'red' | 'amber' };
   pumps: {
     id: ChannelId;
@@ -511,6 +558,43 @@ export function displayModel(
   s: DisplayState,
   inputs: DisplayInputs,
 ): DisplayModel {
+  if (s.demo !== null) {
+    // The demonstration: its scene's page and made-up readings, pumps and words.
+    const { scene, index } = demoScene(s.demo);
+    const left = Math.ceil((DEMO_SECONDS - s.demo) / 60);
+    const m = displayModel(
+      {
+        ...s,
+        demo: null,
+        page: scene.page,
+        tab: scene.tab ?? 'dynamics',
+        targetRow: scene.row ?? 0,
+        advice: 0,
+        showDose: !!scene.say?.dose,
+        pressed: null,
+      },
+      {
+        ...inputs,
+        readings: demoReadings(scene),
+        channels: demoChannels(scene),
+        inhibit: null,
+        advice: demoAdvice(scene),
+        alarms: [],
+        selector: 'auto',
+      },
+    );
+    const status = {
+      text: `DEMONSTRATION · ${left} min · touch the screen to return`,
+      alarms: 0,
+      tint: 'green' as const,
+    };
+    return {
+      ...m,
+      status,
+      demo: true,
+      key: JSON.stringify(['demo', index, left]),
+    };
+  }
   const r = inputs.readings;
   const alarms = inputs.alarms.length;
   const status = inputs.inhibit
@@ -565,6 +649,7 @@ export function displayModel(
   const index = n ? Math.min(s.advice, n - 1) : 0;
   const d = inputs.settings.dynamics;
   const model: Omit<DisplayModel, 'key'> = {
+    demo: false,
     page: s.page,
     tab: s.tab,
     pressed: s.pressed,

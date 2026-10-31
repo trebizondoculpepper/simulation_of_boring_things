@@ -16,6 +16,7 @@ import {
   tabRects,
   tickDisplay,
 } from './aqualis-display';
+import { DEMO_SCENE_SECONDS, DEMO_SECONDS } from './aqualis-demo';
 import type { DisplayInputs, DisplayState } from './aqualis-display';
 
 const view = (id: ChannelId, over: Partial<ChannelView> = {}): ChannelView => ({
@@ -174,5 +175,44 @@ describe('the Aqualis display', () => {
       channels: { ...inputs().channels, acid: view('acid', { delivering: 2 }) },
     });
     expect(displayModel(s, changed).key).not.toBe(a);
+  });
+
+  it('runs a demonstration from settings for five minutes, then cycles again', () => {
+    let s: DisplayState = { ...newDisplay(), page: 'settings' };
+    expect(displayRegions(s, inputs()).some((r) => r.id === 'demo')).toBe(true);
+    s = pressDisplay(s, inputs(), 'demo').state;
+    const pages = new Set<string>();
+    const words = new Set<string>();
+    for (let t = 0; t < DEMO_SECONDS - 1; t += DEMO_SCENE_SECONDS) {
+      const m = displayModel(s, inputs());
+      expect(m.demo).toBe(true);
+      pages.add(m.page);
+      if (m.doctor.advice) words.add(m.doctor.advice.problem);
+      s = tickDisplay(s, DEMO_SCENE_SECONDS);
+    }
+    expect([...pages].sort()).toEqual(['doctor', 'pumps', 'settings', 'water']);
+    expect(words.size).toBeGreaterThan(5);
+    s = tickDisplay(s, 5);
+    expect(s.demo).toBe(null);
+    expect(displayModel(s, inputs()).demo).toBe(false);
+  });
+
+  it('ends the demonstration at a touch anywhere', () => {
+    let s = pressDisplay(newDisplay(), inputs(), 'demo').state;
+    s = tickDisplay(s, 30);
+    const id = hitDisplay(s, inputs(), 320, 240);
+    expect(id).toBe('demo-exit');
+    s = pressDisplay(s, inputs(), id!).state;
+    expect(s.demo).toBe(null);
+    expect(s.page).toBe('pumps');
+  });
+
+  it('redraws the demonstration only when its scene changes', () => {
+    let s = pressDisplay(newDisplay(), inputs(), 'demo').state;
+    const a = displayModel(s, inputs()).key;
+    s = tickDisplay(s, 1);
+    expect(displayModel(s, inputs()).key).toBe(a);
+    s = tickDisplay(s, DEMO_SCENE_SECONDS);
+    expect(displayModel(s, inputs()).key).not.toBe(a);
   });
 });

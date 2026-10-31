@@ -244,7 +244,7 @@ export function createAqualisRoomHost(
       });
       return true;
     },
-    doctorShown: () => display.page === 'doctor',
+    doctorShown: () => displayModel(display, inputs()).page === 'doctor',
     drawDoctor(c, w, h) {
       const a = displayModel(display, inputs()).doctor.advice;
       const box = DOCTOR.him;

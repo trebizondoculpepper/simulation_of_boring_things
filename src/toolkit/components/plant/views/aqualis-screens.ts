@@ -312,6 +312,11 @@ function drawSettings(ctx: Ctx, m: DisplayModel) {
         size: 26,
       });
     });
+    drawGlossyButton(ctx, SETTINGS.demo, '▶  Demonstration', {
+      state: press(m, 'demo'),
+      tint: 'green',
+      size: 17,
+    });
     drawText(
       ctx,
       'Doses are worked out from these: enter them as the pool is built.',
