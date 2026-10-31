@@ -17,7 +17,7 @@ An Aqualis dosing controller of the early 2000s: a white cabinet, mostly touch-s
 - **Dosing it controls**: only sodium hypochlorite and acid. In the game world these are the only chemicals dosed automatically; it drives those two dosing pumps. Every other chemical (sodium bicarbonate, soda ash, calcium chloride, thiosulphate, dilution with fresh water and the rest) is dosed by hand.
 - **HAND · OFF · AUTO**: a traditional three-position selector on the cabinet itself, a local control (it stays on the cabinet, not the control-room boards). AUTO: the controller holds free chlorine and pH at their set points by driving the hypochlorite and acid pumps. HAND: the player runs those two pumps from the touch screen. OFF: no dosing. In every mode it measures, alarms and advises.
 - **Alarms**: it reports to its pool's mimic and to the annunciator with water-composition warnings (chlorine low or high, pH out, combined chlorine high, balance aggressive or scaling, and so on), shown on the old control room and the bridge as the alarms rule requires. Its warnings need a failure model before they say more than on and off (`status-words-need-failure-model`).
-- **Where**: one for the Olympic pool and one for the Lounge pool (the owner called it "the lazy pool"; confirm which pool is meant before installing). Model and try it in a development room first, as every new piece of equipment is, and try its screens on their own before it goes into the plant rooms. The Olympic plant is partly automated and the Lounge mostly manual (`varied-automation`): expect the Olympic's controller to live in AUTO and the Lounge's to be run more by hand.
+- **Where**: one for the Olympic pool and one for the Lounge pool ("the lazy pool" is the Lounge pool, the owner confirmed, 2026-10-31). Model and try it in a development room first, as every new piece of equipment is, and try its screens on their own before it goes into the plant rooms. The Olympic plant is partly automated and the Lounge mostly manual (`varied-automation`): expect the Olympic's controller to live in AUTO and the Lounge's to be run more by hand.
 
 ## Its screen and Dr Aqualis
 
@@ -46,7 +46,6 @@ Later, a separate mission: the player picks up containers of chemicals into an i
 ## Open questions for the owner
 
 - Whether the Aqualis cabinet replaces the dosing room's touch-screen controller that `doc/plant-model.md` plans (after DULCOMARIN, in the dosing room beside its pumps), or stands beside it (replacing it assumed).
-- Which pool "the lazy pool" is (the Lounge pool assumed).
 - Which acid the automatic acid pump uses (hydrochloric acid, sodium bisulphate solution, or CO₂ where a pool has it).
 - The set points and dead bands for AUTO, and how fast it doses.
 - Whether Dr Aqualis speaks (narrated clips) or only shows speech bubbles.
