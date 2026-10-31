@@ -101,7 +101,7 @@ export interface CabinetHost {
  * pump's (`PERISTALTIC_PUMP`): faint behind the shut door, and 20 dB
  * louder with it open (the owner, 2026-10-31).
  */
-const SAMPLE_PUMP_LEVEL = { shut: 0.12, open: 1.2 } as const;
+const SAMPLE_PUMP_LEVEL = { shut: 0.5, open: 5 } as const;
 
 /** The screen's brightness: its white is this grey, under the bloom threshold (as the console's). */
 const SCREEN_LEVEL = 0xb8b8b8;
@@ -1166,9 +1166,13 @@ export function createAqualisCabinet(
     ports: portsOf(model),
     update(dt: number) {
       parts.update(dt);
-      // Its sample pump turns only with its power on and its own switch on
-      // (the owner, 2026-10-31), whatever the room asks.
-      const flowing = powered && mainOn.peek() && valveOpen ? sampleFlow : 0;
+      // Its sample pump turns only with its power on, its own switch on and
+      // its HAND · OFF · AUTO knob not at OFF (the owner, 2026-10-31),
+      // whatever the room asks.
+      const flowing =
+        powered && mainOn.peek() && sel.peek() !== 'off' && valveOpen
+          ? sampleFlow
+          : 0;
       // Its sample pump's whirr, while it turns, louder with the door open.
       const whirring = flowing > 0;
       if (whirring !== pumpHeard) {
