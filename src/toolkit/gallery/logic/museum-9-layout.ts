@@ -96,15 +96,25 @@ export const OVERHEAD = 3.0;
 /**
  * Kept clear at the hall's east end (layout C, 112): both archways are in
  * its east end wall, so the pool, and the chemistry along the south wall,
- * stand back from it, the visitor's floor free in front of both.
+ * stand back from it, the visitor's floor free in front of both: 2.4 m
+ * to the pool's middle-of-the-room edge (less its own run), so the pool
+ * and the hypochlorite store stand clear of an archway's whole approach,
+ * 2.5 m (the audit, 2026-10-31: the pool stood 0.3 m into the approach
+ * from Hall 8, the hypochlorite store 0.8 m into the way on to Hall 0).
+ * The sample tapping and the injection points move 0.4 m west with the
+ * pool, the sample line still clear of it.
  */
-export const EAST_CLEAR = 2.0;
+export const EAST_CLEAR = 2.4;
 /** Where the chemistry's tubes and the sample line may cross the hall, overhead (the owner, 2026-10-28: no pipes hanging out over the room). */
 export const CROSSING = { minX: 2.0, maxX: 7.6 } as const;
-/** The desk's place in the south-west corner, its front (+z of its frame) north, toward the visitor. */
+/**
+ * The desk's place in the south-west corner, its front (+z of its frame)
+ * north, toward the visitor, its back against the south wall (the audit,
+ * 2026-10-31: it stood 0.29 m off it).
+ */
 export const DESK = {
   x: W + 2.5,
-  z: SOUTH - 0.55,
+  z: SOUTH - 0.26,
   yaw: Math.PI,
   w: 4.6,
 } as const;
@@ -124,14 +134,29 @@ const BACK = NORTH + 0.05;
 const S = Math.PI;
 const MAIN_Y = 2.7;
 const CHEM_Z = SOUTH - 0.6;
+/** The chemistry's east end, its store clear of the archway to Hall 0's approach. */
+const CHEM_X = E - EAST_CLEAR - 0.5;
 
-/** Each machine's place. */
+/**
+ * Each machine's place. By the facing rule (`doc/museum-hall-model.md`)
+ * each machine's front (its own +z: controls, gauges, nameplate) faces
+ * the room: those along the north wall yaw 0, those along the south yaw
+ * a half turn (the audit, 2026-10-31: both pumps faced the north wall).
+ * So turned, each pump's suction faces away from where its water comes
+ * from and its lines loop round it: P2 stands 0.7 m east and 0.6 m out
+ * from the wall, P1 0.4 m east and 0.7 m out, the strainer 0.35 m east and 0.15 m out,
+ * placed so the pipework stays under its 180 m.
+ * The strainer is the exception: a pot with its clear lid on top and no
+ * front, it keeps its half turn so its inlet faces the balance tank.
+ */
 export const PLACES: Record<MachineId, MachinePlace> = {
   gasMain: { x: W + 2.6, z: NORTH + 1.7, yaw: 0 },
   pressurisation: { x: W + 0.75, z: NORTH + 2.6, yaw: 0 },
-  boiler: { x: W + 1.3, z: BACK + BOILER.d / 2, yaw: 0 },
-  atmosphere: { x: W + 1.3, z: BACK + BOILER.d / 2, yaw: 0 },
-  primaryPump: { x: W + 3.6, z: NORTH + 0.5, yaw: S },
+  // The boiler's condensate trap and the filter's backwash pipe stood
+  // through the north wall (the audit, 2026-10-31): each stands clear.
+  boiler: { x: W + 1.3, z: BACK + 0.05 + BOILER.d / 2, yaw: 0 },
+  atmosphere: { x: W + 1.3, z: BACK + 0.05 + BOILER.d / 2, yaw: 0 },
+  primaryPump: { x: W + 4.3, z: NORTH + 1.1, yaw: 0 },
   flowTee: { x: W + 5.1, z: NORTH + 1.4, yaw: 0 },
   returnTee: { x: W + 5.1, z: NORTH + 1.4, yaw: 0 },
   hx: { x: W + 6.2, z: NORTH + 0.5, yaw: 0 },
@@ -139,21 +164,21 @@ export const PLACES: Record<MachineId, MachinePlace> = {
   hxTeeOut: { x: W + 6.9, z: NORTH + 1.5, yaw: 0, y: 3.9 },
   wasteTee: { x: W + 10.8, z: NORTH + 3.5, yaw: 0 },
   drain: { x: W + 10.8, z: NORTH + 3.5, yaw: 0 },
-  filter: { x: W + 9.1, z: BACK + 1.75, yaw: 0 },
+  filter: { x: W + 9.1, z: BACK + 1.77, yaw: 0 },
   feedTee: { x: W + 6.9, z: NORTH + 3.9, yaw: 0 },
-  poolPump: { x: W + 12.4, z: NORTH + 1.1, yaw: S },
-  strainer: { x: W + 14.05, z: NORTH + 1.1, yaw: S },
+  poolPump: { x: W + 12.8, z: NORTH + 1.8, yaw: 0 },
+  strainer: { x: W + 14.4, z: NORTH + 1.25, yaw: S },
   balanceTank: { x: W + 16.7, z: BACK + TANK_SHAPE.d / 2, yaw: 0 },
-  sampleTee: { x: W + 18.3, z: NORTH + 0.4, yaw: 0, y: MAIN_Y },
-  hypoInjection: { x: W + 18.9, z: NORTH + 0.4, yaw: 0, y: MAIN_Y },
-  acidInjection: { x: W + 19.5, z: NORTH + 0.4, yaw: 0, y: MAIN_Y },
+  sampleTee: { x: W + 17.9, z: NORTH + 0.4, yaw: 0, y: MAIN_Y },
+  hypoInjection: { x: W + 18.5, z: NORTH + 0.4, yaw: 0, y: MAIN_Y },
+  acidInjection: { x: W + 19.1, z: NORTH + 0.4, yaw: 0, y: MAIN_Y },
   pool: { x: E - EAST_CLEAR - 1.4, z: NORTH + 1.4, yaw: 0 },
-  hypoStore: { x: E - 1.9, z: CHEM_Z, yaw: S },
-  hypoTank: { x: E - 2.9, z: CHEM_Z, yaw: S },
-  hypoPump: { x: E - 3.9, z: CHEM_Z - 0.1, yaw: S },
-  acidStore: { x: E - 5.2, z: CHEM_Z, yaw: S },
-  acidTank: { x: E - 6.2, z: CHEM_Z, yaw: S },
-  acidPump: { x: E - 7.2, z: CHEM_Z - 0.1, yaw: S },
+  hypoStore: { x: CHEM_X, z: CHEM_Z, yaw: S },
+  hypoTank: { x: CHEM_X - 0.85, z: CHEM_Z, yaw: S },
+  hypoPump: { x: CHEM_X - 1.7, z: CHEM_Z - 0.1, yaw: S },
+  acidStore: { x: CHEM_X - 2.7, z: CHEM_Z, yaw: S },
+  acidTank: { x: CHEM_X - 3.5, z: CHEM_Z, yaw: S },
+  acidPump: { x: CHEM_X - 4.3, z: CHEM_Z - 0.1, yaw: S },
   sampleCell: { x: E - 8.9, z: SOUTH, yaw: S, y: PANEL_Y },
   sampleDrain: { x: E - 9.65, z: SOUTH - 0.35, yaw: S },
 };

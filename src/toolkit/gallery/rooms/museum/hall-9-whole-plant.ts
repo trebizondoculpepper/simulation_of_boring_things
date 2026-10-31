@@ -935,7 +935,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     cx7.object,
     PLACES.sampleCell.x - 0.85,
     1.55,
-    SOUTH - 0.01,
+    // Flush on the south wall (the audit, 2026-10-31: 10 mm off it).
+    SOUTH,
     FACE_NORTH,
   );
   object.add(
@@ -1011,7 +1012,10 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
                 ? { colour: '#4d5a63' }
                 : line.pipe === 'steel-screwed'
                   ? { colour: '#b0392b' }
-                  : {},
+                  : // The sample tube, laid square and clipped as the dosing
+                    // tubes are (the audit, 2026-10-31: hung free, it sagged
+                    // through the floor and the south wall).
+                    { laid: true },
       );
       markComponent(pipe, {
         name: `Pipe: ${LINK_NAMES[line.edge]}`,
@@ -1602,7 +1606,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     1.5,
     paintEntrance(hall9Entrance(), 'Hall 9 · The whole plant'),
   );
-  turnTo(entrance, E - 0.04, 1.65, -0.6, FACE_WEST);
+  // Flush on the east wall (the audit, 2026-10-31: both hung 40 mm off it).
+  turnTo(entrance, E, 1.65, -0.6, FACE_WEST);
   object.add(
     markComponent(still(entrance), {
       name: 'Entrance panel',
@@ -1616,7 +1621,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     0.56,
     paintResetSign(RESET_SIGN),
   );
-  turnTo(resetSign, E - 0.04, 1.75, 1.2, FACE_WEST);
+  turnTo(resetSign, E, 1.75, 1.2, FACE_WEST);
   object.add(
     markComponent(still(resetSign), { name: 'RESET sign', decorative: true }),
   );
