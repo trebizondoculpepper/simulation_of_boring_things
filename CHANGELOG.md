@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Changed
 
+- The crosshair's carrying cues (mission 116): a lift arrow over what can be picked up; while carrying, put down, put back in its place, into a bin or carton, or fit into a socket, red with a × where the place refuses; the help line names what is carried. The click and the cue come from one resolver, so they cannot disagree; carrying no longer raycasts every frame; dev4's live card sparks only when actually pulled.
 - Plant Room 1's annunciator, PL1-CP3, clear of the equipment doors' frame, in a new layout with its ACCEPT, RESET, LAMP TEST and MUTE down its left margin, reachable from the doorway; the room's reach test now checks where a panel is worked.
 - Lift doors no longer close on the player: standing in either the landing or the car door's path holds them open however long (no more nudging shut through you), reopens them while closing, keeps a shut lift from leaving, and once clear they close after their hold (`WORLD_VERSION` 62).
 - The engineer's office: a software box picked up is held in the hands, as anything carried is (it had been posed nine times too far away, the room passing a scaled group for the carrying's root); the Gateway 3000 carton no longer clips the wall, desk or cupboard.
