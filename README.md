@@ -2,7 +2,10 @@
 
 **The Pool** is a first-person simulation of the boring things behind a swimming pool. Out front is a leisure centre of serene, impossible pool halls; behind its staff doors is the plant that keeps them running: pumps, sand filters, boilers, heat exchangers, chemical stores, dosing pumps, air handling, switchgear and the control rooms that watch it all. Every machine is a working model of a real kind of plant, with gauges that read, switches that switch, lamps that light and recorders that record, all joined into one simulated building whose water has to stay clean, warm and safe. It is a game for adults who like the quiet satisfaction of machinery.
 
-**[Play the latest release on itch.io](https://salimfadhley.itch.io/the-pool)**, or the [bleeding-edge build](https://trebizondoculpepper.github.io/the_pool/), which follows every push to `main`. Desktop builds for Linux (and the Steam Deck), macOS and Windows are described under [Desktop builds](#desktop-builds).
+- **Official release:** https://salimfadhley.itch.io/the-pool
+- **Bleeding-edge release:** https://trebizondoculpepper.github.io/the_pool/ (follows every push to `main`)
+
+Desktop builds for Linux (and the Steam Deck), macOS and Windows are described under [Desktop builds](#desktop-builds).
 
 ## How to play
 
@@ -53,26 +56,7 @@ The proposed definition of a healthy New Game and its repeatable audit are in [H
 
 ### Development rooms
 
-The development rooms can be opened directly, among them the modelling demonstrations:
-
-- [Dev19: a plant room laid out, plumbed and scored by the room-layout pipeline](https://trebizondoculpepper.github.io/the_pool/?room=dev19)
-- [Dev20: experimental sources and sinks of every substance](https://trebizondoculpepper.github.io/the_pool/?room=dev20)
-- [Dev21: each source plumbed to its sink, valves closed](https://trebizondoculpepper.github.io/the_pool/?room=dev21)
-- [Dev22: a pump on a battery-backed supply](https://trebizondoculpepper.github.io/the_pool/?room=dev22)
-- [Dev36: jacuzzi music-effects prototype](?room=dev36)
-- [Dev37: valve test rig, an electric spring-return butterfly valve with its panel and a throw switch to fail its power](?room=dev37)
-- [Duty manager’s office](?room=duty_managers_office)
-- [Dev35: isolated jacuzzi water-effects prototype](?room=dev35)
-- [Dev23: draining a jacuzzi by gravity](https://trebizondoculpepper.github.io/the_pool/?room=dev23)
-- [Dev24: duty and standby pumps](https://trebizondoculpepper.github.io/the_pool/?room=dev24)
-- [Dev25: a tank filled and drained through one port](https://trebizondoculpepper.github.io/the_pool/?room=dev25)
-- [Dev26: an Olympic filter on its five-valve battery](https://trebizondoculpepper.github.io/the_pool/?room=dev26)
-- [Dev27: heat exchange from a gas boiler, with its mimic board](https://trebizondoculpepper.github.io/the_pool/?room=dev27)
-- [Dev51: the ideal pool plant, a working 3D schematic of a pool's circulation, filtration and heating](https://trebizondoculpepper.github.io/the_pool/?room=dev51)
-- [Dev52: museum stuff, the museum's showcases tried in a dark room](https://trebizondoculpepper.github.io/the_pool/?room=dev52)
-- [Dev53: the skimmer reveal, Hall 5's skimmer as a film: gold caustics, an orbit, a jump cut and a fanfare](https://trebizondoculpepper.github.io/the_pool/?room=dev53)
-
-The room-layout pipeline is described in [`doc/room-layout-guide.md`](doc/room-layout-guide.md), and the test scenarios in [`doc/prompts/scenarios.md`](doc/prompts/scenarios.md).
+New equipment and controls are modelled in the development rooms first. The [developers' panel](https://trebizondoculpepper.github.io/the_pool/?dev) (`?dev`) lists every room by its URL. The room-layout pipeline is described in [`doc/room-layout-guide.md`](doc/room-layout-guide.md), and the test scenarios in [`doc/prompts/scenarios.md`](doc/prompts/scenarios.md).
 
 ## Checks
 
