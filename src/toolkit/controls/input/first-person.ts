@@ -298,19 +298,66 @@ const CUE_STOP = '#f04b43';
 const CUE_EDGE = '#182327';
 
 /** One curved arrow, clockwise or (mirrored) anticlockwise, and its label. */
+/**
+ * The turn arrow's shape, worked out once: a tail along an arc over the
+ * top, tapering from a point to its full width (the owner, 2026-10-31: so
+ * which way it goes is plain at a glance), and a big head at its end.
+ */
+const TURN_ARROW = (() => {
+  const W = 34;
+  const cx = 15;
+  const cy = 17;
+  const r = 10;
+  const from = (200 * Math.PI) / 180;
+  const to = (318 * Math.PI) / 180;
+  const N = 16;
+  const outer: string[] = [];
+  const inner: string[] = [];
+  for (let k = 0; k <= N; k++) {
+    const t = k / N;
+    const a = from + (to - from) * t;
+    const half = 0.25 + 1.9 * t;
+    const [ux, uy] = [Math.cos(a), Math.sin(a)];
+    outer.push(
+      `${(cx + (r + half) * ux).toFixed(2)},${(cy + (r + half) * uy).toFixed(2)}`,
+    );
+    inner.unshift(
+      `${(cx + (r - half) * ux).toFixed(2)},${(cy + (r - half) * uy).toFixed(2)}`,
+    );
+  }
+  const ex = cx + r * Math.cos(to);
+  const ey = cy + r * Math.sin(to);
+  // Along the arc at its end (clockwise), and across it.
+  const [tx, ty] = [-Math.sin(to), Math.cos(to)];
+  const [nx, ny] = [-ty, tx];
+  const p = (along: number, across: number) =>
+    `${(ex + tx * along + nx * across).toFixed(2)},${(ey + ty * along + ny * across).toFixed(2)}`;
+  return {
+    W,
+    tail: [...outer, ...inner].join(' '),
+    head: [p(8, 0), p(-1.5, 5.8), p(-1.5, -5.8)].join(' '),
+    // The tail's fade runs from its start to its head, left to right.
+    fadeFrom: (cx + r * Math.cos(from)).toFixed(2),
+    fadeTo: ex.toFixed(2),
+  };
+})();
+
 function turnArrow(direction: -1 | 1, possible: boolean, label?: string) {
   const colour = possible ? CUE_GO : CUE_STOP;
-  const arc = 'M4 13 A9.5 9.5 0 0 1 20 9';
-  const head = '18,4.5 24.5,8.5 18.5,13.5';
-  const flip = direction < 0 ? ' transform="translate(28 0) scale(-1 1)"' : '';
+  const { W, tail, head, fadeFrom, fadeTo } = TURN_ARROW;
+  const H = label ? 30 : 21;
+  const fade = `turn-fade-${possible ? 'go' : 'stop'}`;
+  const flip =
+    direction < 0 ? ` transform="translate(${W} 0) scale(-1 1)"` : '';
   const text = label
-    ? `<text x="14" y="25" text-anchor="middle" font-size="9" font-weight="bold" font-family="sans-serif" fill="#f5f1df" stroke="${CUE_EDGE}" stroke-width="2.5" paint-order="stroke">${label}</text>`
+    ? `<text x="${W / 2}" y="28" text-anchor="middle" font-size="9" font-weight="bold" font-family="sans-serif" fill="#f5f1df" stroke="${CUE_EDGE}" stroke-width="2.5" paint-order="stroke">${label}</text>`
     : '';
   return (
-    `<svg width="28" height="${label ? 27 : 17}" viewBox="0 0 28 ${label ? 27 : 17}">` +
-    `<g${flip}><path d="${arc}" fill="none" stroke="${CUE_EDGE}" stroke-width="5" stroke-linecap="round"/>` +
-    `<polygon points="${head}" fill="${colour}" stroke="${CUE_EDGE}" stroke-width="1.6" stroke-linejoin="round"/>` +
-    `<path d="${arc}" fill="none" stroke="${colour}" stroke-width="2.5" stroke-linecap="round"/></g>` +
+    `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">` +
+    `<defs><linearGradient id="${fade}" gradientUnits="userSpaceOnUse" x1="${fadeFrom}" y1="0" x2="${fadeTo}" y2="0">` +
+    `<stop offset="0" stop-color="${colour}" stop-opacity="0.15"/><stop offset="1" stop-color="${colour}" stop-opacity="1"/></linearGradient></defs>` +
+    `<g${flip}><polygon points="${tail}" fill="url(#${fade})" stroke="${CUE_EDGE}" stroke-opacity="0.6" stroke-width="1.2" stroke-linejoin="round"/>` +
+    `<polygon points="${head}" fill="${colour}" stroke="${CUE_EDGE}" stroke-width="1.6" stroke-linejoin="round"/></g>` +
     `${text}</svg>`
   );
 }
