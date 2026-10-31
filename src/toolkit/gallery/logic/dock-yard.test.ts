@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { YARD, dockFloorAt, dockSteps, dockYardSolids } from './dock-yard';
+import {
+  YARD,
+  dockFloorAt,
+  dockSteps,
+  dockYardSolids,
+  fireExitLeafSign,
+} from './dock-yard';
 
 const F = { wallZ: -6, thickness: 0.2, doorX: 0 };
 
@@ -64,5 +70,22 @@ describe('the loading dock, out to the yard', () => {
       expect(blocked(high, -3, -6.1)).toBe(true);
       expect(blocked(high, -6, -3)).toBe(false);
     });
+  });
+});
+
+describe('the pier door’s keep-clear sign', () => {
+  it('is on the leaf’s outer face, within it and clear of its handle', () => {
+    const width = 1.0;
+    const s = fireExitLeafSign(width);
+    // On the leaf (hinge at 0, free edge at its width), not in the air.
+    expect(s.x - s.w / 2).toBeGreaterThan(0.06);
+    expect(s.x + s.w / 2).toBeLessThan(width - 0.06);
+    expect(s.y + s.h / 2).toBeLessThan(2.1 - 0.05);
+    expect(s.y - s.h / 2).toBeGreaterThan(1.1);
+    // Just off its outer face (z = 0), toward the yard.
+    expect(s.z).toBeLessThanOrEqual(0);
+    expect(s.z).toBeGreaterThan(-0.01);
+    // Clear of the outside handle, 0.09 m in from the free edge.
+    expect(width - 0.09 - (s.x + s.w / 2)).toBeGreaterThan(0.1);
   });
 });

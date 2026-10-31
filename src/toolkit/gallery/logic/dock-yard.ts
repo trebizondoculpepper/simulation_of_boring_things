@@ -203,3 +203,20 @@ export function dockYardSolids(f: DockFrame, low: boolean): Footprint[] {
     ...(low ? [...intakeSolids(), ...dressingSolids()] : []),
   ];
 }
+
+/**
+ * The pier door's FIRE EXIT KEEP CLEAR sign (the owner, 2026-10-31: it
+ * hung in the air when the door stood open): on the outside face of its
+ * leaf, where UK practice puts it on an outward-opening single-leaf fire
+ * exit, at eye level, swinging with it; not on the wall, which on the pier
+ * has the lorry shutters' guides close either side. Its middle in the
+ * leaf's hinge frame (the hinge at x = 0, the leaf running +x to its free
+ * edge, its outer face z = 0, the floor y = 0), its face toward -z, and
+ * its size, metres; for a leaf `width` wide (`createFireExitDoor`'s,
+ * whose outside handle is 0.09 m in from the free edge, 1 m up).
+ */
+export function fireExitLeafSign(width: number) {
+  const w = 0.2;
+  const h = 0.3;
+  return { x: width / 2, y: 1.6, z: -0.002, w, h };
+}

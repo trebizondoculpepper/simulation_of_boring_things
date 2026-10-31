@@ -32,13 +32,13 @@ import { INTAKE, YARD, YARD_DRESSING } from '../logic/dock-yard';
  * The goods yard's dressing (prompt 083; the owner, 2026-10-26): bins, a
  * skip, a cage of spent forklift propane, cardboard, crates, cones, a
  * grit bin, sad planters and a cigarette bin by the door; a headroom sign
- * over each lorry opening and a keep-clear sign on the fire exit's outside.
- * Set decoration. The dock's frame, metres; the yard at `YARD.level`.
+ * over each lorry opening. (The fire exit's keep-clear sign is on its
+ * leaf, `dock-door.ts`, so it swings with it.) Set decoration. The
+ * dock's frame, metres; the yard at `YARD.level`.
  */
 export function createYardDressing(
   kit: PanelKit,
   openings: readonly { at: number; w: number; h: number }[],
-  doorX: number,
 ) {
   const group = new Group();
   group.name = 'Goods yard dressing';
@@ -85,11 +85,6 @@ export function createYardDressing(
     sign.rotation.y = Math.PI;
     group.add(sign);
   }
-  // The fire exit's outside: keep clear.
-  const keep = createSafetySign(kit, ['exit'], ['Fire exit', 'Keep clear']);
-  keep.position.set(doorX, 1.6, INTAKE.wallZ - 0.06);
-  keep.rotation.y = Math.PI;
-  group.add(keep);
   // Above the propane cage, no smoking, no naked flames (the owner,
   // 2026-10-26); and on the tarmac the evidence that people smoke there
   // anyway: butts scattered by the cage and under the cigarette bin by the

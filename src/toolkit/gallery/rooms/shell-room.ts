@@ -244,7 +244,7 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
             thickness: SHELL_WALL,
             apertures: lorryOpenings,
           }).group,
-          createYardDressing(kit, lorryOpenings, yard.doorX),
+          createYardDressing(kit, lorryOpenings),
           createDockSafety(kit, {
             wallZ: -spec.d / 2,
             hw: spec.w / 2,

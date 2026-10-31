@@ -2,14 +2,17 @@ import type { PanelKit } from '../../components/core/views/eighties-controls';
 import { beginPart } from '../../components/core/parts/parts';
 import type { Part } from '../../components/core/parts/parts';
 import { createFireExitDoor } from '../../components/fire/views/detection-and-exits';
+import { createSafetySign } from '../../components/general-safety/views/safety-signs';
+import { fireExitLeafSign } from '../logic/dock-yard';
 import type { Group } from 'three';
 
 /**
  * The loading dock's pier door (the owner, 2026-10-26): a fire exit door
  * from the collection, its push bar on the dock's side, opening outward
- * onto the landing and the yard's steps. Use opens it, or shuts it. Its
- * origin on the dock's floor at the middle of the opening, in the wall's
- * inside face; the dock's frame, x east, z south.
+ * onto the landing and the yard's steps; its FIRE EXIT KEEP CLEAR sign
+ * on its leaf's outer face, swinging with it. Use opens it, or shuts it.
+ * Its origin on the dock's floor at the middle of the opening, in the
+ * wall's inside face; the dock's frame, x east, z south.
  */
 export function dockDoor(
   kit: PanelKit,
@@ -22,6 +25,17 @@ export function dockDoor(
   door.position.set(at.x, 0, at.wallZ + 0.005);
   a.object.add(door);
   const leaves = door.userData.leaves as Group[];
+  // The keep-clear sign, for those outside, on the leaf (it hung in the
+  // doorway when the door was open, the owner, 2026-10-31).
+  const s = fireExitLeafSign(width);
+  const keep = createSafetySign(
+    kit,
+    ['mandatory'],
+    ['FIRE EXIT', 'KEEP CLEAR'],
+  );
+  keep.position.set(s.x, s.y, s.z);
+  keep.rotation.y = Math.PI;
+  leaves[0].add(keep);
   let target = 0;
   let angle = 0;
   door.traverse((o) => a.uses.set(o, () => (target = target > 0 ? 0 : 1)));
