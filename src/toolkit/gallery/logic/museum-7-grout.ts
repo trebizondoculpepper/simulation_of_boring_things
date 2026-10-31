@@ -1,4 +1,4 @@
-import { hallInterior, hallSize } from './museum-plan';
+import { BENCH as GALLERY_BENCH, hallInterior, hallSize } from './museum-plan';
 
 /**
  * Hall 7, "Grout: The Unsung Hero of the Aquatics World" (107k): the
@@ -7,12 +7,11 @@ import { hallInterior, hallSize } from './museum-plan';
  * research marks indicative are hedged ("about", "by the"). The hall has
  * no state and no plant: it is set decoration, reverently lit.
  *
- * The hall's frame (metres, its middle at the origin): the visitor comes
- * in through the north wall's archway (z = −6.7) walking south and leaves
- * by the west wall's (x = −7.7). The row runs east to west across the
- * hall's south half, in date order from the visitor's left to right as
- * they face it (rule 5), so walking on towards the way out walks forward
- * in time.
+ * The hall's frame (metres, its middle at the origin; `hallArches`): the
+ * visitor comes in from Hall 6 through the east wall's archway, near its
+ * north end (z = −7), and leaves for Hall 8 by the south wall's, near its
+ * west end (x = −8). The plinths stand round the walls in date order, and
+ * the ground about each archway is kept clear (`archClearZones`).
  */
 
 export interface GroutPlinth {
@@ -251,15 +250,13 @@ export const yawOf = (n: number) => {
 
 /**
  * Where each plinth stands, all round the edge of the hall (the owner,
- * 2026-10-30; it had a few in the middle, 2026-10-28), one in each corner
- * facing the middle of the hall, in date order round it from the way in
- * (north): 1 on the north wall east of the way in, its lectern where the
- * owner stood for it; 2 in the north-east corner; 3 and 4 on the east
- * wall, either side of the introduction; 5, the 1970s', in the south-east
+ * 2026-10-30; it had a few in the middle, 2026-10-28), in date order: 1
+ * and 2 on the north wall; 3 and 4 on the east wall, either side of the
+ * introduction and south of the way in; 5, the 1970s', in the south-east
  * corner under the oil-wheel projector; 6 and 7 on the south wall, under
- * the title; 8 in the south-west corner; 9 on the west wall south of the
- * way out; 10, the coda, in the north-west corner, past the way out and
- * the bench.
+ * the title, east of the way out; 8 and 9 on the west wall; 10, the coda,
+ * in the north-west corner, past the bench. No plinth stands in a corner
+ * beside an archway (2026-10-31, `MOVED`).
  */
 /** The hall's inside half-sizes (grown with Hall 2 in layout C, `museum-layout.ts`). */
 export const HALL7 = (() => {
@@ -292,12 +289,36 @@ const SET_OUT: Readonly<
   9: { x: -6.8, z: 3.2, facing: 'east' },
   10: { x: -6.8, z: -5.8, facing: 'middle' },
 };
+/**
+ * Plinths moved out of the corners beside the archways (the owner,
+ * 2026-10-31: the entry was cramped), in the grown hall's frame: 2 from
+ * the north-east corner, by the way in, to the north wall beside 1, and 1
+ * along it to make room, so that 2's lectern, in line with the way in
+ * (2.2 m off the north wall), stands well into the hall; 3 and
+ * 4 closer either side of the introduction, 3 off the way in's wall end;
+ * 8 from the south-west corner, by the way out, to the west wall, and 9
+ * along it to make room.
+ */
+const MOVED: Readonly<
+  Record<number, { x: number; z: number; facing: Facing }>
+> = {
+  1: { x: 1.0, z: -8.25, facing: 'south' },
+  2: { x: 4.8, z: -8.25, facing: 'south' },
+  3: { x: 9.3, z: -2.6, facing: 'west' },
+  4: { x: 9.3, z: 2.6, facing: 'west' },
+  8: { x: -9.3, z: 5.6, facing: 'east' },
+  9: { x: -9.3, z: 2.0, facing: 'east' },
+};
 export const PLACES: Readonly<
   Record<number, { x: number; z: number; facing: Facing }>
 > = Object.fromEntries(
   Object.entries(SET_OUT).map(([n, p]) => [
     n,
-    { ...p, x: grown(p.x, 7.7, HALL7.halfX), z: grown(p.z, 6.7, HALL7.halfZ) },
+    MOVED[+n] ?? {
+      ...p,
+      x: grown(p.x, 7.7, HALL7.halfX),
+      z: grown(p.z, 6.7, HALL7.halfZ),
+    },
   ]),
 );
 
@@ -341,6 +362,28 @@ export const BENCH = {
   depth: 0.45,
 } as const;
 
+/**
+ * A pair of gallery benches in the middle of the hall (the owner,
+ * 2026-10-31: to sit and take in the wonder of grout), the museum's own
+ * (`museum-plan.ts` BENCH: oak on steel, 2 m long), end to end along x
+ * before the title wall, a seated visitor facing it and plinths 6 and 7
+ * (and, turned, the rest). They stand south-east of the straight walk
+ * from the way in to the way out, clear of both archways.
+ */
+export const MIDDLE_BENCHES: readonly { x: number; z: number }[] = [
+  { x: 0.4, z: 4.5 },
+  { x: 3.0, z: 4.5 },
+];
+export const MIDDLE_BENCH = GALLERY_BENCH;
+
+/** A middle bench's footprint (its length along x). */
+export const middleBenchRect = (b: { x: number; z: number }) => ({
+  minX: b.x - MIDDLE_BENCH.l / 2,
+  maxX: b.x + MIDDLE_BENCH.l / 2,
+  minZ: b.z - MIDDLE_BENCH.w / 2,
+  maxZ: b.z + MIDDLE_BENCH.w / 2,
+});
+
 /** The oil-wheel projector, hung high before the 1970s' plinth (5), on its visitor's side, aimed down at its specimen. */
 export const PROJECTOR = (() => {
   const p = PLACES[5];
@@ -372,6 +415,8 @@ export function hall7Solids() {
       minZ: BENCH.z - BENCH.length / 2,
       maxZ: BENCH.z + BENCH.length / 2,
     },
+    // The middle benches.
+    ...MIDDLE_BENCHES.map(middleBenchRect),
   ];
 }
 

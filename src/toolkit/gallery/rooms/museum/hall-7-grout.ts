@@ -22,6 +22,8 @@ import {
   CLOSING_CARD,
   HALL7,
   INTRODUCTION,
+  MIDDLE_BENCH,
+  MIDDLE_BENCHES,
   PLACES,
   PLINTH,
   PLINTHS,
@@ -399,6 +401,31 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       decorative: true,
     }),
   );
+  // ---- The middle benches: the museum's gallery bench, oak on black steel ----
+  const oak = t.paint('#a0784a', 0.6);
+  const steel = t.paint('#1c1d1f', 0.5, 0.6);
+  for (const b of MIDDLE_BENCHES) {
+    const seat = new Group();
+    const { w, l, h: bh } = MIDDLE_BENCH;
+    t.box(seat, oak, l, 0.06, w, b.x, bh - 0.03, b.z);
+    for (const end of [-1, 1])
+      t.box(
+        seat,
+        steel,
+        0.05,
+        bh - 0.06,
+        w - 0.06,
+        b.x + end * (l / 2 - 0.2),
+        (bh - 0.06) / 2,
+        b.z,
+      );
+    object.add(
+      markComponent(still(seat), {
+        name: 'Gallery bench, for the wonder of grout',
+        decorative: true,
+      }),
+    );
+  }
   const closing = createWallPanel(
     kit,
     'The closing card',

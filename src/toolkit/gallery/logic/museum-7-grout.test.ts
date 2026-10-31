@@ -14,7 +14,16 @@ import {
   MUSIC_FILES,
   musicFor,
   lecternAt,
+  MIDDLE_BENCHES,
+  middleBenchRect,
+  yawOf,
 } from './museum-7-grout';
+import {
+  ARCH_CLEAR,
+  archClearHits,
+  archClearZones,
+  hallArches,
+} from './museum-plan';
 
 describe('Hall 7, grout', () => {
   it('has ten plinths, numbered in order, each with its place', () => {
@@ -72,10 +81,7 @@ describe('Hall 7, grout', () => {
       expect(s.maxX).toBeLessThan(HALL7.halfX);
       expect(s.minZ).toBeGreaterThan(-HALL7.halfZ);
       expect(s.maxZ).toBeLessThan(HALL7.halfZ);
-      // The west archway: x near −7.7, z within ±1.8; the north one: z near −6.7, x within ±1.8; each 2 m deep.
-      const west = s.minX < -HALL7.halfX + 2 && s.maxZ > -1.8 && s.minZ < 1.8;
-      const north = s.minZ < -HALL7.halfZ + 2 && s.maxX > -1.8 && s.minX < 1.8;
-      expect(west || north).toBe(false);
+      expect(archClearHits('museum7', s)).toEqual([]);
     }
     // No two plinths overlap.
     for (const a of PLINTHS)
@@ -92,12 +98,83 @@ describe('Hall 7, grout', () => {
   });
 });
 
+describe('the archways’ clear ground (the owner, 2026-10-31)', () => {
+  it('sets a zone at each archway, 2 m beyond its sides and 2 m into the hall', () => {
+    const zones = archClearZones('museum7');
+    expect(zones).toHaveLength(2);
+    for (const [i, a] of hallArches('museum7').entries()) {
+      const z = zones[i];
+      const along = a.into[0] === 0 ? z.maxX - z.minX : z.maxZ - z.minZ;
+      expect(along).toBeCloseTo(a.w + 2 * ARCH_CLEAR.along);
+    }
+  });
+
+  it('stands no plinth, lectern or bench in one, nor in the corner beside it', () => {
+    const r = (x: number, z: number, h: number) => ({
+      minX: x - h,
+      maxX: x + h,
+      minZ: z - h,
+      maxZ: z + h,
+    });
+    for (const p of PLINTHS) {
+      const { x, z } = PLACES[p.n];
+      const yaw = yawOf(p.n);
+      const h =
+        PLINTH_HALF * (Math.abs(Math.cos(yaw)) + Math.abs(Math.sin(yaw)));
+      expect(archClearHits('museum7', r(x, z, h)), `plinth ${p.n}`).toEqual([]);
+      const l = lecternAt(p.n);
+      expect(
+        archClearHits('museum7', r(l.x, l.z, 0.22)),
+        `lectern ${p.n}`,
+      ).toEqual([]);
+    }
+    for (const b of MIDDLE_BENCHES)
+      expect(archClearHits('museum7', middleBenchRect(b))).toEqual([]);
+  });
+});
+
+describe('the middle benches', () => {
+  it('stand inside the hall, clear of each other and of every other solid', () => {
+    const solids = hall7Solids();
+    const benches = MIDDLE_BENCHES.map(middleBenchRect);
+    const overlap = (a: (typeof benches)[0], b: (typeof benches)[0]) =>
+      a.maxX > b.minX && a.minX < b.maxX && a.maxZ > b.minZ && a.minZ < b.maxZ;
+    for (const b of benches) {
+      expect(
+        Math.abs(b.minX) < HALL7.halfX && Math.abs(b.maxX) < HALL7.halfX,
+      ).toBe(true);
+      // Away from the walls: in the middle of the hall, room to walk round.
+      expect(Math.abs(b.minZ)).toBeLessThan(HALL7.halfZ - 3);
+      const others = solids.filter(
+        (s) => !benches.some((o) => o.minX === s.minX && o.minZ === s.minZ),
+      );
+      for (const s of others) expect(overlap(b, s)).toBe(false);
+    }
+    expect(overlap(benches[0], benches[1])).toBe(false);
+  });
+
+  it('leaves the straight walk from the way in to the way out clear by a metre', () => {
+    const [out, into] = hallArches('museum7');
+    const a = into.frame;
+    const b = out.frame;
+    for (const r of MIDDLE_BENCHES.map(middleBenchRect)) {
+      for (let t = 0; t <= 1; t += 0.01) {
+        const x = a.x + (b.x - a.x) * t;
+        const z = a.z + (b.z - a.z) * t;
+        const dx = Math.max(r.minX - x, 0, x - r.maxX);
+        const dz = Math.max(r.minZ - z, 0, z - r.maxZ);
+        expect(Math.hypot(dx, dz)).toBeGreaterThan(1);
+      }
+    }
+  });
+});
+
 describe('the approach light', () => {
   it('lights the plinth approached, holds it to the far edge, and lets go', () => {
     // Plinth 6, on the south wall, facing north into the hall.
     const at = lecternAt(6);
     expect(approachedPlinth(at.x, at.z, null)).toBe(6);
-    expect(approachedPlinth(0, -6, null)).toBeNull();
+    expect(approachedPlinth(0, -1, null)).toBeNull();
     // Held a little past the near edge, so it does not flicker.
     expect(approachedPlinth(at.x, at.z - 2.5, 6)).toBe(6);
     expect(approachedPlinth(at.x, at.z - APPROACH_FAR - 0.1, 6)).toBeNull();

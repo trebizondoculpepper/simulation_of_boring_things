@@ -149,10 +149,13 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 ### Added
 
 - A released build's title screen links its release notes, its GitHub release, beside the source code link in the bottom right corner; other builds show none (the Release workflow names the tag in `VITE_RELEASE_TAG`).
+- A pair of the museum's gallery benches in the middle of Hall 7, facing the title wall and plinths 5 to 7, to sit and take in the wonder of grout, clear of the walk from the way in to the way out.
 
 ### Changed
 
 - Changelog entries go under Keep a Changelog headings (Added, Changed, Fixed and the rest), so the release notes sort features from fixes exactly (the owner, 2026-10-31); this release's earlier entries, written before the rule, have none and are sorted by their wording.
+- Museum Hall 7 (grout) keeps the ground about its archways clear (the owner, 2026-10-31): no plinth or lectern stands in the corners beside the way in (east wall) or the way out (south wall). Plinth 2 left the north-east corner for the north wall (1 moved along to make room), 3 and 4 closed in round the introduction, and 8 left the south-west corner for the west wall (9 moved along). A shared rule, `archClearZones` (each archway's opening plus 2 m either side along its wall, 2 m deep into the hall), is tested for Hall 7 only.
+- The museum corridor between the two black boxes, Hall 7 (grout) and Hall 8 (Never again), is black like them (the owner, 2026-10-31): matt black walls, floor, deck and beams, the halls' own finish, so the two are no longer joined by a white corridor; its pendants burn a little brighter so it stays walkable and its signs and vinyls read. Every other corridor stays white (`corridorFinish`, tested).
 
 ## [0.7.0] - 2026-10-30
 

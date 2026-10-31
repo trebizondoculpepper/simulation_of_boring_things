@@ -1297,3 +1297,53 @@ export const HALL0_BANDS = [
   { y: 1.4, h: 0.05, colour: '#5fb3c4' },
   { y: 6.4, h: 0.3, colour: '#1f6f8b' },
 ] as const;
+
+/**
+ * The clear ground about each archway (the owner, 2026-10-31: things in
+ * the corners beside an archway make the entry cramped). In the hall's
+ * own plan, one rectangle per archway: its opening widened by `along`
+ * metres on either side, along its wall, and reaching `depth` metres into
+ * the hall from the wall's inside face. Where an archway is near a
+ * corner, the rectangle takes in that corner's end of the other wall too.
+ * Nothing that stands on the floor (an exhibit, plinth, lectern, bench or
+ * sign) may have its footprint in one. Only Hall 7 is held to it so far.
+ */
+export const ARCH_CLEAR = { along: 2, depth: 2 } as const;
+
+export function archClearZones(
+  id: MuseumHallId,
+  along: number = ARCH_CLEAR.along,
+  depth: number = ARCH_CLEAR.depth,
+): Rect[] {
+  return hallArches(id).map((a) => {
+    const { x, z } = a.frame;
+    const [ix, iz] = a.into;
+    const half = a.w / 2 + along;
+    const reach = MUSEUM_WALL / 2 + depth;
+    // The far edge, into the hall, and the wall line behind the arch.
+    const fx = x + ix * reach;
+    const fz = z + iz * reach;
+    return ix === 0
+      ? {
+          minX: x - half,
+          maxX: x + half,
+          minZ: Math.min(z, fz),
+          maxZ: Math.max(z, fz),
+        }
+      : {
+          minX: Math.min(x, fx),
+          maxX: Math.max(x, fx),
+          minZ: z - half,
+          maxZ: z + half,
+        };
+  });
+}
+
+/** The archway clear zones that footprint `r` (hall's own plan) lies in, by index; empty if clear. */
+export function archClearHits(id: MuseumHallId, r: Rect): number[] {
+  return archClearZones(id).flatMap((c, i) =>
+    r.maxX > c.minX && r.minX < c.maxX && r.maxZ > c.minZ && r.minZ < c.maxZ
+      ? [i]
+      : [],
+  );
+}
