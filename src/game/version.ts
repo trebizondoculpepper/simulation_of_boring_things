@@ -98,3 +98,19 @@ export function buildLine(
   const label = build ? `v${version} · build ${build}` : `v${version}`;
   return `${label}${development ? ' · development build' : ''}`;
 }
+
+/** The project's repository, where its source and its releases are. */
+export const REPOSITORY = 'https://github.com/trebizondoculpepper/the_pool';
+
+/**
+ * The release notes page for a released build, its GitHub release (the
+ * Release workflow names the tag in `VITE_RELEASE_TAG`); none for any other
+ * build, whose changes have no release yet.
+ */
+export function releaseNotesUrl(
+  tag: string | undefined = import.meta.env.VITE_RELEASE_TAG,
+): string | null {
+  return tag && /^v\d+\.\d+\.\d+/.test(tag)
+    ? `${REPOSITORY}/releases/tag/${encodeURIComponent(tag)}`
+    : null;
+}

@@ -64,7 +64,7 @@ import { torch } from './toolkit/controls/logic/torch';
 import { createGameSession } from './toolkit/save/game-session';
 import { GAS_ZONE_IDS } from './game/plant/gas';
 import type { PoolId } from './game/plant/pools';
-import { buildLine, versionLabel } from './game/version';
+import { buildLine, releaseNotesUrl, versionLabel } from './game/version';
 import { createTitleScreen } from './toolkit/title/title-screen';
 import {
   ATTRACT_SHOTS,
@@ -441,6 +441,7 @@ const titleActions: Parameters<typeof createTitleScreen>[0] = {
       : pauseMenu.open('Controls', { inGame: false }),
   covered: () => pauseMenu.isOpen || (menuPanel?.isOpen ?? false),
   build: buildLine(),
+  releaseNotes: releaseNotesUrl(),
 };
 const titleScreen = createTitleScreen(titleActions);
 const positionStatus = document.createElement('span');

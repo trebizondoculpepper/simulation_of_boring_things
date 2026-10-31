@@ -10,6 +10,7 @@ import { partAudio } from '../components/core/audio/part-audio';
 import { createTitleMusic } from './title-music';
 import { listenMenu } from '../controls/input/menu-input';
 import { createTitleLogo } from './title-logo';
+import { REPOSITORY } from '../../game/version';
 
 export interface TitleActions {
   newGame(): void;
@@ -24,6 +25,8 @@ export interface TitleActions {
   covered(): boolean;
   /** The version and build, for the corner. */
   build: string;
+  /** A released build's release notes page, linked beside the source. */
+  releaseNotes?: string | null;
 }
 
 export function createTitleScreen(actions: TitleActions) {
@@ -75,11 +78,19 @@ export function createTitleScreen(actions: TitleActions) {
   build.className = 'title-build';
   build.textContent = actions.build;
   const source = document.createElement('a');
-  source.href = 'https://github.com/trebizondoculpepper/the_pool';
+  source.href = REPOSITORY;
   source.textContent = 'Source code';
   source.target = '_blank';
   source.rel = 'noopener noreferrer';
   build.append(document.createElement('br'), source);
+  if (actions.releaseNotes) {
+    const notes = document.createElement('a');
+    notes.href = actions.releaseNotes;
+    notes.textContent = 'Release notes';
+    notes.target = '_blank';
+    notes.rel = 'noopener noreferrer';
+    build.append(' · ', notes);
+  }
   root.append(build);
 
   const items = () =>

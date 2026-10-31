@@ -5,6 +5,7 @@ import {
   compareVersions,
   parseVersion,
   buildLine,
+  releaseNotesUrl,
   versionLabel,
 } from './version';
 
@@ -72,5 +73,18 @@ describe('the game’s version', () => {
     expect(buildLine('0.2.0', 'x', true)).toBe(
       'v0.2.0 · build x · development build',
     );
+  });
+});
+
+describe('releaseNotesUrl', () => {
+  it('links a release build to its GitHub release', () => {
+    expect(releaseNotesUrl('v0.8.0')).toBe(
+      'https://github.com/trebizondoculpepper/the_pool/releases/tag/v0.8.0',
+    );
+  });
+  it('gives no link for a build that is not a release', () => {
+    expect(releaseNotesUrl(undefined)).toBeNull();
+    expect(releaseNotesUrl('')).toBeNull();
+    expect(releaseNotesUrl('main')).toBeNull();
   });
 });

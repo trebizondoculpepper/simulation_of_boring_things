@@ -82,7 +82,9 @@ jobs:
       - run: npm run format:check
       - run: npm test
       - name: Name the build
-        run: echo "VITE_BUILD=$(git rev-parse --short HEAD) · $(date -u +'%-d %b %Y')" >> "$GITHUB_ENV"
+        run: |
+          echo "VITE_BUILD=$(git rev-parse --short HEAD) · $(date -u +'%-d %b %Y')" >> "$GITHUB_ENV"
+          echo "VITE_RELEASE_TAG=${TAG}" >> "$GITHUB_ENV"
       # A tagged release is rebuilt at the tag's exact version.
       - run: npm run build -- --release
       # The desktop jobs below wrap exactly this build.

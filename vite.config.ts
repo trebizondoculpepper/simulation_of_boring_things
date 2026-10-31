@@ -57,6 +57,11 @@ export default defineConfig({
     'import.meta.env.VITE_BUILD': JSON.stringify(
       process.env.VITE_BUILD || localBuild,
     ),
+    // A release's tag, set only by the Release workflow: the title screen
+    // links its GitHub release notes.
+    'import.meta.env.VITE_RELEASE_TAG': JSON.stringify(
+      process.env.VITE_RELEASE_TAG || '',
+    ),
   },
   lint: {
     plugins: ['oxc', 'typescript', 'unicorn'],
