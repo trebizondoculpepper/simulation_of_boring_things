@@ -73,6 +73,8 @@ export const PANEL_PAGE_ORDER: readonly { code: string; short: string }[] = [
   { code: 'WH-T2', short: 'PIT PUMPS' },
   { code: 'LB-CAB1', short: 'FILL CABINET' },
   { code: 'WH-CP3', short: 'DISTRIBUTION' },
+  // The Lounge's Dr Aqualis Trio (mission 114).
+  { code: 'PL1-CP2', short: 'LOUNGE DOSING' },
 ];
 
 const STATION_SHORT: Record<string, string> = {

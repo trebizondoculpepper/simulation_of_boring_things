@@ -29,6 +29,11 @@ import type { PlantReading } from './control-room-demo';
 import { airState, heatingState, mainPoolState } from './pool-mimics';
 import type { PumpsShown } from './pool-mimics';
 import { PARODY_SPECS } from './parody-specs';
+import { trioAlarms } from '../../../game/plant/aqualis-world';
+import type { TrioPool } from '../../../game/plant/aqualis-world';
+import { trioWindows } from '../../../game/plant/aqualis-annunciator';
+import { osRunning, watchdogTripped } from '../../../game/plant/aqualis-os';
+import type { ChannelId } from '../../../game/plant/aqualis-types';
 import type { ParodySpec, ParodyWidget } from './parody-trial';
 
 /**
@@ -463,50 +468,72 @@ function airMimic(): PanelBinding {
   };
 }
 
-/** PL2-CP2: the Olympic's dosing controller and sample cells (the original's world reads: its pool's water; its pumps dosing as its pool is dosed). */
-function dosingController(): PanelBinding {
-  const p = (c: BridgeContext) => c.world.pools.pool_02;
-  const dosing = (chemical: Chemical, rate: number) => (c: BridgeContext) => {
-    const running = c.reading.dosing && c.world.chemicals[chemical] > 0;
-    return [running ? rate / 2 : 0, running ? `${rate} l/h` : 'IDLE'] as const;
+/**
+ * PLn-CP2: a pool's Dr Aqualis Trio (mission 114), as its cabinet has it
+ * in the world (`world.aqualis`): its analyser's readings, each channel's
+ * demand and status, its mode, its inhibit and its alarms. Readings and
+ * status only: its knob, touch screen and power switch are at the cabinet
+ * (the local-only rule), and the bridge has no dosing START or STOP.
+ */
+function trioPanel(pool: TrioPool, code: string, node: string): PanelBinding {
+  const t = (c: BridgeContext) => c.world.aqualis[pool];
+  const r = (c: BridgeContext) => t(c).readings;
+  const num = (v: number | null | undefined) => v ?? Number.NaN;
+  const demand = (id: ChannelId) => (c: BridgeContext) => {
+    const ch = t(c).channels[id];
+    const on = osRunning(t(c).os);
+    return [
+      on ? ch.demand : 0,
+      on ? `${Math.round(ch.demand * 100)} %` : '—',
+    ] as const;
   };
-  const AT = 'the dosing controller in the Olympic plant room';
+  const status = (id: ChannelId) => (c: BridgeContext) => {
+    if (!osRunning(t(c).os)) return '—';
+    const s = t(c).channels[id].status;
+    return s.kind === 'offline'
+      ? `OFFLINE (${s.reason})`.toUpperCase()
+      : s.kind.toUpperCase();
+  };
+  const alarms = (c: BridgeContext) => trioAlarms(t(c));
   return {
-    code: 'PL2-CP2',
-    model: { room: 'plant_pool_02', node: 'controller' },
+    code,
+    model: { room: `plant_${pool}`, node },
     readouts: {
-      'FREE CHLORINE': (c) => p(c).freeChlorine,
-      PH: (c) => p(c).ph,
-      REDOX: (c) => p(c).redox,
-      WATER: (c) => p(c).temperature,
+      'FREE CHLORINE': (c) => num(r(c)?.freeChlorine),
+      'COMBINED CL': (c) => num(r(c)?.combinedChlorine),
+      PH: (c) => num(r(c)?.ph),
+      LSI: (c) => num(r(c)?.lsi),
+      WATER: (c) => num(r(c)?.temperature),
     },
     trends: {
-      'CHLORINE RESIDUAL': (c) => share(p(c).freeChlorine, 0, 4),
-      PH: (c) => share(p(c).ph, 6.6, 8.2),
+      'CHLORINE RESIDUAL': (c) => share(num(r(c)?.freeChlorine), 0, 4),
+      PH: (c) => share(num(r(c)?.ph), 6.6, 8.2),
     },
     gauges: {
-      'HYPO STROKE RATE': dosing('hypochlorite', 1.24),
-      'ACID STROKE RATE': dosing('acid', 0.62),
+      'HYPO DEMAND': demand('hypochlorite'),
+      'ACID DEMAND': demand('acid'),
     },
     lamps: {
-      'HYPO DOSING': (c) => dosing('hypochlorite', 1)(c)[0] > 0,
-      'ACID DOSING': (c) => dosing('acid', 1)(c)[0] > 0,
-      'SAMPLE FLOW FAULT': (c) => c.reading.flow < 1,
+      'HYPO DOSING': (c) => t(c).channels.hypochlorite.delivering > 0,
+      'ACID DOSING': (c) => t(c).channels.acid.delivering > 0,
+      'SAMPLE FLOW LOW': (c) =>
+        alarms(c).some((a) => a.id === 'sample-flow-low'),
+      AUTO: (c) => osRunning(t(c).os) && t(c).selector === 'auto',
+      HAND: (c) => osRunning(t(c).os) && t(c).selector === 'hand',
+      OFF: (c) => osRunning(t(c).os) && t(c).selector === 'off',
+      'DOSING INHIBITED': (c) =>
+        trioWindows(c.world.aqualis, pool).includes('dosing-inhibit'),
+      'CONTROLLER FAULT': (c) => watchdogTripped(t(c).os),
+      ALARM: (c) => alarms(c).length > 0,
     },
-    buttons: {
-      STOP: unmodelled('a dosing stop'),
-      START: unmodelled('a dosing stop'),
-      RESET: local(AT),
-      '▲': local(AT),
-      '▼': local(AT),
-      BACK: local(AT),
-      OK: local(AT),
+    rows: {
+      CONTROLLER: (c) =>
+        t(c).os.powered ? t(c).os.phase.toUpperCase() : 'NO SUPPLY',
+      HYPOCHLORITE: status('hypochlorite'),
+      ACID: status('acid'),
+      CO2: status('co2'),
+      ALARMS: (c) => String(alarms(c).length),
     },
-    rows: Object.fromEntries(
-      ['CALIBRATE PH', 'CALIBRATE CL', 'SET POINTS', 'LIMITS', 'LOG'].map(
-        (r) => [r, () => 'AT THE CONTROLLER'],
-      ),
-    ),
   };
 }
 
@@ -1194,7 +1221,8 @@ export const BRIDGE_BINDINGS: Readonly<Record<string, PanelBinding>> =
       mainPoolMimic(),
       heatingMimic(),
       airMimic(),
-      dosingController(),
+      trioPanel('pool_02', 'PL2-CP2', 'controller'),
+      trioPanel('pool_01', 'PL1-CP2', 'dosing'),
       changeover(),
       fireRepeater(),
       annunciator(),

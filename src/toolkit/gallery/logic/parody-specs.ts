@@ -8,6 +8,67 @@ import type { ParodySpec } from './parody-trial';
  * names the original it parodies. Data only; `parody-panel.ts` builds
  * them and `parody-trial.ts` runs them.
  */
+/** A Dr Aqualis Trio's panel on the bridge (mission 114): what its cabinet reads and does, shown; nothing worked. */
+function trioSpec(code: string, pool: string, title: string): ParodySpec {
+  return {
+    original: `THE ${pool} POOL'S DR AQUALIS TRIO (DOSING CONTROLLER)`,
+    title,
+    code,
+    shape: 'rounded',
+    pages: [
+      {
+        name: 'MEASURE',
+        columns: [
+          [
+            {
+              kind: 'readouts',
+              items: [
+                ['FREE CHLORINE', 'mg/l', 0.8, 2.4],
+                ['COMBINED CL', 'mg/l', 0, 0.5],
+                ['PH', '', 7.1, 7.7],
+                ['LSI', '', -0.3, 0.3],
+                ['WATER', '°C', 27, 30],
+              ],
+            },
+          ],
+          [
+            { kind: 'trend', name: 'CHLORINE RESIDUAL' },
+            { kind: 'trend', name: 'PH' },
+          ],
+        ],
+      },
+      {
+        name: 'PUMPS',
+        columns: [
+          [
+            { kind: 'gauges', items: ['HYPO DEMAND', 'ACID DEMAND'] },
+            {
+              kind: 'lamps',
+              labels: ['HYPO DOSING', 'ACID DOSING', 'SAMPLE FLOW LOW'],
+            },
+            {
+              kind: 'lamps',
+              labels: ['AUTO', 'HAND', 'OFF', 'DOSING INHIBITED'],
+            },
+          ],
+        ],
+      },
+      {
+        name: 'STATUS',
+        columns: [
+          [
+            {
+              kind: 'list',
+              rows: ['CONTROLLER', 'HYPOCHLORITE', 'ACID', 'CO2', 'ALARMS'],
+            },
+            { kind: 'lamps', labels: ['CONTROLLER FAULT', 'ALARM'] },
+          ],
+        ],
+      },
+    ],
+  };
+}
+
 export const PARODY_SPECS: readonly ParodySpec[] = [
   // ---- Pumps and filtration ----------------------------------------------------
   {
@@ -586,65 +647,10 @@ export const PARODY_SPECS: readonly ParodySpec[] = [
   },
 
   // ---- Chemicals and dosing --------------------------------------------------
-  {
-    original: 'THE DOSING CONTROLLER AND SAMPLE CELLS (AFTER DULCOMARIN)',
-    title: 'WATER CHEMISTRY ORACLE',
-    code: 'PL2-CP2',
-    shape: 'rounded',
-    pages: [
-      {
-        name: 'MEASURE',
-        columns: [
-          [
-            {
-              kind: 'readouts',
-              items: [
-                ['FREE CHLORINE', 'mg/l', 0.8, 2.4],
-                ['PH', '', 7.1, 7.7],
-                ['REDOX', 'mV', 680, 780],
-                ['WATER', '°C', 27, 30],
-              ],
-            },
-          ],
-          [
-            { kind: 'trend', name: 'CHLORINE RESIDUAL' },
-            { kind: 'trend', name: 'PH' },
-          ],
-        ],
-      },
-      {
-        name: 'PUMPS',
-        columns: [
-          [
-            { kind: 'gauges', items: ['HYPO STROKE RATE', 'ACID STROKE RATE'] },
-            {
-              kind: 'lamps',
-              labels: ['HYPO DOSING', 'ACID DOSING', 'SAMPLE FLOW FAULT'],
-            },
-            { kind: 'buttons', labels: ['STOP', 'START', 'RESET'] },
-          ],
-        ],
-      },
-      {
-        name: 'MENU',
-        columns: [
-          [
-            { kind: 'buttons', labels: ['▲', '▼', 'BACK', 'OK'] },
-            {
-              kind: 'list',
-              rows: [
-                'CALIBRATE PH',
-                'CALIBRATE CL',
-                'SET POINTS',
-                'LIMITS',
-                'LOG',
-              ],
-            },
-          ],
-        ],
-      },
-    ],
-  },
+  // The Dr Aqualis Trios (mission 114): readings and status only, every
+  // control local, at its cabinet.
+  trioSpec('PL2-CP2', 'OLYMPIC', 'WATER CHEMISTRY ORACLE'),
+  trioSpec('PL1-CP2', 'LOUNGE', 'LOUNGE CHEMISTRY ORACLE'),
   {
     original: 'THE DELIVERY FILL CABINET (CHEMICAL STORE)',
     title: 'TANKER DOCKING PORT',
