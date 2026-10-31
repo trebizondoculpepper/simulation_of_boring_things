@@ -690,25 +690,38 @@ export function startAqualisControllerRoom(canvas: HTMLCanvasElement) {
   const faultWindow = t.printed(0.3, 0.1, () => {}, 256, true);
   faultWindow.mesh.position.set(0.12, 1.22, 0.032);
   crashBoard.add(faultWindow.mesh);
-  let faultShown: boolean | null = null;
+  let faultShown: string | null = null;
   const drawFaultWindow = () => {
     const lit = host.controllerFault();
-    if (lit === faultShown) return;
-    faultShown = lit;
+    // While a crash is counted down, the window counts it (the owner,
+    // 2026-10-31: five seconds from the button to the crash).
+    const left = host.crashIn();
+    const count = left === null ? null : Math.ceil(left);
+    const key = count !== null ? `in${count}` : lit ? 'fault' : 'dark';
+    if (key === faultShown) return;
+    faultShown = key;
     const c = faultWindow.context;
     const cw = c.canvas.width;
     const ch = c.canvas.height;
-    c.fillStyle = lit ? '#ffb000' : '#3b3326';
+    c.fillStyle = count !== null ? '#2a0f0f' : lit ? '#ffb000' : '#3b3326';
     c.fillRect(0, 0, cw, ch);
     c.strokeStyle = '#111111';
     c.lineWidth = 6;
     c.strokeRect(3, 3, cw - 6, ch - 6);
-    c.fillStyle = lit ? '#1b1200' : '#6d604a';
-    c.font = `bold ${Math.round(ch * 0.3)}px ${SANS}`;
     c.textAlign = 'center';
     c.textBaseline = 'middle';
-    c.fillText('CONTROLLER', cw / 2, ch * 0.33);
-    c.fillText('FAULT', cw / 2, ch * 0.7);
+    if (count !== null) {
+      c.fillStyle = '#ff5a4a';
+      c.font = `bold ${Math.round(ch * 0.26)}px ${SANS}`;
+      c.fillText('CRASH IN', cw / 2, ch * 0.3);
+      c.font = `bold ${Math.round(ch * 0.42)}px ${SANS}`;
+      c.fillText(`${count} s`, cw / 2, ch * 0.7);
+    } else {
+      c.fillStyle = lit ? '#1b1200' : '#6d604a';
+      c.font = `bold ${Math.round(ch * 0.3)}px ${SANS}`;
+      c.fillText('CONTROLLER', cw / 2, ch * 0.33);
+      c.fillText('FAULT', cw / 2, ch * 0.7);
+    }
     faultWindow.texture.needsUpdate = true;
   };
   drawFaultWindow();
@@ -930,7 +943,10 @@ export function startAqualisControllerRoom(canvas: HTMLCanvasElement) {
       u.valve?.setOpen(Boolean(fb?.running));
     }
     pumpLamp.set(host.pumpRunning());
-    crashedLamp.set(host.crashed());
+    const left = host.crashIn();
+    crashedLamp.set(
+      host.crashed() || (left !== null && Math.floor(left * 2) % 2 === 0),
+    );
     drawFaultWindow();
     drawPlate();
     parts.update(delta);

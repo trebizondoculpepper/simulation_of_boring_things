@@ -141,6 +141,9 @@ import { OVERLAY } from '../../components/plant/logic/aqualis-cabinet';
  * burst. Only the supply, off and on, brings it back.
  */
 
+/** Seconds from a crash board button to the crash. */
+export const CRASH_COUNTDOWN = 5;
+
 /** The world step the sampler and controller take, s (the rig's tick). */
 const TICK = 10;
 /** The most ticks a frame may take (1000× at a slow frame). */
@@ -213,6 +216,8 @@ export interface AqualisRoomHost {
   /** Crash it now (the crash board's buttons), its watchdog as switched. */
   crash(kind: CrashKind): void;
   /** Whether it is crashed (the board's CRASHED lamp). */
+  /** Seconds until a crash the board has asked for, or null. */
+  crashIn(): number | null;
   crashed(): boolean;
   /** The crash board's WATCHDOG WORKS · FAILS switch: whether the next crash's watchdog works. */
   watchdog(): boolean;
@@ -606,7 +611,12 @@ export function createAqualisRoomHost(
     },
     bootFrame: () => (os.boot ? bootFrame(bootNow(), os.boot.t) : null),
     os: () => os,
-    crash: (kind) => crashNow(kind),
+    crash(kind) {
+      // The board's buttons crash it after a countdown (the owner,
+      // 2026-10-31), so whoever pressed one can turn to watch.
+      pendingCrash = { kind, after: CRASH_COUNTDOWN };
+    },
+    crashIn: () => (pendingCrash ? Math.max(0, pendingCrash.after) : null),
     crashed: () => os.phase === 'crashed',
     watchdog: () => watchdog,
     setWatchdog(works) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { createAqualisRoomHost } from './aqualis-room';
+import { CRASH_COUNTDOWN, createAqualisRoomHost } from './aqualis-room';
 import { SETTINGS } from '../../components/plant/logic/aqualis-display';
 import { tabRects } from '../../components/plant/logic/aqualis-display';
 import { DEFAULT_TARGETS } from '../../../game/plant/aqualis-types';
@@ -88,11 +88,32 @@ describe('dev58’s host: the crash board', () => {
     return host;
   };
 
+  /** A crash board button pressed, and its countdown waited out. */
+  const crashNow = (
+    host: ReturnType<typeof createAqualisRoomHost>,
+    kind: 'stop' | 'glitch',
+  ) => {
+    host.crash(kind);
+    run(host, CRASH_COUNTDOWN + 0.2);
+  };
+
+  it('crashes five seconds after its button is pressed, counting down', () => {
+    const host = dosingHard();
+    host.crash('stop');
+    expect(host.crashIn()).toBe(CRASH_COUNTDOWN);
+    run(host, 3);
+    expect(host.crashed()).toBe(false);
+    expect(host.crashIn()).toBeCloseTo(2, 0);
+    run(host, 2.2);
+    expect(host.crashed()).toBe(true);
+    expect(host.crashIn()).toBe(null);
+  });
+
   it('holds the outputs through a blue screen, takes no touches and gives no advice', () => {
     const host = dosingHard();
-    const held = host.outputs();
     host.setWatchdog(false);
-    host.crash('stop');
+    crashNow(host, 'stop');
+    const held = host.outputs();
     expect(host.crashed()).toBe(true);
     expect(host.os().crash?.kind).toBe('stop');
     run(host, 5);
@@ -108,7 +129,7 @@ describe('dev58’s host: the crash board', () => {
   it('with the watchdog working, drops the outputs and lights CONTROLLER FAULT and ALARM', () => {
     const host = dosingHard();
     host.setWatchdog(true);
-    host.crash('glitch');
+    crashNow(host, 'glitch');
     run(host, 2);
     expect(host.controllerFault()).toBe(true);
     expect(host.outputs()).toEqual({ hypochlorite: 0, acid: 0, co2: 0 });
@@ -122,7 +143,7 @@ describe('dev58’s host: the crash board', () => {
     const host = dosingHard();
     host.setWatchdog(false);
     host.setSpeed(0);
-    host.crash('glitch');
+    crashNow(host, 'glitch');
     const seen = new Set<string>();
     for (let t = 0; t < 60; t += 0.1) {
       host.step(0.1);
@@ -148,7 +169,7 @@ describe('dev58’s host: the crash board', () => {
 
   it('recovers by power-cycling: the recovery menu, then his apology', () => {
     const host = dosingHard();
-    host.crash('stop');
+    crashNow(host, 'stop');
     run(host, 3);
     host.setPower(false);
     host.setPower(true);
@@ -171,7 +192,11 @@ describe('dev58’s host: the crash board', () => {
   it('a held hypochlorite output drives the chlorine up past its high limit, the alarms silent', () => {
     const host = dosingHard();
     host.setWatchdog(false);
-    host.crash('stop');
+    // Counted down at 1×, so the dose it holds is the hard one.
+    const speed = host.speed();
+    host.setSpeed(0);
+    crashNow(host, 'stop');
+    host.setSpeed(speed);
     const high =
       DEFAULT_TARGETS.freeChlorine.high * ALARM_LIMITS.chlorineHighTimes;
     // Up to twelve hours at 1000×.
