@@ -103,14 +103,6 @@ export const DESK = {
   d: 0.5,
 } as const;
 /**
- * Where the pipework was laid for (the first layout): re-plumbing for the
- * tanks' new place is deferred by the owner (2026-10-31), so the lines,
- * header and fittings stay put for now.
- */
-const PLUMBED = { tankZ: 1.7, readoutZ: -5.2 } as const;
-const plumbedTankX = (id: TankId) =>
-  1.2 + TANKS.findIndex((t) => t.id === id) * 0.6;
-/**
  * The mimic ("The map") on the back wall (the owner, 2026-10-31), flush,
  * behind the tanks and centred on them, its middle: 3.0 × 1.4 m, its foot
  * at 2.65 m, over the tanks' tops (2.3 m) as read from the desk, its head
@@ -142,8 +134,7 @@ export const BALANCE_TANK = {
 /**
  * The pump M4-P1, with its valves and flowmeter as a unit, in the far
  * right corner (the owner, 2026-10-31): the back wall's east end here,
- * facing into the room (+z), its set's length along x. Its pipes are not
- * yet re-laid (deferred by the owner): they still run to where it was.
+ * facing into the room (+z), its set's length along x.
  */
 export const PUMP = { x: EAST - 1.25, z: NORTH + 0.6, yaw: 0 } as const;
 /** Which way the pump's set runs along x: −1 faced into the room, +1 turned half round. */
@@ -163,12 +154,13 @@ export const PUMP_DISCHARGE = {
   y: 1.26,
   z: PUMP.z - PUMP_DIR * 0.12,
 } as const;
-/** The pump's nozzles where its pipes were laid for (the first layout). */
-const PLUMBED_SUCTION = { x: 4.4, y: 0.68, z: 0.4 } as const;
-const PLUMBED_DISCHARGE = { x: 3.97, y: 1.26, z: 0.28 } as const;
-/** The dosing pot, in front of the header's end, and the tee by the pool. */
+/**
+ * The dosing pot, in the manifold strip beyond the header's east end, and
+ * the injection tee behind the pool's back corner, between the pot and the
+ * pump (the re-plumb, 2026-10-31).
+ */
 export const POT = { x: 3.7, z: -6.35, r: 0.2, h: 0.8 } as const;
-export const TEE = { x: 5.2, z: -5.65, r: 0.07, h: 0.16 } as const;
+export const TEE = { x: 4.4, z: -5.65, r: 0.07, h: 0.16 } as const;
 /** The readout board on the west wall, south of the pool as the hall stands. */
 /**
  * The analyser's readout board alone, centred on the hall's west wall (EAST
@@ -212,22 +204,26 @@ export const LECTERN_FOOT = { hw: 0.47, hd: 0.21 } as const;
 /**
  * The lecterns, by station, each before or beside what it describes and
  * facing the visitor looking at it, numbered along the way round from the
- * arrival archway: the desk, the tanks, the swimmers (at the pool), the
- * readout, the challenge cards.
+ * arrival archway (re-placed for the second layout, 2026-10-31): the
+ * console's on its right and the challenge cards' on its left (the cards'
+ * poster is on the console's pedestal), level with its front, clear of its
+ * operator's side; the tanks' before the stand's west end; the swimmers'
+ * before the pool's front, left of the balancing tank; the readout's
+ * before the board, as the Beam's is before the Beam.
  */
 export const LECTERNS: Record<number, { x: number; z: number; yaw: number }> = {
   1: { x: DESK.x + 2.6, z: DESK.z + 0.1, yaw: 0 },
   2: { x: BUND.minX - 0.65, z: TANK_Z + 0.9, yaw: 0 },
-  3: { x: POOL.x, z: POOL.z + POOL.d / 2 + 0.6, yaw: 0 },
-  4: { x: EAST - 1.2, z: READOUT.z + 2.0, yaw: -Math.PI / 2 },
-  5: { x: CARDS_BOARD.x, z: NORTH + 1.3, yaw: 0 },
+  3: { x: POOL.x - 1.0, z: POOL.z + POOL.d / 2 + 0.6, yaw: 0 },
+  4: { x: EAST - 1.0, z: READOUT.z, yaw: -Math.PI / 2 },
+  5: { x: DESK.x - 2.6, z: DESK.z + 0.1, yaw: 0 },
 };
 /**
- * TEMPORARY, for the owner's review of the second layout (2026-10-31):
- * the station lecterns are parked out of bounds, far below the floor, and
- * their footprints taken off the floor. Set false to bring them back.
+ * Whether the station lecterns are parked out of bounds, far below the
+ * floor, their footprints off it (as for the owner's review of the second
+ * layout, 2026-10-31). They stand in the hall again since the re-plumb.
  */
-export const LECTERNS_PARKED = true;
+export const LECTERNS_PARKED = false;
 /** Where a parked lectern is put: well out of the hall and out of sight. */
 export const PARKED_Y = -50;
 /** A lectern's footprint, turned with it. */
@@ -238,49 +234,66 @@ export function lecternFoot(l: { x: number; z: number; yaw: number }) {
   return { minX: l.x - hw, maxX: l.x + hw, minZ: l.z - hd, maxZ: l.z + hd };
 }
 
+/**
+ * The re-plumb for the second layout (2026-10-31). The manifold strip, the
+ * 1.1 m between the stand and the back wall, carries the header and the
+ * make-up; the pot, the tee, the pump and the pool's back all meet in the
+ * strip's east end. Nothing crosses a walkway or the console's front: the
+ * only line in the open room is the analyser's sample, low along the right
+ * wall. Gravity lines fall: each chemical drops from its tank's outlet into
+ * the header, the header runs level to the pot, the pot's line level to
+ * the tee.
+ */
 const Y = 0.2;
 const H = 0.25;
-/** Overhead, clear of every head: the make-up's run to the pool. */
-const OVERHEAD = 2.4;
+/** The run behind the stand, in the strip: the tanks' lines, the header, the make-up. */
+const STRIP_Z = STAND.minZ - 0.25;
+/** The make-up's run along the strip, under the mimic and over the pot. */
+const MAKE_UP_Y = 1.5;
+/** The make-up's turn over the pool's back rim, clear of the discharge's drop. */
+const MAKE_UP_X = TEE.x - 0.25;
 /** The pump's discharge, over to the injection tee. */
 const OVER = 1.6;
-/** The pool's suction: up out of its north end, then along to the pump. */
-const SUCTION_X = 6.3;
+/** The pool's suction: out of its back, then along to the pump. */
+const SUCTION_X = 4.8;
 /**
- * The dosing header DH1: a manifold along the bund's back, under the
- * tanks' outlets, each chemical's line dropping into it (not the
- * make-up's, which runs to the pool).
+ * The dosing header DH1: a manifold in the strip behind the stand, low
+ * under the tanks' outlets, each chemical's line dropping into it (not the
+ * make-up's, which runs to the pool), its east end's line on to the pot.
  */
 export const MANIFOLD = {
-  minX: 1.2 - 0.05,
-  maxX: 1.2 + (TANKS.length - 2) * 0.6 + 0.15,
-  z: PLUMBED.tankZ - 0.4,
-  y: Y,
+  minX: tankX(TANKS[0].id) - 0.05,
+  maxX: tankX(TANKS[TANKS.length - 2].id) + 0.15,
+  z: STRIP_Z,
+  y: 0.3,
   od: 0.05,
 } as const;
-/** The make-up's spout, over the pool's north rim and above its water. */
+/** The make-up's spout, over the pool's back rim and above its water. */
 export const FRESH_SPOUT = {
-  x: 1.2 + (TANKS.length - 1) * 0.6,
+  x: MAKE_UP_X,
   y: POOL.h - 0.05,
-  z: POOL.z + POOL.w / 2 - 0.25,
+  z: POOL.z - POOL.d / 2 + 0.25,
 };
 type V3 = [number, number, number];
 /** Each link's run, in the hall's frame. */
 export function pipeRuns(): { edge: LinkId; od: number; points: V3[] }[] {
   const runs: { edge: LinkId; od: number; points: V3[] }[] = [];
-  const back = PLUMBED.tankZ - 0.57;
+  /** A tank's back, where its outlet leaves it. */
+  const outlet = TANK_Z - 0.2;
   for (const t of TANKS) {
-    const x = plumbedTankX(t.id);
+    const x = tankX(t.id);
     if (t.id === 'fresh')
       runs.push({
         edge: 'dose.fresh',
         od: 0.06,
         points: [
-          [x, 0.16, PLUMBED.tankZ],
-          [x, 0.16, back],
-          // Up behind the tanks, overhead to the pool, down to its spout.
-          [x, OVERHEAD, back],
-          [x, OVERHEAD, FRESH_SPOUT.z],
+          [x, TANK_LIFT + 0.16, outlet],
+          [x, TANK_LIFT + 0.16, STRIP_Z],
+          // Up in the strip, along it over the pot, out over the pool's
+          // back rim and down to its spout.
+          [x, MAKE_UP_Y, STRIP_Z],
+          [MAKE_UP_X, MAKE_UP_Y, STRIP_Z],
+          [MAKE_UP_X, MAKE_UP_Y, FRESH_SPOUT.z],
           [FRESH_SPOUT.x, FRESH_SPOUT.y, FRESH_SPOUT.z],
         ],
       });
@@ -289,47 +302,48 @@ export function pipeRuns(): { edge: LinkId; od: number; points: V3[] }[] {
         edge: `dose.${t.id}` as LinkId,
         od: 0.025,
         points: [
-          [x, H, PLUMBED.tankZ],
-          [x, H, MANIFOLD.z],
-          [x, Y, MANIFOLD.z],
+          [x, TANK_LIFT + H, outlet],
+          [x, TANK_LIFT + H, MANIFOLD.z],
+          [x, MANIFOLD.y, MANIFOLD.z],
         ],
       });
   }
-  // From the manifold's end, round into the dosing pot's side.
+  // From the manifold's east end, level along the strip into the pot's front.
   runs.push({
     edge: 'header',
     od: 0.04,
     points: [
-      [MANIFOLD.maxX, Y, MANIFOLD.z],
-      [SUCTION_X, Y, MANIFOLD.z],
-      [SUCTION_X, Y, POT.z],
-      [POT.x + POT.r, Y, POT.z],
+      [MANIFOLD.maxX, MANIFOLD.y, MANIFOLD.z],
+      [POT.x, MANIFOLD.y, MANIFOLD.z],
+      [POT.x, MANIFOLD.y, POT.z + POT.r],
     ],
   });
+  // Out of the pot's east side, round into the tee's back.
   runs.push({
     edge: 'injection',
     od: 0.03,
     points: [
-      [POT.x, Y, POT.z - POT.r],
-      [TEE.x, Y, TEE.z + TEE.r],
+      [POT.x + POT.r, Y, POT.z],
+      [TEE.x, Y, POT.z],
+      [TEE.x, Y, TEE.z - TEE.r],
     ],
   });
   runs.push({
     edge: 'poolOut',
     od: 0.11,
     points: [
-      [SUCTION_X, PLUMBED_SUCTION.y, POOL.z + POOL.w / 2],
-      [SUCTION_X, PLUMBED_SUCTION.y, PLUMBED_SUCTION.z],
-      [PLUMBED_SUCTION.x, PLUMBED_SUCTION.y, PLUMBED_SUCTION.z],
+      [SUCTION_X, PUMP_SUCTION.y, POOL.z - POOL.d / 2],
+      [SUCTION_X, PUMP_SUCTION.y, PUMP_SUCTION.z],
+      [PUMP_SUCTION.x, PUMP_SUCTION.y, PUMP_SUCTION.z],
     ],
   });
   runs.push({
     edge: 'poolDischarge',
     od: 0.11,
     points: [
-      [PLUMBED_DISCHARGE.x, PLUMBED_DISCHARGE.y, PLUMBED_DISCHARGE.z],
-      [PLUMBED_DISCHARGE.x, OVER, PLUMBED_DISCHARGE.z],
-      [TEE.x, OVER, PLUMBED_DISCHARGE.z],
+      [PUMP_DISCHARGE.x, PUMP_DISCHARGE.y, PUMP_DISCHARGE.z],
+      [PUMP_DISCHARGE.x, OVER, PUMP_DISCHARGE.z],
+      [TEE.x, OVER, PUMP_DISCHARGE.z],
       [TEE.x, OVER, TEE.z],
       [TEE.x, Y + TEE.h / 2, TEE.z],
     ],
@@ -338,19 +352,21 @@ export function pipeRuns(): { edge: LinkId; od: number; points: V3[] }[] {
     edge: 'poolReturn',
     od: 0.11,
     points: [
-      [TEE.x, Y, TEE.z - TEE.r],
-      [TEE.x, Y, POOL.z + POOL.w / 2],
+      [TEE.x, Y, TEE.z + TEE.r],
+      [TEE.x, Y, POOL.z - POOL.d / 2],
     ],
   });
-  const sampleZ = PLUMBED.readoutZ + READOUT.w / 2 - 0.3;
+  // Out of the pool's right side, low along the right wall to the board.
+  const sampleZ = READOUT.z - READOUT.w / 2 + 0.3;
+  const sampleX = EAST - 0.08;
   runs.push({
     edge: 'sample',
     od: 0.015,
     points: [
-      [EAST - 0.3, 1.0, POOL.z - POOL.w / 2],
-      [EAST - 0.3, 1.0, sampleZ],
-      [EAST - 0.03, 1.0, sampleZ],
-      [EAST - 0.03, READOUT.y - READOUT.h / 2, sampleZ],
+      [POOL.x + POOL.w / 2, 1.0, POOL.z + POOL.d / 2 - 0.2],
+      [sampleX, 1.0, POOL.z + POOL.d / 2 - 0.2],
+      [sampleX, 1.0, sampleZ],
+      [sampleX, READOUT.y - READOUT.h / 2, sampleZ],
     ],
   });
   return runs;
@@ -377,7 +393,7 @@ export function fittingPlaces(): Record<
       at:
         t.id === 'fresh'
           ? [tankX(t.id), TANK_LIFT + 0.16, TANK_Z - 0.4]
-          : [tankX(t.id), TANK_LIFT + H, TANK_Z - 0.31],
+          : [tankX(t.id), TANK_LIFT + H, TANK_Z - 0.32],
       along: [0, 0, -1],
     };
   places['pump.suction'] = {
@@ -457,8 +473,16 @@ export function nodeShape(node: string): Shape {
   switch (node) {
     case 'header':
       return box(
-        [MANIFOLD.minX, Y - MANIFOLD.od / 2, MANIFOLD.z - MANIFOLD.od / 2],
-        [MANIFOLD.maxX, Y + MANIFOLD.od / 2, MANIFOLD.z + MANIFOLD.od / 2],
+        [
+          MANIFOLD.minX,
+          MANIFOLD.y - MANIFOLD.od / 2,
+          MANIFOLD.z - MANIFOLD.od / 2,
+        ],
+        [
+          MANIFOLD.maxX,
+          MANIFOLD.y + MANIFOLD.od / 2,
+          MANIFOLD.z + MANIFOLD.od / 2,
+        ],
       );
     case 'pot':
       return { kind: 'cyl', x: POT.x, z: POT.z, r: POT.r, y0: 0, y1: POT.h };
