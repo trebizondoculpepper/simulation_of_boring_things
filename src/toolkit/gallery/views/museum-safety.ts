@@ -127,8 +127,11 @@ function staffDoorSticker(kit: PanelKit) {
   texture.needsUpdate = true;
   const material = lifebuoyStickerMaterial(texture);
   kit.materials.push(material);
-  const mesh = new Mesh(new PlaneGeometry(W, H), material);
-  mesh.position.set(0, H / 2, 0.0015);
+  // Its foot on the floor, baked into the plane: the layer is merged, and
+  // a mesh's own offset was lost there, sinking the door half into the floor.
+  const plane = new PlaneGeometry(W, H);
+  plane.translate(0, H / 2, 0.0015);
+  const mesh = new Mesh(plane, material);
   mesh.renderOrder = 1;
   mesh.name = 'STAFF ONLY door sticker (vinyl)';
   return mesh;
