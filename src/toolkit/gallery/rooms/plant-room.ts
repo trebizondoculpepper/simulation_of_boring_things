@@ -70,8 +70,7 @@ import {
   humanLadderLandingSolids,
   humanLadderZones,
 } from '../../components/architectural/views/human-ladder';
-import { knobDirection } from '../../controls/input/knob-turning';
-import { touchingAt } from '../../controls/input/touch-point';
+import { useOnHit } from '../../controls/input/touch-point';
 import {
   createPs1Material,
   ps1Uniforms,
@@ -661,10 +660,8 @@ export function startEquipmentRoom(
       for (const exhibit of live) {
         const work = exhibit.parts?.uses.get(o);
         if (work) {
-          const at = o;
           // A touch surface may ask where it was touched (`touch-point.ts`).
-          return () =>
-            touchingAt(hit, () => work(knobDirection(at, hit.point, camera)));
+          return useOnHit(hit, o, work, camera);
         }
       }
     }

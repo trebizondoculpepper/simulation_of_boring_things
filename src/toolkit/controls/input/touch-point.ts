@@ -1,4 +1,5 @@
-import type { Object3D } from 'three';
+import type { Camera, Object3D, Vector3 } from 'three';
+import { knobDirection } from './knob-turning';
 
 /**
  * The control scheme's part of touching a screen: where on a touch
@@ -56,4 +57,22 @@ export function touchPoint(surface: Object3D): Touch | null {
     if (o === surface)
       return { u: touched.u, v: touched.v, point: touched.point };
   return null;
+}
+
+/**
+ * A room's use of what its ray struck: `work`, the use found on `at` (the
+ * object struck or one of its parents), done with the hit known, so a
+ * touch surface can ask where it was touched (`touchPoint`) and a knob
+ * which way it turns (`knobDirection`). A room that hands a use to its
+ * equipment from a ray's hit does it through this, or a touch screen in it
+ * is told nothing of where it was touched and does nothing.
+ */
+export function useOnHit(
+  hit: SurfaceHit & { point: Vector3 },
+  at: Object3D,
+  work: (direction?: number) => void,
+  camera: Camera,
+) {
+  return () =>
+    touchingAt(hit, () => work(knobDirection(at, hit.point, camera)));
 }

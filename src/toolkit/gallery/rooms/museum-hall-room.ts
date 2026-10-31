@@ -79,8 +79,7 @@ import {
   createPanelKit,
   disposeKit,
 } from '../../components/core/views/eighties-controls';
-import { knobDirection } from '../../controls/input/knob-turning';
-import { touchingAt } from '../../controls/input/touch-point';
+import { useOnHit } from '../../controls/input/touch-point';
 import { partAudio } from '../../components/core/audio/part-audio';
 import { createInspector } from '../views/inspect-pick';
 import { localNow } from '../logic/museum-time';
@@ -313,9 +312,7 @@ export function startMuseumHallRoom(
     for (let o: Object3D | null = hit.object; o; o = o.parent) {
       const work = exhibit?.parts?.uses.get(o) ?? liftParts.uses.get(o);
       if (work) {
-        const at = o;
-        return () =>
-          touchingAt(hit, () => work(knobDirection(at, hit.point, camera)));
+        return useOnHit(hit, o, work, camera);
       }
     }
     return null;

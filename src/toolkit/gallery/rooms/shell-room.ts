@@ -21,7 +21,7 @@ import {
 import { SHELL_WALL } from '../logic/shell-rooms';
 import { createDockOutside } from '../views/dock-outside';
 import { createInspector } from '../views/inspect-pick';
-import { touchingAt } from '../../controls/input/touch-point';
+import { useOnHit } from '../../controls/input/touch-point';
 import { computed, signal } from '@preact/signals-core';
 import {
   actOnZoneMusic,
@@ -77,7 +77,6 @@ import { createZoneMusicRack } from '../../components/sound/parts/zone-music-rac
 import { JACUZZI_MUSIC } from '../audio/jacuzzi-music';
 import type { Part } from '../../components/core/parts/parts';
 import { createPartSet } from '../../components/core/parts/parts';
-import { knobDirection } from '../../controls/input/knob-turning';
 import {
   activeDoorway,
   pickDoorway,
@@ -530,10 +529,8 @@ export function runShell(canvas: HTMLCanvasElement, cfg: ShellConfig) {
     for (let o: Object3D | null = hit.object; o; o = o.parent) {
       const work = parts.uses.get(o) ?? machines.useOf(o);
       if (work) {
-        const at = o;
         // With the hit known, so a touch surface can ask where it was touched.
-        return () =>
-          touchingAt(hit, () => work(knobDirection(at, hit.point, camera)));
+        return useOnHit(hit, o, work, camera);
       }
       // A chair that declares a seat: sat on (`controls/logic/seat.ts`).
       const seat = seatDeclared(o);

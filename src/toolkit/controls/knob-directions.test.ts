@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vite-plus/test';
  * 2026-10-24: the default for all knobs). A knob's use turns up when it is
  * given no direction, so a room whose clicks work parts without asking
  * `knobDirection` leaves its knobs able only to turn up: from full, never
- * at all. Every walkable room that works parts must ask it.
+ * at all. Every walkable room that works parts must ask it, or hand its
+ * uses on through `useOnHit`, which does.
  */
 
 const SOURCES = import.meta.glob<string>(
@@ -24,7 +25,9 @@ describe('knob directions', () => {
         ([, text]) =>
           text.includes('createFirstPerson(') &&
           /parts\??\.uses/.test(text) &&
-          !text.includes('knobDirection'),
+          !text.includes('knobDirection') &&
+          // `useOnHit` asks it (`input/touch-point.ts`).
+          !text.includes('useOnHit('),
       )
       .map(([path]) => path);
     expect(Object.keys(SOURCES).length).toBeGreaterThan(100);

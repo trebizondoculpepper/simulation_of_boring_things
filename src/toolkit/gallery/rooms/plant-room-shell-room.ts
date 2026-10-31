@@ -72,7 +72,7 @@ import {
 } from '../../components/core/views/eighties-controls';
 import { createPartSet } from '../../components/core/parts/parts';
 import { partAudio } from '../../components/core/audio/part-audio';
-import { knobDirection } from '../../controls/input/knob-turning';
+import { useOnHit } from '../../controls/input/touch-point';
 import { createRoomEquipment } from '../views/room-equipment';
 import { cabinetServices } from '../views/cabinet-services';
 import { roomWorld } from '../../save/world-store';
@@ -199,10 +199,9 @@ export function startPlantRoomShell(
         services?.uses.get(o) ??
         fibreControl?.parts.uses.get(o) ??
         jacuzziMimic?.parts.uses.get(o);
-      if (work) {
-        const at = o;
-        return () => work(knobDirection(at, hit.point, camera));
-      }
+      // With the hit known, so a touch screen (the Trio's) can ask where
+      // it was touched (`touch-point.ts`).
+      if (work) return useOnHit(hit, o, work, camera);
     }
     return null;
   };

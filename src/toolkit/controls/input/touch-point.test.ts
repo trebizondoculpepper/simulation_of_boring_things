@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { Group, Mesh } from 'three';
-import { touchPoint, touchingAt } from './touch-point';
+import { Group, Mesh, PerspectiveCamera, Vector3 } from 'three';
+import { touchPoint, touchingAt, useOnHit } from './touch-point';
 
 describe('a touch on a surface', () => {
   it('is known to the surface struck, inside the use only', () => {
@@ -33,5 +33,37 @@ describe('a touch on a surface', () => {
       v: Number.NaN,
       point: { x: 1, y: 2, z: 3 },
     });
+  });
+});
+
+describe('a room’s use of what its ray struck', () => {
+  it('tells the surface where it was touched, and a knob which way to turn', () => {
+    const surface = new Group();
+    const screen = new Mesh();
+    surface.add(screen);
+    const camera = new PerspectiveCamera();
+    camera.position.set(0, 0, 2);
+    camera.updateMatrixWorld();
+    let seen: ReturnType<typeof touchPoint> = null;
+    let turned: number | undefined;
+    const use = useOnHit(
+      {
+        object: screen,
+        uv: { x: 0.25, y: 0.75 },
+        point: new Vector3(0.1, 0, 0),
+      },
+      surface,
+      (direction) => {
+        seen = touchPoint(surface);
+        turned = direction;
+      },
+      camera,
+    );
+    expect(seen).toBeNull();
+    use();
+    expect(seen).toEqual({ u: 0.25, v: 0.75, point: { x: 0.1, y: 0, z: 0 } });
+    // Struck right of its middle: turned up.
+    expect(turned).toBe(1);
+    expect(touchPoint(surface)).toBeNull();
   });
 });
