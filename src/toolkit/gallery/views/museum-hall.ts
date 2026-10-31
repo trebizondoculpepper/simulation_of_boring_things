@@ -49,6 +49,7 @@ import {
   beyondAt,
   comingSoonPanel,
   hall0Ladder,
+  ARCH_CROWN,
   hallArches,
   hallCorridors,
   hallLiftOpening,
@@ -74,6 +75,15 @@ import type {
 import { MUSEUM_EXHIBITION as BRAND } from '../logic/museum-brand';
 import { CORRIDOR, CORRIDOR_WINDOW } from '../logic/museum-layout';
 import { createPendantLamps } from '../../components/architectural/views/pendant-lamps';
+
+/** A corridor's hanging sign: its width (within the corridor), height, middle's height (just below the arch's crown) and distance in from the archway. */
+const HANGING_SIGN = {
+  // 20% smaller and 0.3 m lower than first hung (the owner, 2026-10-31).
+  w: 3.6 * 0.8,
+  h: 0.8 * 0.8,
+  y: ARCH_CROWN - 0.55 - 0.3,
+  fromPortal: 0.6,
+} as const;
 
 /** A corridor's pendant: its dome's rim, m up, and its size (Lamp Copper's model F), hung from the deck. */
 const CORRIDOR_LAMP = { rim: 4.6, size: 0.8 } as const;
@@ -1597,7 +1607,6 @@ export function createMuseumHall(
   const inner = hallInterior(id);
   const welcome = id === 'museum0';
   const blackBox = isBlackBox(id);
-  const arches = hallArches(id);
   let projector: ReturnType<typeof createCausticsProjector> | null = null;
 
   // The floor, out to its wall lines, laid from the museum's origin; Hall 0's painted once.
@@ -2108,42 +2117,71 @@ export function createMuseumHall(
   }
 
   // Over each archway on this side: where it leads.
-  for (const a of arches) {
-    const sign = signMesh(
-      a.kind === 'door' ? 3.6 : 5.2,
-      a.kind === 'door' ? 0.8 : 1.1,
-      paintArchHeader(id, a),
-      textures,
-      240,
-      false,
-      { glossy: BRAND.colours.accent, shadow: true },
+  // The way-finding signs (the owner, 2026-10-31): not on the hall's walls
+  // but hung from the deck in each corridor, 0.6 m inside each archway, as
+  // wide as the corridor allows, just below the arch's crown, double-sided:
+  // each face names the hall the one reading it is walking towards, NEXT
+  // EXHIBIT or BACK TO. Both halls build the corridor, so its two signs.
+  const headerOf = (from: MuseumHallId, to: MuseumHallId) =>
+    paintArchHeader(
+      from,
+      hallArches(from).find((x) => x.to === to)!,
     );
-    // Over the exit box straight over the archway (`EXIT_OVER_ARCH`).
-    const lift = a.kind === 'door' ? 0.55 : 1.25;
-    // Over its doorway, but slid along towards the wall's middle as far as
-    // it must to clear the corner: a corridor's doorway stands near its
-    // wall's end (layout C).
-    const signW = a.kind === 'door' ? 3.6 : 5.2;
-    const wallOfA = hallWalls(id).find(
-      (w) =>
-        w.axis === a.axis &&
-        Math.abs((w.axis === 'x' ? a.at.z : a.at.x) - w.line) < 1e-9,
-    )!;
-    const u0 = a.axis === 'x' ? a.at.x : a.at.z;
-    const room = signW / 2 + t / 2 + 0.3;
-    const u = Math.min(Math.max(u0, wallOfA.from + room), wallOfA.to - room);
-    // Flat on the wall, no cove glow: only the title wall has that (the
-    // owner, 2026-10-28); lit a little from within to read in the dim hall.
-    const off = 0.015;
-    sign.position.set(
-      (a.axis === 'x' ? u : a.at.x) + a.into[0] * (t / 2 + off),
-      a.top + lift,
-      (a.axis === 'z' ? u : a.at.z) + a.into[1] * (t / 2 + off),
-    );
-    sign.rotation.y = Math.atan2(a.into[0], a.into[1]);
-    if (welcome)
-      (sign.material as MeshStandardMaterial).emissiveIntensity = 0.55;
-    plan.add(sign);
+  const hangers: BufferGeometry[] = [];
+  for (const c of hallCorridors(id)) {
+    const ends = [
+      { at: c.path[0], toward: c.path[1], hallSide: id, beyond: c.to },
+      { at: c.path[2], toward: c.path[1], hallSide: c.to, beyond: id },
+    ];
+    for (const e of ends) {
+      const dx = e.toward.x - e.at.x;
+      const dz = e.toward.z - e.at.z;
+      const len = Math.hypot(dx, dz);
+      const d = [dx / len, dz / len] as const;
+      const x = e.at.x + d[0] * HANGING_SIGN.fromPortal;
+      const z = e.at.z + d[1] * HANGING_SIGN.fromPortal;
+      // Seen from the hall at this end: where it leads.
+      const outward = signMesh(
+        HANGING_SIGN.w,
+        HANGING_SIGN.h,
+        headerOf(e.hallSide, e.beyond),
+        textures,
+        240,
+        false,
+        { glossy: BRAND.colours.accent },
+      );
+      outward.position.set(x - d[0] * 0.01, HANGING_SIGN.y, z - d[1] * 0.01);
+      outward.rotation.y = Math.atan2(-d[0], -d[1]);
+      // Seen from the corridor, walking to this end's hall.
+      const inward = signMesh(
+        HANGING_SIGN.w,
+        HANGING_SIGN.h,
+        headerOf(e.beyond, e.hallSide),
+        textures,
+        240,
+        false,
+        { glossy: BRAND.colours.accent },
+      );
+      inward.position.set(x + d[0] * 0.01, HANGING_SIGN.y, z + d[1] * 0.01);
+      inward.rotation.y = Math.atan2(d[0], d[1]);
+      if (welcome)
+        for (const s of [outward, inward])
+          (s.material as MeshStandardMaterial).emissiveIntensity = 0.55;
+      group.add(outward, inward);
+      // Two steel rods up to the deck.
+      const top = HANGING_SIGN.y + HANGING_SIGN.h / 2;
+      const rise = CORRIDOR.height - BEAM_DEPTH - top;
+      for (const s of [-1, 1]) {
+        const rod = new CylinderGeometry(0.01, 0.01, rise, 6);
+        const across = (HANGING_SIGN.w / 2 - 0.2) * s;
+        rod.translate(x + d[1] * across, top + rise / 2, z - d[0] * across);
+        hangers.push(rod);
+      }
+    }
+  }
+  if (hangers.length) {
+    group.add(new Mesh(mergeGeometries(hangers), m.steel));
+    for (const g of hangers) g.dispose();
   }
 
   for (const child of [...group.children, ...plan.children])

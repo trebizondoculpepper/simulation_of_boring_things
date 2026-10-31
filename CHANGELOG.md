@@ -4,6 +4,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Museum way-finding signs hang in the corridors (the owner, 2026-10-31): no longer on the halls' walls over the archways, but hung on two rods from the deck 0.6 m inside each archway, 2.88 × 0.64 m within the corridor, below the arch's crown, double-sided: each face names the hall the one reading it walks towards, NEXT EXHIBIT or BACK TO; both halls build the corridor with its two signs.
 - Museum, Hall 0 (the owner, 2026-10-31): the welcome panel stands before the west wall, south of the archway into Hall 1, between the wall and the painted pool, facing into the hall; the lifebuoy sticker moves to the west wall south of that archway; the panel's words now say to follow the arrows west through the archway, and the route nine halls.
 - Museum: the STAFF ONLY door no longer stands half sunk in the floor (the owner, 2026-10-30): its sticker's lift to its foot is baked into its plane, since the safety layer's merge dropped the mesh's own offset.
 - Museum, Hall 3: the STAFF ONLY door moves to the west end wall, between the two archways; on the street wall it stood behind the hypochlorite store (the audit, 2026-10-30).
