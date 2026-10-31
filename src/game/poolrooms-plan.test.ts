@@ -13,6 +13,9 @@ import {
   WALL_HOLES,
   WINDOWS,
   arches,
+  archCurve,
+  ARCADE_TOP,
+  vaultHeightAt,
   HALL_COLUMNS,
   COLUMN_RADIUS,
   bankPlants,
@@ -202,12 +205,15 @@ describe('the pool rooms, laid out', () => {
     for (const arch of list) {
       const radius = (arch.to - arch.from) / 2;
       expect(arch.spring - arch.floor).toBeGreaterThanOrEqual(2.1 - 1e-9);
-      expect(arch.rise).toBeLessThanOrEqual(radius + 1e-9);
+      if (arch.style !== 'pointed')
+        expect(arch.rise).toBeLessThanOrEqual(radius + 1e-9);
       expect(arch.spring + arch.rise).toBeLessThan(arch.top);
     }
-    // The arcades, in the tall hall, round.
-    for (const arch of list.slice(LINKS.length))
-      expect(arch.rise).toBeCloseTo((arch.to - arch.from) / 2, 6);
+    // The arcades, in the tall chapel, pointed and gothic.
+    for (const arch of list.filter((a) => a.kind === 'arcade')) {
+      expect(arch.style).toBe('pointed');
+      expect(arch.rise).toBeGreaterThan((arch.to - arch.from) / 2);
+    }
     for (const link of LINKS) {
       const arch = list.find((x) => x.from === link.from && x.to === link.to)!;
       for (const zone of [zoneById(link.a), zoneById(link.b)])
@@ -285,8 +291,17 @@ describe('the pool rooms, laid out', () => {
       expect(w.to).toBeLessThan(s.to);
       expect(w.sill).toBeGreaterThan(0.5);
       expect(w.head).toBeLessThan(zone.height);
-      for (const [a, b] of gapsIn(zone, w.side))
-        expect(w.to <= a || w.from >= b).toBe(true);
+      // Clear of every opening, or high over its arch (the rose over the lane).
+      for (const [a, b] of gapsIn(zone, w.side)) {
+        const arch = arches().find(
+          (x) => x.kind === 'link' && x.from === a && x.to === b,
+        )!;
+        expect(
+          w.to <= a ||
+            w.from >= b ||
+            zone.y + w.sill > arch.spring + arch.rise + 0.5,
+        ).toBe(true);
+      }
       for (const door of STAFF_DOORS.filter(
         (d) => d.zone === w.zone && d.side === w.side,
       ))
@@ -401,5 +416,63 @@ describe('the pool rooms, laid out', () => {
     ).toBeLessThan(
       distanceToCourse(river, (bar.minX + bar.maxX) / 2, bar.maxZ),
     );
+  });
+  it('draws an arch’s head from jamb to jamb: round, pointed, or flattened', () => {
+    for (const style of ['round', 'pointed', 'flat'] as const) {
+      const rise =
+        style === 'pointed' ? 3 * Math.sqrt(3) : style === 'round' ? 3 : 1.5;
+      const curve = archCurve(0, 6, 4, rise, style);
+      expect(curve[0][0]).toBeCloseTo(0, 6);
+      expect(curve[0][1]).toBeCloseTo(4, 6);
+      expect(curve.at(-1)![0]).toBeCloseTo(6, 6);
+      expect(curve.at(-1)![1]).toBeCloseTo(4, 6);
+      expect(Math.max(...curve.map(([, v]) => v))).toBeCloseTo(4 + rise, 6);
+    }
+  });
+
+  it('makes the main hall a gothic water chapel: tall, vaulted, its openings pointed', () => {
+    const chapel = zoneById('hall');
+    expect(chapel.name).toBe('The water chapel');
+    expect(vaultHeightAt(0)).toBeCloseTo(ARCADE_TOP + 18, 1);
+    expect(vaultHeightAt(16)).toBeCloseTo(ARCADE_TOP, 6);
+    expect(vaultHeightAt(0)!).toBeLessThan(chapel.height);
+    expect(
+      WINDOWS.filter((w) => w.zone === 'hall' && w.shape === 'lancet').length,
+    ).toBeGreaterThan(12);
+    expect(
+      WINDOWS.filter((w) => w.zone === 'hall' && w.shape === 'rose'),
+    ).toHaveLength(1);
+    expect(SKYLIGHTS.filter((k) => k.zone === 'hall')).toHaveLength(0);
+  });
+
+  it('makes the chapel’s floor its pool, wall to wall, with a ledge to walk round', () => {
+    const chapel = zoneById('hall');
+    const main = POOLS.find((p) => p.board === 'MAIN POOL')!;
+    expect(main.zone).toBe('hall');
+    expect(main.rect.minX - chapel.rect.minX).toBeLessThanOrEqual(1.5);
+    expect(chapel.rect.maxZ - main.rect.maxZ).toBeLessThanOrEqual(1.5);
+    // Every pier stands in the water.
+    for (const [x, z] of HALL_COLUMNS)
+      expect(poolAt(chapel, x, z)).not.toBeNull();
+    // Each opening and door of the chapel reaches the ledge.
+    for (const link of LINKS.filter((l) => l.a === 'hall' || l.b === 'hall')) {
+      const other = zoneById(link.a === 'hall' ? link.b : link.a);
+      const side = sharedSide(chapel.rect, other.rect)!;
+      const s = sideOf(chapel.rect, side);
+      const inward = {
+        north: [0, 1],
+        south: [0, -1],
+        west: [1, 0],
+        east: [-1, 0],
+      }[side];
+      const mid = (link.from + link.to) / 2;
+      // Some way along its opening, clear of the lane's water, a step in.
+      const along =
+        link.from + 0.3 < -1.25 || link.from > 1.25 ? link.from + 0.3 : mid;
+      const [x, z] = s.along === 'x' ? [along, s.at] : [s.at, along];
+      expect(
+        poolAt(chapel, x + inward[0] * 0.7, z + inward[1] * 0.7),
+      ).toBeNull();
+    }
   });
 });

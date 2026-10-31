@@ -124,12 +124,12 @@ export const ZONES: readonly Zone[] = [
   },
   {
     id: 'hall',
-    name: 'Main pool hall',
+    name: 'The water chapel',
     kind: 'hall',
     rect: rect(-20, 20, -30, 30),
     y: 0,
-    height: 18,
-    tint: '#eef3f6',
+    height: 33,
+    tint: '#ece9e0',
   },
   {
     id: 'lane',
@@ -283,15 +283,17 @@ export const POOLS: readonly Pool[] = [
   // Two footbaths across the gallery, to be waded through.
   { zone: 'gallery', rect: rect(-3, 3, 44, 46), depth: 0.15, wade: true },
   { zone: 'gallery', rect: rect(-3, 3, 36, 38), depth: 0.15, wade: true },
-  // The main pool, and the lane that leaves it and does not come back.
+  // The main pool: the water chapel's whole floor, wall to wall but for
+  // a ledge round it to walk on; and the lane that leaves it through the
+  // north wall and does not come back.
   {
     zone: 'hall',
-    rect: rect(-8, 8, -20, 12),
+    rect: rect(-18.5, 18.5, -28.5, 28.5),
     depth: 2,
     wade: false,
     board: 'MAIN POOL',
   },
-  { zone: 'hall', rect: rect(-1.25, 1.25, -30, -20), depth: 2, wade: false },
+  { zone: 'hall', rect: rect(-1.25, 1.25, -30, -28.5), depth: 2, wade: false },
   {
     zone: 'lane',
     rect: rect(-1.25, 1.25, -88, -30),
@@ -679,8 +681,44 @@ export interface Arch {
   rise: number;
   /** How high the wall over it goes: to the taller of the two zones' ceilings. */
   wallTop: number;
+  /** Its head: a half circle, gothic and pointed, or flattened (half an ellipse). */
+  style: 'round' | 'pointed' | 'flat';
+  /** Whether it is an opening between zones (in a wall) or one of an arcade's (free-standing). */
+  kind: 'link' | 'arcade';
   /** How thick its wall or arcade is, metres. */
   thickness: number;
+}
+
+/** How high the chapel's arcades stand, where its vault springs from, metres. */
+export const ARCADE_TOP = 14;
+/** The chapel's vault: from the arcades' tops at x = ±16, pointed, to its apex, metres. */
+export const VAULT = {
+  from: -16,
+  to: 16,
+  spring: ARCADE_TOP,
+  rise: 18,
+} as const;
+
+/** How high the vault's underside is at `x`, if `x` is under it. */
+export function vaultHeightAt(x: number): number | null {
+  if (x < VAULT.from || x > VAULT.to) return null;
+  const curve = archCurve(
+    VAULT.from,
+    VAULT.to,
+    VAULT.spring,
+    VAULT.rise,
+    'pointed',
+    48,
+  );
+  for (let i = 1; i < curve.length; i++) {
+    const [u0, v0] = curve[i - 1];
+    const [u1, v1] = curve[i];
+    if ((x - u0) * (x - u1) <= 0)
+      return u1 === u0
+        ? Math.max(v0, v1)
+        : v0 + ((x - u0) / (u1 - u0)) * (v1 - v0);
+  }
+  return null;
 }
 
 /** The main hall's columns: on an 8 m grid, some standing in the pool. */
@@ -700,8 +738,9 @@ const CROWN = 0.3;
 
 /**
  * An arch over `from`–`to`, under a wall reaching `top`: round-headed,
- * a half circle, where there is the height for it; flattened, half an
- * ellipse, where a wide opening is in a low wall.
+ * a half circle, where there is the height for it, or, `gothic`, pointed
+ * (as tall as an equilateral arch, its two arcs struck from its jambs);
+ * flattened, half an ellipse, where a wide opening is in a low wall.
  */
 function archUnder(
   along: 'x' | 'z',
@@ -711,12 +750,14 @@ function archUnder(
   floor: number,
   top: number,
   thickness: number,
-): Arch {
-  const radius = (to - from) / 2;
-  const rise = Math.max(
-    0.3,
-    Math.min(radius, top - CROWN - (floor + SPRING_LEAST)),
-  );
+  gothic = false,
+): Omit<Arch, 'kind'> {
+  const half = (to - from) / 2;
+  const room = top - CROWN - (floor + SPRING_LEAST);
+  const pointed = gothic && room >= half * 1.05;
+  const rise = pointed
+    ? Math.min(half * Math.sqrt(3), room)
+    : Math.max(0.3, Math.min(half, room));
   const spring = Math.max(
     floor + SPRING_LEAST,
     Math.min(floor + SPRING + 2, top - CROWN - rise),
@@ -732,7 +773,45 @@ function archUnder(
     top,
     wallTop: top,
     thickness,
+    style: pointed ? 'pointed' : rise >= half - 1e-9 ? 'round' : 'flat',
   };
+}
+
+/**
+ * The inner curve of an arch's head, from its left jamb at its spring
+ * over to its right, as points (u along its wall, v up): a half circle,
+ * a pointed arch's two arcs, or half an ellipse.
+ */
+export function archCurve(
+  from: number,
+  to: number,
+  spring: number,
+  rise: number,
+  style: Arch['style'],
+  segments = 24,
+): [number, number][] {
+  const half = (to - from) / 2;
+  const mid = from + half;
+  const points: [number, number][] = [];
+  if (style === 'pointed') {
+    // Each arc's centre on the springing line, `d` in from its jamb.
+    const d = (half * half + rise * rise) / (2 * half);
+    const apex = Math.atan2(rise, d - half);
+    for (let i = 0; i <= segments; i++) {
+      const a = Math.PI - (apex * i) / segments;
+      points.push([from + d + d * Math.cos(a), spring + d * Math.sin(a)]);
+    }
+    for (let i = segments - 1; i >= 0; i--) {
+      const a = (apex * i) / segments;
+      points.push([to - d + d * Math.cos(a), spring + d * Math.sin(a)]);
+    }
+    return points;
+  }
+  for (let i = 0; i <= segments * 2; i++) {
+    const a = Math.PI - (Math.PI * i) / (segments * 2);
+    points.push([mid + half * Math.cos(a), spring + rise * Math.sin(a)]);
+  }
+  return points;
 }
 
 /** Every opening between zones, arched; and the main hall's two arcades. */
@@ -757,8 +836,11 @@ export function arches(): Arch[] {
         floor,
         Math.min(ceiling(a), ceiling(b)),
         0.3,
+        // The chapel's openings are gothic.
+        link.a === 'hall' || link.b === 'hall',
       ),
       wallTop: Math.max(ceiling(a), ceiling(b)),
+      kind: 'link',
     });
   }
   // The arcades: down each side of the main pool, column to column.
@@ -766,17 +848,19 @@ export function arches(): Arch[] {
   for (const x of [-16, 16]) {
     const zs = HALL_COLUMNS.filter(([cx]) => cx === x).map(([, z]) => z);
     for (let i = 1; i < zs.length; i++)
-      list.push(
-        archUnder(
+      list.push({
+        ...archUnder(
           'z',
           x,
           zs[i - 1] + COLUMN_RADIUS,
           zs[i] - COLUMN_RADIUS,
           hall.y,
-          hall.y + 11,
+          hall.y + ARCADE_TOP,
           0.6,
+          true,
         ),
-      );
+        kind: 'arcade',
+      });
   }
   return list;
 }
@@ -861,13 +945,6 @@ export interface Skylight {
 }
 
 export const SKYLIGHTS: readonly Skylight[] = [
-  // The main hall: six square lanterns, clear of its columns.
-  ...[-12, 0, 12].flatMap((x) =>
-    [-20, -4, 12].map((z) => ({
-      zone: 'hall',
-      rect: rect(x - 3, x + 3, z - 3, z + 3),
-    })),
-  ),
   // The gallery: small squares down its length.
   ...[34, 41, 48].map((z) => ({
     zone: 'gallery',
@@ -894,16 +971,43 @@ export interface ZoneWindow {
   to: number;
   sill: number;
   head: number;
+  /** Its shape: square-headed, a gothic lancet (pointed, its head the apex), or a round rose window. */
+  shape?: 'rect' | 'lancet' | 'rose';
 }
 
+/** A lancet: its width, its sill and apex above the floor. */
+const lancet = (
+  zone: string,
+  side: Side,
+  from: number,
+  sill = 5,
+  head = 21,
+): ZoneWindow => ({
+  zone,
+  side,
+  from,
+  to: from + 3,
+  sill,
+  head,
+  shape: 'lancet',
+});
+
 export const WINDOWS: readonly ZoneWindow[] = [
-  // The main hall's clerestory, high on its outer walls.
-  { zone: 'hall', side: 'south', from: -18, to: -6, sill: 10, head: 15 },
-  { zone: 'hall', side: 'south', from: 6, to: 18, sill: 10, head: 15 },
-  { zone: 'hall', side: 'north', from: -18, to: -6, sill: 10, head: 15 },
-  { zone: 'hall', side: 'north', from: 6, to: 18, sill: 10, head: 15 },
-  { zone: 'hall', side: 'west', from: 8, to: 26, sill: 10, head: 15 },
-  { zone: 'hall', side: 'east', from: 16, to: 28, sill: 10, head: 15 },
+  // The water chapel: tall lancets down its sides and across its south
+  // end, and its rose window high over the arch where the lane leaves.
+  ...[-28, -22, 6, 14, 22].map((z) => lancet('hall', 'west', z)),
+  ...[-28, -11, -5, 6, 14, 22].map((z) => lancet('hall', 'east', z)),
+  ...[-16, -10, 7, 13].map((x) => lancet('hall', 'south', x)),
+  ...[-16, 13].map((x) => lancet('hall', 'north', x)),
+  {
+    zone: 'hall',
+    side: 'north',
+    from: -6,
+    to: 6,
+    sill: 13,
+    head: 25,
+    shape: 'rose',
+  },
   // The terraces look out west, low enough for a child.
   { zone: 'terraces', side: 'west', from: -16, to: 6, sill: 0.9, head: 4.5 },
   // The spa: one tall window, floor to near its ceiling.

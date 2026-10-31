@@ -11,6 +11,8 @@ import {
   DirectionalLight,
   DoubleSide,
   ExtrudeGeometry,
+  Path,
+  TorusGeometry,
   Fog,
   Group,
   HemisphereLight,
@@ -55,7 +57,12 @@ import {
   TIKI_BAR,
   WALL_HOLES,
   WINDOWS,
+  ARCADE_TOP,
+  VAULT,
+  archCurve,
   arches,
+  gapsIn,
+  vaultHeightAt,
   bankPlants,
   boardPlace,
   doorPlace,
@@ -70,14 +77,23 @@ import {
   zoneById,
   zoneFloor,
 } from '../game/poolrooms-plan';
-import type { Pool, Side, WallRun, Zone } from '../game/poolrooms-plan';
+import type {
+  Arch,
+  Pool,
+  Side,
+  WallRun,
+  Zone,
+  ZoneWindow,
+} from '../game/poolrooms-plan';
 
 /**
  * The pool rooms, bare: a blockout of `src/game/poolrooms-plan.ts`, to
  * walk round and judge its shape before anything is dressed. White tile
  * everywhere, each zone tinted its own colour; pools as blue water in
  * pale basins, some to wade through; stairs and ramps between the four
- * levels; columns in the main hall, some standing in the pool; the
+ * levels; the main hall a gothic water chapel, its pointed arcades on
+ * clustered piers under a tall ribbed vault, lancets and a rose window,
+ * its whole floor the main pool, its piers standing in the water; the
  * slide's tube from the spa down to the grotto, ridden by using its
  * mouth; skylights, windows onto bright nothing, and lamps (frosted
  * globes, sconces, posts); a winding river between flat decks, fake plants on its banks,
@@ -447,18 +463,52 @@ export function startPoolroomsWorld(canvas: HTMLCanvasElement) {
         corners.map(([x, z]) => [x, slope(x, z) - pool.depth, z] as const),
         tiles,
       );
+      // Its walls, but open wherever another pool's water carries on beyond
+      // them (the main pool into the lane).
+      const neighbours = POOLS.filter(
+        (q) => q !== pool && !q.round && !q.course,
+      );
       for (let i = 0; i < 4; i++) {
         const [ax, az] = corners[i];
         const [bx, bz] = corners[(i + 1) % 4];
-        quad(
-          [
-            [ax, slope(ax, az), az],
-            [bx, slope(bx, bz), bz],
-            [bx, slope(bx, bz) - pool.depth, bz],
-            [ax, slope(ax, az) - pool.depth, az],
-          ],
-          tiles,
-        );
+        const alongX = az === bz;
+        const lo = alongX ? Math.min(ax, bx) : Math.min(az, bz);
+        const hi = alongX ? Math.max(ax, bx) : Math.max(az, bz);
+        const gaps = neighbours
+          .filter((q) =>
+            alongX
+              ? (Math.abs(q.rect.maxZ - az) < 1e-6 ||
+                  Math.abs(q.rect.minZ - az) < 1e-6) &&
+                q.rect.minX < hi &&
+                q.rect.maxX > lo
+              : (Math.abs(q.rect.maxX - ax) < 1e-6 ||
+                  Math.abs(q.rect.minX - ax) < 1e-6) &&
+                q.rect.minZ < hi &&
+                q.rect.maxZ > lo,
+          )
+          .map((q) =>
+            alongX ? [q.rect.minX, q.rect.maxX] : [q.rect.minZ, q.rect.maxZ],
+          )
+          .sort((g, h) => g[0] - h[0]);
+        const pieces: [number, number][] = [];
+        let from = lo;
+        for (const [g0, g1] of gaps) {
+          if (g0 > from) pieces.push([from, Math.min(g0, hi)]);
+          from = Math.max(from, g1);
+        }
+        if (hi > from) pieces.push([from, hi]);
+        for (const [u0, u1] of pieces) {
+          const [x0, z0, x1, z1] = alongX ? [u0, az, u1, az] : [ax, u0, ax, u1];
+          quad(
+            [
+              [x0, slope(x0, z0), z0],
+              [x1, slope(x1, z1), z1],
+              [x1, slope(x1, z1) - pool.depth, z1],
+              [x0, slope(x0, z0) - pool.depth, z0],
+            ],
+            tiles,
+          );
+        }
       }
       quad(
         corners.map(([x, z]) => [x, slope(x, z) - FREEBOARD, z] as const),
@@ -500,97 +550,242 @@ export function startPoolroomsWorld(canvas: HTMLCanvasElement) {
           minZ: run.from * m,
           maxZ: run.to * m,
         };
-  const wallMaterials = new Map<string, Material>();
-  for (const run of wallRuns()) {
-    const zone = zoneById(run.zone);
+  for (const run of wallRuns()) wallSolids.push(wallFootprint(run));
+  const allArches = arches();
+  /** The arch over the opening `from`–`to` in a zone's side. */
+  const linkArch = (
+    line: { along: 'x' | 'z'; at: number },
+    from: number,
+    to: number,
+  ) =>
+    allArches.find(
+      (x) =>
+        x.kind === 'link' &&
+        x.along === line.along &&
+        Math.abs(x.at - line.at) < 1e-6 &&
+        Math.abs(x.from - from) < 1e-6 &&
+        Math.abs(x.to - to) < 1e-6,
+    )!;
+  /** A window's outline in its wall (u along it, v up). */
+  const windowOutline = (w: ZoneWindow, floor: number): [number, number][] => {
+    const y0 = floor + w.sill,
+      y1 = floor + w.head;
+    if (w.shape === 'rose') {
+      const cu = (w.from + w.to) / 2,
+        cv = (y0 + y1) / 2,
+        r = (w.to - w.from) / 2;
+      return Array.from({ length: 48 }, (_, i) => {
+        const a = (i / 48) * Math.PI * 2;
+        return [cu + r * Math.cos(a), cv + r * Math.sin(a)] as [number, number];
+      });
+    }
+    if (w.shape === 'lancet') {
+      const rise = w.to - w.from;
+      return [
+        [w.from, y0],
+        ...archCurve(w.from, w.to, y1 - rise, rise, 'pointed', 12),
+        [w.to, y0],
+      ];
+    }
+    return [
+      [w.from, y0],
+      [w.from, y1],
+      [w.to, y1],
+      [w.to, y0],
+    ];
+  };
+  // Each side of each zone is one wall, its openings, windows and the
+  // slide's and the river's holes cut through it.
+  const SIDES: readonly Side[] = ['north', 'south', 'east', 'west'];
+  for (const zone of ALL_ZONES) {
     const { low, high } = span(zone);
-    const bottom = low - 0.6;
+    const bottom = low - 1.2;
     const top = high + zone.height;
-    let material = wallMaterials.get(zone.id);
-    if (!material) {
-      material = tiled(zone.tint, 4, 4);
-      wallMaterials.set(zone.id, material);
-    }
-    // Pieces: around each hole in it, full height elsewhere.
-    // The slide's and the river's holes, and its windows.
-    const holes = [
-      ...WALL_HOLES,
-      ...WINDOWS.map((w) => ({
-        ...w,
-        bottom: zoneById(w.zone).y + w.sill,
-        top: zoneById(w.zone).y + w.head,
-      })),
-    ]
-      .filter(
-        (h) =>
-          h.zone === run.zone &&
-          h.side === run.side &&
-          h.from >= run.from &&
-          h.to <= run.to,
-      )
-      .sort((a, b) => a.from - b.from);
-    // Its own half of the wall's thickness, on its side of the line, so a
-    // wall two zones share shows each its own face and neither fights.
-    const inward = { north: 1, south: -1, west: 1, east: -1 }[run.side];
-    const line = run.at + (inward * WALL) / 4;
-    const piece = (from: number, to: number, y0: number, y1: number) => {
-      if (to - from < 0.001 || y1 - y0 < 0.001) return;
-      const mid = (from + to) / 2;
-      return run.along === 'x'
-        ? box(
-            world,
-            material!,
-            to - from,
-            y1 - y0,
-            WALL / 2,
-            mid,
-            (y0 + y1) / 2,
-            line,
-          )
-        : box(
-            world,
-            material!,
-            WALL / 2,
-            y1 - y0,
-            to - from,
-            line,
-            (y0 + y1) / 2,
-            mid,
+    const material = tiled(zone.tint, 1, 1);
+    for (const side of SIDES) {
+      const line = sideOf(zone.rect, side);
+      // Its openings, each an arch from the floor to its head.
+      const openings = gapsIn(zone, side).map(([a, b]) => {
+        const arch: Arch = linkArch(line, a, b);
+        return {
+          a,
+          b,
+          floor: arch.floor,
+          curve: archCurve(a, b, arch.spring, arch.rise, arch.style),
+        };
+      });
+      const left = openings.find((o) => o.a <= line.from + 1e-6);
+      const right = openings.find((o) => o.b >= line.to - 1e-6);
+      const whole = left !== undefined && left === right;
+      const outline: [number, number][] = [];
+      if (whole) {
+        // Open its whole width: only the wall over its arch.
+        outline.push(...left.curve, [line.to, top], [line.from, top]);
+      } else {
+        outline.push([line.from, bottom], [line.to, bottom]);
+        if (right)
+          outline.push(
+            [line.to, right.floor],
+            [right.a, right.floor],
+            ...right.curve,
           );
-    };
-    let from = run.from;
-    for (const hole of holes) {
-      piece(from, hole.from, bottom, top);
-      piece(hole.from, hole.to, bottom, hole.bottom);
-      piece(hole.from, hole.to, hole.top, top);
-      from = hole.to;
+        outline.push([line.to, top], [line.from, top]);
+        if (left)
+          outline.push(
+            ...left.curve,
+            [left.b, left.floor],
+            [line.from, left.floor],
+          );
+      }
+      const shape = new Shape();
+      shape.moveTo(outline[0][0], outline[0][1]);
+      for (const [u, v] of outline.slice(1)) shape.lineTo(u, v);
+      shape.closePath();
+      const hole = (points: readonly (readonly [number, number])[]) => {
+        const path = new Path();
+        path.moveTo(points[0][0], points[0][1]);
+        for (const [u, v] of points.slice(1)) path.lineTo(u, v);
+        path.closePath();
+        shape.holes.push(path);
+      };
+      if (!whole) {
+        for (const o of openings)
+          if (o !== left && o !== right)
+            hole([[o.a, o.floor], ...o.curve, [o.b, o.floor]]);
+        for (const h of WALL_HOLES.filter(
+          (x) => x.zone === zone.id && x.side === side,
+        ))
+          hole([
+            [h.from, h.bottom],
+            [h.from, h.top],
+            [h.to, h.top],
+            [h.to, h.bottom],
+          ]);
+        for (const w of WINDOWS.filter(
+          (x) => x.zone === zone.id && x.side === side,
+        ))
+          hole(windowOutline(w, zone.y));
+      }
+      const geometry = new ExtrudeGeometry(shape, {
+        depth: WALL / 2,
+        bevelEnabled: false,
+        curveSegments: 1,
+      });
+      const mesh = new Mesh(geometry, material);
+      // Its own half of the wall's thickness, on its side of the line, so a
+      // wall two zones share shows each its own face and neither fights.
+      const inward = { north: 1, south: -1, west: 1, east: -1 }[side];
+      const centre = line.at + (inward * WALL) / 4;
+      if (line.along === 'x') mesh.position.set(0, 0, centre - WALL / 4);
+      else {
+        mesh.rotation.y = -Math.PI / 2;
+        mesh.position.set(centre + WALL / 4, 0, 0);
+      }
+      world.add(mesh);
     }
-    piece(from, run.to, bottom, top);
-    wallSolids.push(wallFootprint(run));
   }
 
-  // ---- The main hall's columns, some standing in the water --------------
+  // ---- The chapel's piers, its vault and its furnishings ----------------------
   const column = keep(
-    new MeshStandardMaterial({ color: '#f4f7f7', roughness: 0.4 }),
+    new MeshStandardMaterial({ color: '#f1efe8', roughness: 0.4 }),
+  );
+  const rib = keep(
+    new MeshStandardMaterial({ color: '#d9d3c4', roughness: 0.5 }),
   );
   const columnSolids: Footprint[] = [];
   const hall = zoneById('hall');
   for (let x = -16; x <= 16; x += 8)
     for (let z = -24; z <= 24; z += 8) {
-      const mesh = new Mesh(
-        new CylinderGeometry(0.45, 0.45, hall.height + 3, 20),
+      // A clustered pier, its core and four shafts: up to the arcade's top
+      // on the arcades, up into the vault in the nave.
+      const height =
+        Math.abs(x) === 16
+          ? ARCADE_TOP
+          : (vaultHeightAt(x) ?? hall.height) + 0.2;
+      const base = -2.2;
+      const core = new Mesh(
+        new CylinderGeometry(0.45, 0.45, height - base, 20),
         column,
       );
-      mesh.position.set(x, (hall.height - 3) / 2, z);
-      world.add(mesh);
+      core.position.set(x, (height + base) / 2, z);
+      world.add(core);
+      for (let k = 0; k < 4; k++) {
+        const a = (k / 4) * Math.PI * 2 + Math.PI / 4;
+        const shaft = new Mesh(
+          new CylinderGeometry(0.14, 0.14, height - base, 10),
+          column,
+        );
+        shaft.position.set(
+          x + Math.cos(a) * 0.46,
+          (height + base) / 2,
+          z + Math.sin(a) * 0.46,
+        );
+        world.add(shaft);
+      }
+      if (Math.abs(x) === 16) {
+        // Its capital, where the arcade's arches spring.
+        const capital = new Mesh(new CylinderGeometry(0.75, 0.6, 0.5, 8), rib);
+        capital.position.set(x, 4.2, z);
+        world.add(capital);
+      }
       columnSolids.push({
-        minX: (x - 0.5) * m,
-        maxX: (x + 0.5) * m,
-        minZ: (z - 0.5) * m,
-        maxZ: (z + 0.5) * m,
+        minX: (x - 0.65) * m,
+        maxX: (x + 0.65) * m,
+        minZ: (z - 0.65) * m,
+        maxZ: (z + 0.65) * m,
       });
     }
-
+  {
+    // The vault: a pointed barrel over the nave, its ribs over the piers.
+    const band = (out: number) => {
+      const inner = archCurve(
+        VAULT.from,
+        VAULT.to,
+        VAULT.spring,
+        VAULT.rise,
+        'pointed',
+        32,
+      );
+      const outer = archCurve(
+        VAULT.from - out,
+        VAULT.to + out,
+        VAULT.spring,
+        VAULT.rise + out * 1.4,
+        'pointed',
+        32,
+      );
+      const shape = new Shape();
+      shape.moveTo(inner[0][0], inner[0][1]);
+      for (const [u, v] of inner.slice(1)) shape.lineTo(u, v);
+      for (const [u, v] of [...outer].reverse()) shape.lineTo(u, v);
+      shape.closePath();
+      return shape;
+    };
+    const length = hall.rect.maxZ - hall.rect.minZ;
+    const shell = new Mesh(
+      new ExtrudeGeometry(band(0.35), {
+        depth: length,
+        bevelEnabled: false,
+        curveSegments: 1,
+      }),
+      tiled(hall.tint, 1, 1),
+    );
+    shell.position.z = hall.rect.minZ;
+    world.add(shell);
+    for (let z = -24; z <= 24; z += 8) {
+      const ribMesh = new Mesh(
+        new ExtrudeGeometry(band(0.75), {
+          depth: 0.5,
+          bevelEnabled: false,
+          curveSegments: 1,
+        }),
+        rib,
+      );
+      // Its underside a little below the vault's.
+      ribMesh.position.set(0, -0.15, z - 0.25);
+      world.add(ribMesh);
+    }
+  }
   // ---- Skylights: light wells up to glowing panes ---------------------------
   const daylight = keep(new MeshBasicMaterial({ color: '#f7fcff' }));
   const well = keep(
@@ -636,8 +831,18 @@ export function startPoolroomsWorld(canvas: HTMLCanvasElement) {
       color: '#eef8fb',
       transparent: true,
       opacity: 0.92,
+      side: DoubleSide,
     }),
   );
+  /** Put a thing made in a wall's (u, v) plane onto that wall's line. */
+  const onWall = (mesh: Object3D, along: 'x' | 'z', at: number) => {
+    if (along === 'x') mesh.position.z = at;
+    else {
+      mesh.rotation.y = -Math.PI / 2;
+      mesh.position.x = at;
+    }
+    world.add(mesh);
+  };
   for (const w of WINDOWS) {
     const zone = zoneById(w.zone);
     const s = sideOf(zone.rect, w.side);
@@ -645,8 +850,67 @@ export function startPoolroomsWorld(canvas: HTMLCanvasElement) {
       y1 = zone.y + w.head;
     const mid = (w.from + w.to) / 2;
     const width = w.to - w.from;
-    const pane = new Mesh(new PlaneGeometry(width, y1 - y0), glass);
     const out = { north: -1, south: 1, west: -1, east: 1 }[w.side] * (WALL / 2);
+    if (w.shape === 'lancet' || w.shape === 'rose') {
+      const outline = windowOutline(w, zone.y);
+      const shape = new Shape();
+      shape.moveTo(outline[0][0], outline[0][1]);
+      for (const [u, v] of outline.slice(1)) shape.lineTo(u, v);
+      const geometry = new ShapeGeometry(shape);
+      onWall(new Mesh(geometry, glass), s.along, s.at + out);
+      const tracery = new Group();
+      if (w.shape === 'lancet') {
+        const spring = y1 - width;
+        box(
+          tracery,
+          frameMaterial,
+          0.07,
+          spring - y0,
+          0.1,
+          mid,
+          (y0 + spring) / 2,
+          0,
+        );
+        box(
+          tracery,
+          frameMaterial,
+          width,
+          0.07,
+          0.1,
+          mid,
+          (y0 + spring) / 2,
+          0,
+        );
+      } else {
+        const r = width / 2;
+        const cv = (y0 + y1) / 2;
+        for (let i = 0; i < 12; i++) {
+          const a = (i / 12) * Math.PI * 2;
+          const spoke = new Mesh(
+            new BoxGeometry(r - 0.6, 0.1, 0.12),
+            frameMaterial,
+          );
+          spoke.position.set(
+            mid + (Math.cos(a) * (r + 0.6)) / 2,
+            cv + (Math.sin(a) * (r + 0.6)) / 2,
+            0,
+          );
+          spoke.rotation.z = a;
+          tracery.add(spoke);
+        }
+        for (const ring of [0.6, r * 0.6, r - 0.05]) {
+          const torus = new Mesh(
+            new TorusGeometry(ring, 0.07, 6, 48),
+            frameMaterial,
+          );
+          torus.position.set(mid, cv, 0);
+          tracery.add(torus);
+        }
+      }
+      onWall(tracery, s.along, s.at);
+      continue;
+    }
+    const pane = new Mesh(new PlaneGeometry(width, y1 - y0), glass);
     if (s.along === 'x') pane.position.set(mid, (y0 + y1) / 2, s.at + out);
     else {
       pane.rotation.y = Math.PI / 2;
@@ -731,7 +995,9 @@ export function startPoolroomsWorld(canvas: HTMLCanvasElement) {
         at.z - inward[1] * 0.06,
       );
     } else if (lamp.kind === 'pendant') {
-      const top = span(zone).high + zone.height;
+      const top =
+        (lamp.zone === 'hall' ? vaultHeightAt(lamp.x) : null) ??
+        span(zone).high + zone.height;
       const length = top - lamp.y;
       const hanger = new Mesh(
         new CylinderGeometry(0.015, 0.015, length, 6),
@@ -740,6 +1006,24 @@ export function startPoolroomsWorld(canvas: HTMLCanvasElement) {
       hanger.position.set(lamp.x, lamp.y + length / 2, lamp.z);
       world.add(hanger);
       radius = 0.32;
+      if (lamp.zone === 'hall') {
+        // The chapel's: a corona, a ring of lights, round its globe.
+        const ring = new Mesh(new TorusGeometry(1.1, 0.04, 6, 32), rod);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.copy(at);
+        world.add(ring);
+        for (let k = 0; k < 8; k++) {
+          const a = (k / 8) * Math.PI * 2;
+          const small = new Mesh(new SphereGeometry(0.08, 10, 8), bulbs[tone]);
+          small.position.set(
+            at.x + Math.cos(a) * 1.1,
+            at.y + 0.1,
+            at.z + Math.sin(a) * 1.1,
+          );
+          world.add(small);
+        }
+        radius = 0.22;
+      }
     } else if (lamp.kind === 'post') {
       const floor = zoneFloor(zone, lamp.x, lamp.z);
       const pole = new Mesh(
@@ -801,17 +1085,25 @@ export function startPoolroomsWorld(canvas: HTMLCanvasElement) {
   const archStone = keep(
     new MeshStandardMaterial({ color: '#f3f5f4', roughness: 0.45 }),
   );
-  for (const arch of arches()) {
-    const mid = (arch.from + arch.to) / 2;
-    const radius = (arch.to - arch.from) / 2;
-    // The wall over it: from its spring to the taller zone's ceiling, its
+  for (const arch of allArches) {
+    if (arch.kind === 'link') {
+      uplight(arch);
+      continue;
+    }
+    // An arcade's arch: the wall over it, from its spring to its top, its
     // head cut out.
+    const curve = archCurve(
+      arch.from,
+      arch.to,
+      arch.spring,
+      arch.rise,
+      arch.style,
+    );
     const shape = new Shape();
     shape.moveTo(arch.from, arch.spring);
     shape.lineTo(arch.from, arch.wallTop);
     shape.lineTo(arch.to, arch.wallTop);
-    shape.lineTo(arch.to, arch.spring);
-    shape.absellipse(mid, arch.spring, radius, arch.rise, 0, Math.PI, false);
+    for (const [u, v] of [...curve].reverse()) shape.lineTo(u, v);
     const geometry = new ExtrudeGeometry(shape, {
       depth: arch.thickness,
       bevelEnabled: false,
@@ -825,7 +1117,10 @@ export function startPoolroomsWorld(canvas: HTMLCanvasElement) {
       head.position.set(arch.at + half, 0, 0);
     }
     world.add(head);
-    // An uplighter at each of its feet, washing light up its jambs.
+    uplight(arch);
+  }
+  /** An uplighter at each of an arch's feet, washing light up its jambs. */
+  function uplight(arch: Arch) {
     const rise = arch.spring + arch.rise * 0.6 - arch.floor;
     for (const [u, facing] of [
       [arch.from, 1],
