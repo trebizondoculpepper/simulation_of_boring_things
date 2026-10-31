@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
+  CAR_FRONT,
   DOOR_STACK,
   LANDING_SET,
+  doorPaths,
   doorPanels,
   doorTravel,
   landingArrival,
@@ -22,6 +24,7 @@ import {
 } from './main-corridor';
 import {
   BRIDGE_LIFT,
+  bridgeLiftPlace,
   CORNER_FILLET,
   ENTRY,
   bridgeWallGaps,
@@ -32,7 +35,22 @@ import {
   corridorFirePoints,
   corridorPosterPlacements,
 } from './corridor-posters';
-import { hallArches, hallLiftOpening, MUSEUM_WALL } from './museum-plan';
+import {
+  hallArches,
+  hallLiftOpening,
+  hallLiftPlace,
+  MUSEUM_WALL,
+} from './museum-plan';
+import {
+  holdLift,
+  LIFT_TIMING,
+  LIFTS,
+  newLift,
+  pressLift,
+  stepLift,
+} from './freight-lift';
+import type { LiftFloor, LiftState } from './freight-lift';
+import type { LiftPlace } from './lift-doorway';
 
 const ahead = (yaw: number) => ({ x: Math.sin(yaw), z: -Math.cos(yaw) });
 
@@ -203,4 +221,136 @@ describe('the freight lift’s landings (mission 108)', () => {
         expect(Math.abs(u - lift.u) - a.w / 2 - DOOR_STACK).toBeGreaterThan(0);
       }
   });
+});
+
+/** The walker's footprint's half-width (`first-person.ts`, `WALKER_RADIUS_METRES`). */
+const WALKER = 0.175;
+/** Clear of a path by this much, its footprint (square to the room) turned however the doorway is. */
+const CLEAR = WALKER * Math.SQRT2 + 0.01;
+
+/**
+ * Every lift doorway the game has: the car's (the same for both lifts) and
+ * each landing's, B2 in the corridor, 3 on the bridge, 4 in the museum,
+ * and the trial lift's dev floors (`TRIAL_LANDING`, at the room's origin).
+ */
+const LANDINGS: [string, LiftPlace][] = [
+  ['B2 (main corridor)', CORRIDOR_LIFT],
+  ['3 (bridge)', bridgeLiftPlace()],
+  ['4 (museum)', hallLiftPlace('museum0')!],
+  ['the trial lift’s dev floors', { x: 0, z: 0, yaw: 0 }],
+];
+const CAR: LiftPlace = { x: 0, z: 0, yaw: 0 };
+const mid = (r: { v0: number; v1: number }) => (r.v0 + r.v1) / 2;
+
+describe('the doors’ paths: the walker in the way (safety edges)', () => {
+  it('each door’s path is the strip its panels sweep, stack to stack, as deep as its reveal', () => {
+    for (const landing of [false, true]) {
+      const p = doorPaths(landing);
+      for (const r of [p.landing, p.car]) {
+        expect(r.u1 - r.u0).toBeCloseTo(2 * DOOR_STACK);
+        expect(r.v1 - r.v0).toBeCloseTo(LIFT_DOOR.depth);
+      }
+    }
+    // From a landing, its own leaves’ path is its leaf stop, and the car’s
+    // lies beyond the sill’s edge.
+    const d = liftDoorway({ x: 0, z: 0, yaw: 0 }, true);
+    expect(d.paths.landing.v0).toBeCloseTo(d.leaf.minZ);
+    expect(d.paths.landing.v1).toBeCloseTo(d.leaf.maxZ);
+    expect(d.paths.car.v1).toBeCloseTo(
+      -LANDING_SET - CAR_FRONT + LIFT_DOOR.depth,
+    );
+    // From the car, its door just inside its sill, the landing’s just out.
+    const c = doorPaths(false);
+    expect(c.car.v1).toBeCloseTo(CAR_FRONT);
+    expect(c.landing.v1).toBeCloseTo(0);
+  });
+  for (const [name, place] of LANDINGS)
+    it(`at landing ${name}: in either door’s path it is blocked; just outside, not`, () => {
+      const d = liftDoorway(place, true);
+      const at = (u: number, v: number) => liftWorld(place, u, v);
+      const blocks = (u: number, v: number) => {
+        const p = at(u, v);
+        return d.blocks(p.x, p.z, WALKER);
+      };
+      // In the landing doors’ path, in the middle and near a jamb.
+      expect(blocks(0, mid(d.paths.landing))).toBe(true);
+      expect(blocks(0.6, mid(d.paths.landing))).toBe(true);
+      // Out in the room, its footprint just reaching the path.
+      expect(blocks(0, d.paths.landing.v1 + WALKER - 0.01)).toBe(true);
+      // In the car doors’ path, across the sill.
+      expect(blocks(0, mid(d.paths.car))).toBe(true);
+      // Just outside the path, and well out in the room.
+      expect(blocks(0, d.paths.landing.v1 + CLEAR)).toBe(false);
+      expect(blocks(0, 1.5)).toBe(false);
+      // Inside the car, clear of its doors, seen from the landing.
+      expect(blocks(0, d.paths.car.v0 - CLEAR)).toBe(false);
+    });
+  it('in the car: in its door’s path or the landing’s across the sill, blocked; inside, clear of them, not', () => {
+    const d = liftDoorway(CAR);
+    const blocks = (u: number, v: number) =>
+      d.blocks(liftWorld(CAR, u, v).x, liftWorld(CAR, u, v).z, WALKER);
+    expect(blocks(0, mid(d.paths.car))).toBe(true);
+    expect(blocks(-0.5, CAR_FRONT + WALKER - 0.01)).toBe(true);
+    expect(blocks(0, mid(d.paths.landing))).toBe(true);
+    expect(blocks(0, CAR_FRONT + WALKER + 0.01)).toBe(false);
+    expect(blocks(0, LIFT_CAR.d / 2)).toBe(false);
+    // In a back corner, and against a front return beside the doorway.
+    expect(blocks(LIFT_CAR.w / 2 - WALKER, LIFT_CAR.d - WALKER)).toBe(false);
+    expect(blocks(1.1, CAR_FRONT + 0.04 + WALKER)).toBe(false);
+  });
+});
+
+describe('the doors never close on the walker, at every floor of both lifts', () => {
+  /** The lift standing at `floor`, its doors open. */
+  const openAt = (floors: readonly LiftFloor[], floor: string): LiftState =>
+    stepLift(
+      pressLift({ ...newLift(floors), floor }, floor, floors),
+      LIFT_TIMING.doors + 0.1,
+      floors,
+    );
+  for (const id of ['freight', 'trial'] as const) {
+    const { floors } = LIFTS[id];
+    for (const f of floors.filter((x) => x.room)) {
+      const place =
+        id === 'trial'
+          ? LANDINGS[3][1]
+          : (LANDINGS.find(([n]) => n.startsWith(f.label + ' '))?.[1] ?? null);
+      if (!place) throw new Error(`no landing for ${id} ${f.id}`);
+      it(`${id} lift, floor ${f.label}: standing in either door, from the landing or the car`, () => {
+        const landing = liftDoorway(place, true);
+        const car = liftDoorway(CAR);
+        const spots = [
+          // From the landing: its doors, and the car’s across the sill.
+          () => {
+            const p = liftWorld(place, 0, mid(landing.paths.landing));
+            return landing.blocks(p.x, p.z, WALKER);
+          },
+          () => {
+            const p = liftWorld(place, 0.3, mid(landing.paths.car));
+            return landing.blocks(p.x, p.z, WALKER);
+          },
+          // From the car: its doors, and the landing’s across the sill.
+          () => car.blocks(0, mid(car.paths.car), WALKER),
+          () => car.blocks(-0.3, mid(car.paths.landing), WALKER),
+        ];
+        for (const spot of spots) {
+          const blocked = spot();
+          expect(blocked).toBe(true);
+          // Called elsewhere meanwhile: the car must not leave.
+          let l = holdLift(openAt(floors, f.id), true, blocked);
+          const away = floors.find((x) => x.room && x.id !== f.id)!;
+          l = pressLift(l, away.id, floors);
+          l = stepLift(l, LIFT_TIMING.nudgeAfter + 30, floors);
+          expect(l.doors).toBe('open');
+          expect(l.trip).toBeNull();
+          // Clear: it closes after its dwell, then goes.
+          l = holdLift(l, false, false);
+          l = stepLift(l, LIFT_TIMING.reopenDwell - 0.2, floors);
+          expect(l.doors).toBe('open');
+          l = stepLift(l, 0.4 + LIFT_TIMING.nudgeDoors, floors);
+          expect(l.open).toBeLessThan(1);
+        }
+      });
+    }
+  }
 });

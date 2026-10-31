@@ -93,6 +93,93 @@ export function doorPanels(k: number): { fast: number; slow: number } {
  */
 export const LIFT_CAR = { w: 2.62, d: 2.8, h: 2.4 } as const;
 
+/**
+ * How far into the car its front stands behind its sill's edge: the car
+ * door's panels run in the reveal (`LIFT_DOOR.depth`) just inside it.
+ */
+export const CAR_FRONT = 0.12;
+
+/** A rectangle in a place's frame: `u` from `u0` to `u1`, `v` from `v0` to `v1`. */
+export interface LocalRect {
+  u0: number;
+  u1: number;
+  v0: number;
+  v1: number;
+}
+
+/**
+ * The strips of floor the doors' panels sweep between open and shut, in a
+ * doorway's frame: the landing's leaves (in its recess) and the car's (in
+ * its reveal), each from one stack (`DOOR_STACK` out) to the other, as
+ * deep as its reveal. From the car (`landing` false) the landing's doors
+ * stand across the running gap, just out past the sill's edge; from a
+ * landing, the car's stand beyond its recess and the sill gap.
+ */
+export function doorPaths(landing = false): {
+  landing: LocalRect;
+  car: LocalRect;
+} {
+  const d = LIFT_DOOR.depth;
+  const across = { u0: -DOOR_STACK, u1: DOOR_STACK };
+  // In the car's frame: its door in its reveal, the landing's beyond its sill.
+  const car = { v0: CAR_FRONT - d, v1: CAR_FRONT };
+  const land = { v0: -d, v1: 0 };
+  if (!landing)
+    return { landing: { ...across, ...land }, car: { ...across, ...car } };
+  // In a landing's frame, `v` into its room: the car's `v` turned about.
+  const turn = (r: { v0: number; v1: number }) => ({
+    ...across,
+    v0: -LANDING_SET - r.v1,
+    v1: -LANDING_SET - r.v0,
+  });
+  return { landing: turn(land), car: turn(car) };
+}
+
+/**
+ * Whether a walker's footprint (a square `radius` either way, square to
+ * its room, as the walk's collision has it: `walk-collision.ts`) standing
+ * at (x, z) meets a rectangle in a place's frame, turned however the place
+ * is: tested on the four axes that could part them.
+ */
+export function footprintMeets(
+  place: LiftPlace,
+  rect: LocalRect,
+  x: number,
+  z: number,
+  radius: number,
+) {
+  const corners = [
+    liftWorld(place, rect.u0, rect.v0),
+    liftWorld(place, rect.u1, rect.v0),
+    liftWorld(place, rect.u1, rect.v1),
+    liftWorld(place, rect.u0, rect.v1),
+  ];
+  const square = [
+    { x: x - radius, z: z - radius },
+    { x: x + radius, z: z - radius },
+    { x: x + radius, z: z + radius },
+    { x: x - radius, z: z + radius },
+  ];
+  const c = Math.cos(place.yaw);
+  const s = Math.sin(place.yaw);
+  const axes = [
+    { x: 1, z: 0 },
+    { x: 0, z: 1 },
+    { x: c, z: -s },
+    { x: s, z: c },
+  ];
+  const eps = 1e-9;
+  return axes.every((a) => {
+    const along = (p: { x: number; z: number }) => p.x * a.x + p.z * a.z;
+    const r = corners.map(along);
+    const q = square.map(along);
+    return (
+      Math.min(...q) < Math.max(...r) - eps &&
+      Math.max(...q) > Math.min(...r) + eps
+    );
+  });
+}
+
 /** The walker's half-width given to the light curtain: within this of the doorway, it is held. */
 const CURTAIN_REACH = 0.35;
 
@@ -166,6 +253,19 @@ export function liftDoorway(place: LiftPlace, landing = false) {
     through(x: number, z: number) {
       const { u, v } = liftLocal(place, x, z);
       return v < -set - 0.05 && Math.abs(u) < half;
+    },
+    /** The strips of floor the landing's and the car's doors sweep (`doorPaths`), in the place's frame. */
+    paths: doorPaths(landing),
+    /**
+     * Whether a walker of `radius` at (x, z) stands in either door's path:
+     * the doors must not close on it (their safety edges).
+     */
+    blocks(x: number, z: number, radius: number) {
+      const paths = doorPaths(landing);
+      return (
+        footprintMeets(place, paths.landing, x, z, radius) ||
+        footprintMeets(place, paths.car, x, z, radius)
+      );
     },
     /** In the doorway, or near enough the face for the light curtain. */
     inDoorway(x: number, z: number, radius = 0.3) {

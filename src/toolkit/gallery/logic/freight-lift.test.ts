@@ -105,6 +105,77 @@ describe('the freight lift’s doors', () => {
     expect(l.doors).toBe('shut');
     expect(l.nudging).toBe(false);
   });
+  it('someone in a door’s path: they never close, however long, nor nudge', () => {
+    let l = holdLift(openAtFloor(), true, true);
+    expect(l.blocked).toBe(true);
+    l = run(l, T.nudgeAfter + 10, 0.1);
+    expect(l.doors).toBe('open');
+    expect(l.nudging).toBe(false);
+    expect(closingWarning(l)).toBe(false);
+  });
+  it('in a door’s path, the light curtain counts as broken', () => {
+    const l = holdLift(openAtFloor(), false, true);
+    expect(l.held).toBe(true);
+  });
+  it('someone stepping into a door’s path as they close: they reopen, and hold', () => {
+    let l = run(openAtFloor(), T.carDwell + 0.5);
+    expect(l.doors).toBe('closing');
+    const closing = l.open;
+    l = holdLift(l, true, true);
+    expect(l.doors).toBe('opening');
+    l = run(l, T.doors + 0.1);
+    expect(l.doors).toBe('open');
+    expect(l.open).toBeGreaterThan(closing);
+    l = run(l, 30, 0.1);
+    expect(l.doors).toBe('open');
+  });
+  it('nudging shut, the curtain ignored, they still reopen for someone in their path', () => {
+    let l = run(holdLift(openAtFloor(), true), T.nudgeAfter + 0.5);
+    expect(l.nudging).toBe(true);
+    expect(l.doors).toBe('closing');
+    l = holdLift(l, true, true);
+    expect(l.doors).toBe('opening');
+    // Blocked at the moment the world steps, too.
+    let m = run(holdLift(openAtFloor(), true), T.nudgeAfter + 0.5);
+    m = { ...m, blocked: true };
+    m = run(m, 0.1);
+    expect(m.doors).toBe('opening');
+    m = run(m, T.doors + 30, 0.1);
+    expect(m.doors).toBe('open');
+  });
+  it('the way clear, they close after the reopen dwell', () => {
+    let l = run(holdLift(openAtFloor(), true, true), 10, 0.1);
+    l = holdLift(l, false, false);
+    expect(l.blocked).toBe(false);
+    l = run(l, T.reopenDwell - 0.2);
+    expect(l.doors).toBe('open');
+    l = run(l, 0.4);
+    expect(l.doors).toBe('closing');
+    l = run(l, T.doors + 0.1);
+    expect(l.doors).toBe('shut');
+  });
+  it('cleared while reopening, they still wait the reopen dwell once open', () => {
+    let l = run(openAtFloor(), T.carDwell + 0.5);
+    l = holdLift(l, true, true);
+    l = holdLift(run(l, 0.2), false, false);
+    expect(l.doors).toBe('opening');
+    while (l.doors === 'opening') l = stepLift(l, 1 / 60);
+    l = run(l, T.reopenDwell - 0.2);
+    expect(l.doors).toBe('open');
+  });
+  it('out of the path but still in the curtain, they nudge as before', () => {
+    let l = run(holdLift(openAtFloor(), true, true), 5, 0.1);
+    l = holdLift(l, true, false);
+    l = run(l, T.nudgeAfter, 0.1);
+    expect(l.nudging).toBe(true);
+  });
+  it('someone in a door’s path when shut: they open, and the car does not leave', () => {
+    let l = pressLift({ ...newLift(), floor: 'b2' }, '4');
+    l = { ...l, blocked: true, held: true };
+    l = run(l, 0.1);
+    expect(l.trip).toBeNull();
+    expect(l.doors).toBe('opening');
+  });
   it('DOOR CLOSE shortens the dwell; DOOR OPEN reopens and holds', () => {
     let l = pressLift(openAtFloor(), 'close');
     l = run(l, T.warning);

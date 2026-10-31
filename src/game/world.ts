@@ -325,7 +325,7 @@ import type {
   LiftState,
 } from '../toolkit/gallery/logic/freight-lift';
 
-export const WORLD_VERSION = 61;
+export const WORLD_VERSION = 62;
 
 /**
  * Where the main corridor's control room doors lead (the owner,
@@ -611,7 +611,14 @@ export type WorldAction =
   /** The freight lift (mission 108): a landing's call, a car button, the doorway held, the floor ahead built. */
   | { type: 'lift/call'; lift: LiftId; floor: string }
   | { type: 'lift/press'; lift: LiftId; button: LiftButton }
-  | { type: 'lift/hold'; lift: LiftId; held: boolean }
+  | {
+      type: 'lift/hold';
+      lift: LiftId;
+      /** Someone in the doorway: the light curtain broken. */
+      held: boolean;
+      /** Someone standing in either door's path: the doors must not close on them. */
+      blocked?: boolean;
+    }
   | { type: 'lift/ready'; lift: LiftId; floor: string }
   | { type: 'bridge/theme-heard' }
   /** The bridge's displays switched on or off (`bridgeDisplaysOn`). */
@@ -1020,7 +1027,7 @@ export function applyAction(world: World, action: WorldAction): World {
           : action.type === 'lift/press'
             ? pressLift(was, action.button, floors)
             : action.type === 'lift/hold'
-              ? holdLift(was, action.held)
+              ? holdLift(was, action.held, action.blocked ?? false)
               : liftReady(was, action.floor);
       return lift === was
         ? world

@@ -441,7 +441,11 @@ function said(
     case 'lift/hold':
       return {
         subject: LIFTS[action.lift].name,
-        text: action.held ? 'doorway occupied' : 'doorway clear',
+        text: action.blocked
+          ? 'doors obstructed'
+          : action.held
+            ? 'doorway occupied'
+            : 'doorway clear',
       };
     case 'lift/ready':
       return {

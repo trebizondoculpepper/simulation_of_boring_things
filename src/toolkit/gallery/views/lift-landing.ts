@@ -8,6 +8,7 @@ import {
 } from 'three';
 import type { Camera, Object3D } from 'three';
 import type { Footprint } from '../../controls/logic/walk-collision';
+import { WALKER_RADIUS_METRES } from '../../controls/input/first-person';
 import type { PanelKit } from '../../components/core/views/eighties-controls';
 import {
   createSevenSegment,
@@ -279,6 +280,7 @@ export function installLiftLanding(o: LiftLandingOptions) {
   });
 
   let held = false;
+  let blocked = false;
   let leaving = false;
   // In charge only once its room is entered (`resume`), not while built
   // unseen ahead of the car or drawn once to warm it.
@@ -337,11 +339,15 @@ export function installLiftLanding(o: LiftLandingOptions) {
         return;
       }
       const w = atWalker();
-      // The light curtain: someone in the doorway while the car is here.
-      const inWay = here && doorway.inDoorway(w.x, w.z);
-      if (inWay !== held) {
+      // The light curtain: someone in the doorway while the car is here;
+      // and the doors' safety edges: someone in either door's path (the
+      // landing's, or the car's across the sill).
+      const inPath = here && doorway.blocks(w.x, w.z, WALKER_RADIUS_METRES);
+      const inWay = inPath || (here && doorway.inDoorway(w.x, w.z));
+      if (inWay !== held || inPath !== blocked) {
         held = inWay;
-        store.dispatch({ type: 'lift/hold', lift: o.lift, held: inWay });
+        blocked = inPath;
+        store.dispatch({ type: 'lift/hold', lift: o.lift, held, blocked });
       }
       // Nobody is in the car: wherever it is going, it may arrive unseen.
       if (l.trip && !l.trip.ready)
@@ -374,6 +380,7 @@ export function installLiftLanding(o: LiftLandingOptions) {
         leaving = true;
         if (held) {
           held = false;
+          blocked = false;
           store.dispatch({ type: 'lift/hold', lift: o.lift, held: false });
         }
         enterDevRoom(car, o.room, true);
@@ -383,6 +390,7 @@ export function installLiftLanding(o: LiftLandingOptions) {
     resume() {
       leaving = false;
       held = false;
+      blocked = false;
       was = null;
       active = true;
     },

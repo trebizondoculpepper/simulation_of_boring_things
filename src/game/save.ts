@@ -272,6 +272,9 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
       : world.bridgeConsoles;
     return { ...world, distribution, bridgeConsoles: consoles };
   },
+  // 61 → 62: each lift's doors' safety edges, nobody in their path
+  // (`fillDefaults` adds `blocked`).
+  61: (world) => world,
   // 60 → 61: the Dr Aqualis Trios (mission 114), the Lounge's and the
   // Olympic's, running in AUTO, each cell settled on its pool's tank water
   // and its chlorine integral carrying on the old controller's dose, so

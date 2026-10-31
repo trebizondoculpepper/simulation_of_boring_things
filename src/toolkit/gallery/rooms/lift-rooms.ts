@@ -77,6 +77,7 @@ import {
 } from '../logic/freight-lift';
 import type { LiftId, LiftState } from '../logic/freight-lift';
 import {
+  CAR_FRONT,
   landingArrival,
   LANDING_SET,
   LIFT_CAR,
@@ -290,7 +291,7 @@ function certificate(kit: PanelKit, name: string) {
 }
 
 /** How far into the car its front stands behind its sill's edge: the car door's panels run there. */
-const FRONT = 0.12;
+const FRONT = CAR_FRONT;
 /** The judder's tremble, metres for each level per second squared the car accelerates: about 5 mm at its hardest. */
 const JUDDER = 0.008;
 
@@ -630,6 +631,7 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
     };
 
   let held = false;
+  let blocked = false;
   let leaving = false;
   let was: LiftState | null = null;
   let warned = false;
@@ -674,10 +676,14 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
     if (!walk.following && !leaving) {
       partAudio.listen(camera, metre, scene);
       const w = { x: walk.walker.x / metre, z: walk.walker.z / metre };
-      const inWay = here && doorway.inDoorway(w.x, w.z);
-      if (inWay !== held) {
+      // The light curtain, and the doors' safety edges: someone in either
+      // door's path (the car's, or the landing's across the sill).
+      const inPath = here && doorway.blocks(w.x, w.z, WALKER_RADIUS_METRES);
+      const inWay = inPath || (here && doorway.inDoorway(w.x, w.z));
+      if (inWay !== held || inPath !== blocked) {
         held = inWay;
-        store.dispatch({ type: 'lift/hold', lift: id, held: inWay });
+        blocked = inPath;
+        store.dispatch({ type: 'lift/hold', lift: id, held, blocked });
       }
       // The floor ahead built and warmed unseen while the car runs: only
       // then may it arrive.
@@ -724,6 +730,7 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
         leaving = true;
         if (held) {
           held = false;
+          blocked = false;
           store.dispatch({ type: 'lift/hold', lift: id, held: false });
         }
         enterDevRoom(to, room, true);
@@ -750,6 +757,7 @@ export function startLiftCarRoom(canvas: HTMLCanvasElement, id: LiftId) {
       resume() {
         leaving = false;
         held = false;
+        blocked = false;
         was = null;
       },
       suspend() {

@@ -169,6 +169,12 @@ export interface LiftState {
   trip: LiftTrip | null;
   /** Someone in the doorway (the light curtain): the doors stay open, or reopen. */
   held: boolean;
+  /**
+   * Someone standing in either door's path, the strip of floor its panels
+   * sweep (the doors' safety edges, `lift-doorway.ts`): the doors never
+   * close on them, nudging or not; closing, they reopen; shut, they open.
+   */
+  blocked: boolean;
   /** Seconds the doorway has held the doors at this stop. */
   heldFor: number;
   /** Closing slowly with the buzzer, the light curtain ignored: held too long. */
@@ -189,6 +195,7 @@ export function newLift(floors = LIFT_FLOORS): LiftState {
     direction: null,
     trip: null,
     held: false,
+    blocked: false,
     heldFor: 0,
     nudging: false,
     alarm: 0,
@@ -436,18 +443,35 @@ export function pressLift(
   return { ...lift, carCalls: [...lift.carCalls, button] };
 }
 
-/** Someone in the doorway, or not: the light curtain, told by the room the walker is in. */
-export function holdLift(lift: LiftState, held: boolean): LiftState {
-  if (lift.held === held) return lift;
-  const next = { ...lift, held };
-  if (!held)
-    return lift.doors === 'open'
-      ? { ...next, dwell: Math.max(lift.dwell, LIFT_TIMING.reopenDwell) }
-      : next;
-  return lift.doors === 'closing' && !lift.nudging
-    ? { ...next, doors: 'opening' }
-    : next;
+/**
+ * Someone in the doorway, or not, told by the room the walker is in: `held`
+ * the light curtain (near the doorway), `blocked` standing in either
+ * door's path (which the curtain covers too). Closing, the doors reopen,
+ * held at least the reopen dwell; nudging, only the path stops them. Once
+ * clear, they wait that dwell before closing again.
+ */
+export function holdLift(
+  lift: LiftState,
+  held: boolean,
+  blocked = false,
+): LiftState {
+  const curtain = held || blocked;
+  if (lift.held === curtain && lift.blocked === blocked) return lift;
+  const next = { ...lift, held: curtain, blocked };
+  const dwell = Math.max(lift.dwell, LIFT_TIMING.reopenDwell);
+  if (lift.doors === 'closing' && (blocked || (curtain && !lift.nudging)))
+    return { ...next, doors: 'opening', dwell };
+  if (!curtain && (lift.doors === 'open' || lift.doors === 'opening'))
+    return { ...next, dwell };
+  return next;
 }
+
+/**
+ * Whether the doors may move towards shut: never while someone stands in
+ * their path; nor, unless nudging, while the light curtain is broken.
+ */
+export const mayClose = (lift: LiftState) =>
+  !lift.blocked && (!lift.held || lift.nudging);
 
 /**
  * The floor ahead built and ready to be seen (its room's `lift/ready`): the
@@ -501,6 +525,8 @@ function tick(
       return open >= 1 ? { ...l, open: 1, doors: 'open' } : { ...l, open };
     }
     case 'open': {
+      // In the doors' path: they stay open, however long.
+      if (l.blocked) return { ...l, heldFor: l.heldFor + dt };
       if (l.held) {
         const heldFor = l.heldFor + dt;
         return heldFor >= LIFT_TIMING.nudgeAfter
@@ -513,7 +539,12 @@ function tick(
         : { ...l, dwell };
     }
     case 'closing': {
-      if (l.held && !l.nudging) return { ...l, doors: 'opening' };
+      if (!mayClose(l))
+        return {
+          ...l,
+          doors: 'opening',
+          dwell: Math.max(l.dwell, LIFT_TIMING.reopenDwell),
+        };
       const rate =
         dt / (l.nudging ? LIFT_TIMING.nudgeDoors : LIFT_TIMING.doors);
       const open = Math.max(0, l.open - rate);
@@ -522,6 +553,10 @@ function tick(
         : { ...l, open };
     }
     case 'shut': {
+      // Someone in the doors' path (come there as they shut): they open
+      // again, and the car goes nowhere.
+      if (l.blocked)
+        return { ...l, doors: 'opening', dwell: LIFT_TIMING.reopenDwell };
       const next = nextStop(l, floors);
       if (next === null) return l.direction ? { ...l, direction: null } : l;
       if (next === l.floor) return arrive(l, next);
@@ -546,6 +581,7 @@ function atRest(l: LiftState, floors: readonly LiftFloor[]) {
     );
   return (
     l.doors === 'shut' &&
+    !l.blocked &&
     !l.direction &&
     !l.carCalls.length &&
     !l.hallCalls.length

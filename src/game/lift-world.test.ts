@@ -26,6 +26,24 @@ describe('the freight lift in the world (mission 108)', () => {
     expect(w.lifts.trial.carCalls).toEqual(['3']);
     expect(w.lifts.freight.carCalls).toEqual([]);
   });
+  it('someone in the doors’ path: they stay open, and the car waits, until the way is clear', () => {
+    let w = newWorld();
+    w = applyAction(w, { type: 'lift/call', lift: 'trial', floor: '1' });
+    w = applyAction(w, { type: 'lift/press', lift: 'trial', button: '3' });
+    w = applyAction(w, {
+      type: 'lift/hold',
+      lift: 'trial',
+      held: true,
+      blocked: true,
+    });
+    expect(w.lifts.trial.blocked).toBe(true);
+    for (let i = 0; i < 600; i++) w = stepWorld(w, 0.1);
+    expect(w.lifts.trial.doors).toBe('open');
+    expect(w.lifts.trial.trip).toBeNull();
+    w = applyAction(w, { type: 'lift/hold', lift: 'trial', held: false });
+    for (let i = 0; i < 100; i++) w = stepWorld(w, 0.1);
+    expect(w.lifts.trial.trip?.to).toBe('3');
+  });
   it('a press of a dead button changes nothing', () => {
     const w = newWorld();
     expect(
