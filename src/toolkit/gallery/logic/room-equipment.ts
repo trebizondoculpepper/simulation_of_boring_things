@@ -1,4 +1,5 @@
 import { CHEMICALS } from '../../../game/plant/chemicals';
+import { PLANT_DOOR } from '../../components/architectural/logic/plant-door';
 import { OT216_SIZE } from '../../components/industrial-control/logic/ot216-terminal';
 import {
   DAY_TANKS,
@@ -1794,13 +1795,22 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
         along: hypoPlaced.footprint.minX - WALL_GAP - 2 * apart - acid.w / 2,
       }),
     );
-    // The annunciator on the south wall where the owner put it
-    // (2026-10-28): east of the door, behind the heat exchanger.
+    // The annunciator on the south wall, just west of the door (the owner,
+    // 2026-10-31, moving it from east of the door, where it was put on
+    // 2026-10-28, to clear floor east of the door for the Dr Aqualis Trio).
+    // The doorway is in the middle of its clear zone.
     const annunciator = at('annunciator');
     out.push(
       put(box, annunciator, {
         wall: 'south',
-        along: Math.max(1.63, doorEast + 0.1 + annunciator.w / 2),
+        // Edged up to the door's frame (the owner), over the open floor
+        // inside the doorway, where its ACCEPT and RESET are in reach,
+        // rather than behind sand filter 1.
+        along:
+          (door + doorEast) / 2 -
+          (PLANT_DOOR.leaf.w + 2 * PLANT_DOOR.frame) / 2 -
+          0.1 -
+          annunciator.w / 2,
       }),
     );
     const panel = at('local control panel');
