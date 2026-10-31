@@ -356,13 +356,16 @@ async function candidates(usage: Map<string, Usage>): Promise<Candidate[]> {
       };
     },
   });
-  // The Aqualis cabinet (mission 114): its screen redrawn every two seconds
-  // (a screen of its cycle changing) and Dr Aqualis's overlay (230 × 300)
-  // at his 10 Hz, as while he animates; its lamps, sample meter and pump worked.
+  // The Aqualis cabinet (mission 114): its screen (a colour LCD, washed
+  // out per pixel off its normal) redrawn every two seconds (a screen of its
+  // cycle changing) and Dr Aqualis's overlay (230 × 300) at his 10 Hz, as
+  // while he animates; its lamps worked; its lower door opened and shut
+  // every eight seconds, its sample meter and pump drawn and worked only
+  // while it is open.
   usage.set('part:aqualis-cabinet', { count: 1, busy: 0, rooms: ['dev58'] });
   list.push({
     id: 'part:aqualis-cabinet',
-    label: 'Aqualis cabinet (12-inch touch screen, HAND · OFF · AUTO)',
+    label: 'Aqualis cabinet (12-inch colour LCD, HAND · OFF · AUTO)',
     source: 'part',
     room: 'dev58',
     build: (kit) => {
@@ -386,6 +389,7 @@ async function candidates(usage: Map<string, Usage>): Promise<Candidate[]> {
               alarm: false,
             });
             cab.setSampleFlow(20 + (second % 5) * 4);
+            cab.setDoorOpen(second % 4 >= 2);
           }
           if (Math.floor(t * 10) !== frame) {
             frame = Math.floor(t * 10);

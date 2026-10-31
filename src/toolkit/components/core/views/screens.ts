@@ -6,11 +6,14 @@ import { watchDisplay } from './display-reach';
  * A small canvas texture for lettering and screens; `kind` says what kind
  * of screen it is, so it is drawn only where it could be read
  * (`display-reach.ts`); `printed` for anything that is not a screen.
+ * `maxHz`, if given, is its own limit on new pictures a second, where its
+ * panel is quicker or slower than its kind's.
  */
 export function createCanvasTexture(
   width: number,
   height: number,
   kind: DisplayKind = 'printed',
+  { maxHz }: { maxHz?: number } = {},
 ) {
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -21,7 +24,7 @@ export function createCanvasTexture(
   texture.anisotropy = 8;
   texture.colorSpace = SRGBColorSpace;
   // Flat beyond reading distance (the owner, 2026-10-29).
-  watchDisplay(texture, canvas, kind);
+  watchDisplay(texture, canvas, kind, maxHz);
   return { canvas, context, texture };
 }
 

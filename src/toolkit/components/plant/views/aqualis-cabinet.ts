@@ -10,6 +10,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import type { PanelKit } from '../../core/views/eighties-controls';
 import { tools, SANS } from '../../core/views/fitting-tools';
 import { createCanvasTexture } from '../../core/views/screens';
+import { setLcdBacklight } from '../../core/views/display-reach';
 import { createBrandBadge } from '../../core/views/brand-badge';
 import { createPs1Material } from '../../core/parts/ps1-material';
 import { createPartSet, selector } from '../../core/parts/parts';
@@ -44,11 +45,14 @@ import type { CabinetModel, LedId, LedState } from '../logic/aqualis-cabinet';
 /**
  * The Aqualis Interactive water-quality controller (mission 114,
  * `doc/plans/114/`): a floor-standing white cabinet of the early 2000s, its
- * lower section the sampling and wet chemistry behind a windowed door (the
- * flow cell and its probes, the sample rotameter, the reagent bottles, the
- * sample inlet and outlet out of its side, an isolating ball valve on the
- * inlet), its upper section the compute and control: on its door a 7-inch
- * touch screen (a canvas texture, `SCREEN` 800 × 480, unlit), an engraved
+ * lower section the sampling and wet chemistry behind an opaque white door
+ * (the flow cell and its probes, the sample rotameter, the reagent bottles,
+ * the sample pump, its circuit boards; drawn only while the door is open or
+ * opening, so a shut cabinet costs nothing for its insides), the sample
+ * inlet and outlet out of its side, an isolating ball valve on the inlet;
+ * its upper section the compute and control: on its door a 12-inch colour
+ * TFT (a canvas texture, `SCREEN`, a backlit `lcd`, washing out off its
+ * narrow angle and black with its power off), an engraved
  * HAND · OFF · AUTO selector and its status lamps; cable glands on top for
  * its three control ports and its alarm output. A glossy rounded top cap and
  * a blue accent strip, as the period liked.
@@ -209,7 +213,7 @@ export function createAqualisCabinet(
     d / 2,
   );
   // The upper section's carcass is closed; the lower's is a shell (sides,
-  // back, floor and roof), so its window shows the wet chemistry inside.
+  // back, floor and roof), so its open door shows the wet chemistry inside.
   const upperH = h - cap - split;
   t.box(
     group,
@@ -246,12 +250,12 @@ export function createAqualisCabinet(
   t.box(group, blue, w + 0.004, 0.014, 0.004, 0, h - cap + 0.004, d + 0.012);
   t.box(group, dark, w, 0.008, 0.004, 0, split, front);
 
-  // ---- The lower section: the wet chemistry behind its windowed door -----------------
+  // ---- The lower section: the wet chemistry behind its door -------------------------
   const lowH = split - plinth - 0.006;
   const lowY = plinth + lowH / 2;
   const frameW = 0.05;
-  // The door: a frame round a clear window, hinged on its right edge so it
-  // swings clear of the sample valve on the left; its handle on the left.
+  // The door: an opaque white leaf, as the cabinet, hinged on its right edge
+  // so it swings clear of the sample valve on the left; its handle on the left.
   const lowerDoor = new Group();
   lowerDoor.name = `${info.name} lower door`;
   lowerDoor.position.set(w / 2, 0, front - door / 2);
@@ -260,23 +264,7 @@ export function createAqualisCabinet(
     mesh.name = lowerDoor.name;
     return mesh;
   };
-  for (const x of [-w + frameW / 2, -frameW / 2])
-    leaf(t.box(lowerDoor, whiteDoor, frameW, lowH, door, x, lowY, 0));
-  for (const y of [plinth + frameW / 2, split - 0.006 - frameW / 2])
-    leaf(t.box(lowerDoor, whiteDoor, w, frameW, door, -w / 2, y, 0));
-  const glass = createPs1Material({
-    color: '#cfe6f2',
-    transparent: true,
-    opacity: 0.18,
-    roughness: 0.05,
-  });
-  kit.materials.push(glass);
-  const pane = leaf(
-    new Mesh(new PlaneGeometry(w - 2 * frameW, lowH - 2 * frameW), glass),
-  );
-  pane.position.set(-w / 2, lowY, 0);
-  pane.renderOrder = 2;
-  lowerDoor.add(pane);
+  leaf(t.box(lowerDoor, whiteDoor, w, lowH, door, -w / 2, lowY, 0));
   leaf(
     t.box(
       lowerDoor,
@@ -317,10 +305,20 @@ export function createAqualisCabinet(
   lowerDoor.add(note);
   const doorMeshes = new Set<Object3D>();
   lowerDoor.traverse((o) => doorMeshes.add(o));
+  // Everything inside the lower section, drawn only while its door is
+  // open or opening (the owner, 2026-10-31); the note inside the door with it.
+  const contents = new Group();
+  contents.name = `${info.name} lower section contents`;
+  contents.visible = false;
+  // Shown and hidden: never merged with the still parts (`mergeStatic`).
+  contents.userData.live = true;
+  note.userData.live = true;
+  note.visible = false;
+  group.add(contents);
   // Inside: a pale back plate, with the analyser's plumbing on it.
   const back = 0.03;
   t.box(
-    group,
+    contents,
     t.paint('#d9dee1', 0.7),
     w - 0.06,
     lowH - 0.04,
@@ -331,7 +329,7 @@ export function createAqualisCabinet(
   );
   const inside = new Group();
   inside.position.set(0, 0, back + 0.005);
-  group.add(inside);
+  contents.add(inside);
   // The flow cell: a clear acrylic block, its four probes standing in it.
   const cellY = 0.66;
   const acrylic = createPs1Material({
@@ -575,7 +573,7 @@ export function createAqualisCabinet(
     return g;
   };
   board(inside, 0.1, 0.085, 1).position.set(-0.115, 0.475, -0.012);
-  const sideBoard = board(group, 0.14, 0.1, 2);
+  const sideBoard = board(contents, 0.14, 0.1, 2);
   sideBoard.position.set(w / 2 - 0.015, 0.56, 0.16);
   sideBoard.rotation.y = -Math.PI / 2;
   // The sample pipes out of the side, and the inlet's ball valve on its pipe.
@@ -654,7 +652,12 @@ export function createAqualisCabinet(
     SCREEN_AT.y,
     0.007,
   );
-  const { context, texture } = createCanvasTexture(SCREEN.w, SCREEN.h, 'touch');
+  // A colour TFT of its period (the owner, 2026-10-31): a backlit `lcd`,
+  // washed out off its narrow angle, black with its power off; quicker than
+  // a character LCD, it shows Dr Aqualis's 10 Hz.
+  const { context, texture } = createCanvasTexture(SCREEN.w, SCREEN.h, 'lcd', {
+    maxHz: 10,
+  });
   kit.textures.push(texture);
   const material = new MeshBasicMaterial({
     map: texture,
@@ -669,7 +672,9 @@ export function createAqualisCabinet(
   // Dr Aqualis's overlay: a canvas of its own just in front of the screen,
   // transparent where he is not, so his frames upload a fraction of it.
   const overSize = overlayCanvasSize(overlayScale);
-  const over = createCanvasTexture(overSize.w, overSize.h, 'touch');
+  const over = createCanvasTexture(overSize.w, overSize.h, 'lcd', {
+    maxHz: 10,
+  });
   // Drawn in the box's own pixels (0 to OVERLAY.w across), whatever its resolution.
   const toBox = () =>
     over.context.setTransform(
@@ -849,6 +854,17 @@ export function createAqualisCabinet(
   let sampleFlow = 30;
   let doorOpen = false;
   let doorAngle = 0;
+  let powered = true;
+  /** Whether the host wants Dr Aqualis's overlay shown, and whether a drawing waits for the power. */
+  let overlayWanted = false;
+  let screenWaiting = false;
+  let overlayWaiting = false;
+  /** The lower section's insides drawn only while its door is open or opening. */
+  const showContents = () => {
+    const shown = doorOpen || doorAngle > 0;
+    contents.visible = shown;
+    note.visible = shown;
+  };
 
   drawBootScreen(context, 0.6, model);
   texture.needsUpdate = true;
@@ -888,7 +904,27 @@ export function createAqualisCabinet(
     screen,
     /** Upload what was drawn into `context` (call only when it changed). */
     screenChanged() {
-      texture.needsUpdate = true;
+      // Off, nothing is shown: uploaded once its power is back.
+      if (powered) texture.needsUpdate = true;
+      else screenWaiting = true;
+    },
+    get powered() {
+      return powered;
+    },
+    /**
+     * Switch it on or off: off, its backlight is out and its screen a
+     * black glossy panel, Dr Aqualis's overlay hidden, its drawings held
+     * back until it is on again.
+     */
+    setPower(on: boolean) {
+      if (on === powered) return;
+      powered = on;
+      setLcdBacklight(material, on);
+      setLcdBacklight(overMaterial, on);
+      overlayMesh.visible = on && overlayWanted;
+      if (on && screenWaiting) texture.needsUpdate = true;
+      if (on && overlayWaiting) over.texture.needsUpdate = true;
+      screenWaiting = overlayWaiting = false;
     },
     /** A use on `object` (the knob turned `direction`, a screen touch at `uv`): whether it did anything. */
     touch(object: Object3D, uv?: Vector2, direction = 1) {
@@ -900,6 +936,7 @@ export function createAqualisCabinet(
       }
       if (doorMeshes.has(object)) {
         doorOpen = !doorOpen;
+        showContents();
         return true;
       }
       if (object === handle) {
@@ -952,10 +989,12 @@ export function createAqualisCabinet(
       context: over.context,
       box: OVERLAY,
       changed() {
-        over.texture.needsUpdate = true;
+        if (powered) over.texture.needsUpdate = true;
+        else overlayWaiting = true;
       },
       visible(on: boolean) {
-        overlayMesh.visible = on;
+        overlayWanted = on;
+        overlayMesh.visible = on && powered;
       },
     },
     get doorOpen() {
@@ -964,7 +1003,10 @@ export function createAqualisCabinet(
     /** Open or shut the lower door, as a click on it would. */
     setDoorOpen(open: boolean) {
       doorOpen = open;
+      showContents();
     },
+    /** The lower section's insides, drawn only while its door is open or opening. */
+    contents,
     /** The sample's flow through the rotameter and its pump, l/h. */
     setSampleFlow(lh: number) {
       sampleFlow = lh;
@@ -975,15 +1017,19 @@ export function createAqualisCabinet(
     update(dt: number) {
       parts.update(dt);
       const flowing = valveOpen ? sampleFlow : 0;
-      meter.show(flowing, dt);
-      // The sample pump's rotor: about a turn a second at 30 l/h.
-      if (flowing > 0) rotor.rotation.z -= dt * 2 * Math.PI * (flowing / 30);
       const swing = doorOpen ? DOOR_OPEN : 0;
       if (doorAngle !== swing) {
         doorAngle +=
           Math.sign(swing - doorAngle) *
           Math.min(Math.abs(swing - doorAngle), dt * 3);
         lowerDoor.rotation.y = doorAngle;
+        showContents();
+      }
+      // Its insides worked only while they are drawn.
+      if (contents.visible) {
+        meter.show(flowing, dt);
+        // The sample pump's rotor: about a turn a second at 30 l/h.
+        if (flowing > 0) rotor.rotation.z -= dt * 2 * Math.PI * (flowing / 30);
       }
       const target = valveOpen ? 0 : Math.PI / 2;
       if (leverAngle !== target) {

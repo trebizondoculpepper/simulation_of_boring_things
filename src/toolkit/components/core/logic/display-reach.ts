@@ -55,6 +55,90 @@ export interface DisplayProfile {
   minSubtended: number;
   maxOffNormal: number;
   fullOffNormal: number;
+  /** How its picture washes out off its normal, drawn per pixel by its material (`LCD_WASH`); none if left out. */
+  wash?: LcdWash;
+}
+
+/**
+ * How a twisted-nematic panel washes out off its normal (the owner,
+ * 2026-10-31: "very washed out … you may still see some of the colour, but
+ * not all of it, as the backlight filters through"). Within `across`
+ * degrees either side, `above` degrees from above and `below` from below
+ * (an ellipse between them) its picture is whole; its wash comes in over
+ * the next `spread` times as far again, eased, to at most `most`. Washed
+ * fully, it loses `desaturate` of its saturation and `contrast` of its
+ * contrast, collapsing towards `lift` of its white: lighter and greyer,
+ * its hues still faintly there.
+ */
+export interface LcdWash {
+  across: number;
+  above: number;
+  below: number;
+  spread: number;
+  most: number;
+  desaturate: number;
+  contrast: number;
+  lift: number;
+}
+
+export const LCD_WASH: LcdWash = {
+  across: 30,
+  above: 18,
+  below: 12,
+  spread: 1.4,
+  most: 0.92,
+  desaturate: 0.45,
+  contrast: 0.62,
+  lift: 0.6,
+};
+
+const DEGREES = 180 / Math.PI;
+
+/**
+ * The angles a panel is seen at, degrees, from the way to the eye in its
+ * own frame (x right, y up, z out of its face): across (either side, so
+ * never negative) and up (negative from below).
+ */
+export function lcdViewAngles(
+  x: number,
+  y: number,
+  z: number,
+): { across: number; up: number } {
+  const out = Math.max(z, 1e-4);
+  return {
+    across: Math.atan2(Math.abs(x), out) * DEGREES,
+    up: Math.atan2(y, out) * DEGREES,
+  };
+}
+
+/** How washed out a panel looks seen at these angles, 0 (whole) to `most`. */
+export function lcdWashAmount(
+  across: number,
+  up: number,
+  wash: LcdWash = LCD_WASH,
+): number {
+  const a = Math.abs(across) / wash.across;
+  const v = up >= 0 ? up / wash.above : -up / wash.below;
+  const t = Math.max(0, Math.min(1, (Math.hypot(a, v) - 1) / wash.spread));
+  return wash.most * t * t * (3 - 2 * t);
+}
+
+/**
+ * A colour (0..1, of the panel's white) washed out by `amount`: its
+ * saturation, then its contrast, lost towards a light grey.
+ */
+export function lcdWashed(
+  [r, g, b]: readonly [number, number, number],
+  amount: number,
+  wash: LcdWash = LCD_WASH,
+): [number, number, number] {
+  const grey = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  const d = amount * wash.desaturate;
+  const k = amount * wash.contrast;
+  return [r, g, b].map((c) => {
+    const flat = c + (grey - c) * d;
+    return flat + (wash.lift - flat) * k;
+  }) as [number, number, number];
 }
 
 const seen = (
@@ -75,7 +159,8 @@ const always = (maxHz: number): DisplayProfile => ({
 });
 
 export const DISPLAY_PROFILES: Record<DisplayKind, DisplayProfile> = {
-  lcd: seen(5, 70, 65),
+  // Its narrow angle is its wash's (`LCD_WASH`); flat only near grazing.
+  lcd: { ...seen(5, 85, 80), wash: LCD_WASH },
   crt: seen(25, 85, 80),
   plasma: seen(30, 85, 80),
   vfd: seen(10, 85, 80),

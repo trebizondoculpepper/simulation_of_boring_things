@@ -1,16 +1,20 @@
-import { Scene, Texture, Vector3 } from 'three';
+import { Color, Scene, Texture, Vector3 } from 'three';
 import type {
   BufferGeometry,
   Camera,
   CanvasTexture,
   Material,
+  WebGLProgramParametersWithUniforms,
+  WebGLRenderer,
   Object3D,
   PerspectiveCamera,
 } from 'three';
 import { METRE } from '../logic/units';
 import type {
   DisplayKind,
+  DisplayProfile,
   DisplaySighting,
+  LcdWash,
   RoomDisplayLimits,
 } from '../logic/display-reach';
 import {
@@ -34,7 +38,10 @@ import {
  * it, or none sees it from in front and large enough to read, and its
  * redraws meanwhile are held back, uploaded once it is shown again;
  * as the view comes round towards its face's normal it fades up from
- * flat to full, over angles set by its kind (an LCD's 70° to 65°). The component drawing it is untouched: it keeps drawing
+ * flat to full, over angles set by its kind (a CRT's 85° to 80°). A kind
+ * with a wash (an LCD's, `LCD_WASH`) is washed out per pixel by the
+ * material showing it, patched once as it is first found in a scene
+ * (`lcdWashPatch`): nothing more is uploaded for it, at any angle. The component drawing it is untouched: it keeps drawing
  * into its own canvas, which is put back when in reach. Rooms need do
  * nothing: every render is watched, at most five times a second per scene.
  */
@@ -43,6 +50,8 @@ interface Watched {
   texture: CanvasTexture;
   canvas: HTMLCanvasElement;
   kind: DisplayKind;
+  /** Its own limit on new pictures a second, if not its kind's. */
+  maxHz?: number;
   updates: number;
   /** How much of it is shown: 0 flat, 1 in full, between a fade. */
   level: number;
@@ -70,11 +79,14 @@ export function watchDisplay(
   texture: CanvasTexture,
   canvas: HTMLCanvasElement,
   kind: DisplayKind,
+  /** Its own limit on new pictures a second, where its panel is quicker or slower than its kind's (a colour TFT's 10 against a character LCD's 5). */
+  maxHz?: number,
 ) {
   const w: Watched = {
     texture,
     canvas,
     kind,
+    maxHz,
     updates: 0,
     level: 1,
     seenUntil: 0,
@@ -159,6 +171,102 @@ function compose(w: Watched) {
 
 const waiting = new Set<Watched>();
 
+/** Its kind's profile, at its own rate if it has one. */
+function profileOf(w: Watched): DisplayProfile {
+  const profile = DISPLAY_PROFILES[w.kind];
+  return w.maxHz === undefined ? profile : { ...profile, maxHz: w.maxHz };
+}
+
+/**
+ * A panel's wash off its normal, per pixel, in its material's own shader
+ * (`LcdWash`): the way to the eye taken into the mesh's frame in its
+ * vertex shader (a plane faces its local +z, its up its local +y), its
+ * angles across and up worked out and its colour washed in its fragment
+ * shader just after its picture is read, exactly as `lcdWashAmount` and
+ * `lcdWashed` do. A few instructions a pixel, nothing uploaded. Its
+ * backlight (`setLcdBacklight`) off, it shows a dark glossy panel instead.
+ */
+export function lcdWashPatch(wash: LcdWash) {
+  const f = (n: number) => n.toFixed(4);
+  const vertexHead = 'varying vec3 lcdEye;\n';
+  const vertex = `
+    lcdEye = transpose(mat3(modelMatrix)) * (cameraPosition - (modelMatrix * vec4(transformed, 1.0)).xyz);`;
+  const fragmentHead = `varying vec3 lcdEye;
+    uniform float lcdLit;
+    uniform vec3 lcdDark;
+    float lcdWashAmount(vec3 e) {
+      float z = max(e.z, 1e-4);
+      float across = degrees(atan(abs(e.x), z)) / ${f(wash.across)};
+      float up = degrees(atan(e.y, z));
+      float v = up >= 0.0 ? up / ${f(wash.above)} : -up / ${f(wash.below)};
+      float t = clamp((length(vec2(across, v)) - 1.0) / ${f(wash.spread)}, 0.0, 1.0);
+      return ${f(wash.most)} * t * t * (3.0 - 2.0 * t);
+    }
+`;
+  const fragment = `
+    {
+      float lcdW = lcdWashAmount(lcdEye);
+      float lcdGrey = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+      vec3 lcdC = mix(diffuseColor.rgb, vec3(lcdGrey), lcdW * ${f(wash.desaturate)});
+      lcdC = mix(lcdC, diffuse * ${f(wash.lift)}, lcdW * ${f(wash.contrast)});
+      // Its backlight off: dark glass, a sheen rising towards grazing.
+      float lcdSheen = pow(1.0 - clamp(normalize(lcdEye).z, 0.0, 1.0), 3.0);
+      vec3 lcdOff = lcdDark + vec3(0.10, 0.11, 0.12) * lcdSheen;
+      diffuseColor.rgb = mix(lcdOff, lcdC, lcdLit);
+    }`;
+  return (material: Material) => {
+    if (patched.has(material)) return;
+    patched.add(material);
+    const before = material.onBeforeCompile;
+    const key = material.customProgramCacheKey.bind(material);
+    material.customProgramCacheKey = () => `${key()}|lcd-wash`;
+    const lit = backlightOf(material);
+    material.onBeforeCompile = function (
+      shader: WebGLProgramParametersWithUniforms,
+      renderer: WebGLRenderer,
+    ) {
+      before.call(this, shader, renderer);
+      shader.uniforms.lcdLit = lit;
+      shader.uniforms.lcdDark = LCD_DARK;
+      shader.vertexShader = (vertexHead + shader.vertexShader).replace(
+        '#include <fog_vertex>',
+        `#include <fog_vertex>${vertex}`,
+      );
+      shader.fragmentShader = (fragmentHead + shader.fragmentShader).replace(
+        '#include <map_fragment>',
+        `#include <map_fragment>${fragment}`,
+      );
+    };
+    material.needsUpdate = true;
+  };
+}
+
+const patched = new WeakSet<Material>();
+/** A dark panel's glass, linear. */
+const LCD_DARK = { value: new Color(0x07090b) };
+
+function backlightOf(material: Material): { value: number } {
+  const data = material.userData as { lcdLit?: { value: number } };
+  return (data.lcdLit ??= { value: 1 });
+}
+
+/**
+ * Switch a backlit LCD's backlight on or off (the owner, 2026-10-31: a
+ * powered-off LCD is black, as there is no backlight): its material shows
+ * a dark glossy panel while off. Only for a backlit panel; a reflective
+ * one, unlit, still shows its glass.
+ */
+export function setLcdBacklight(material: Material, on: boolean) {
+  backlightOf(material).value = on ? 1 : 0;
+}
+
+const washPatches = new Map<LcdWash, (m: Material) => void>();
+function washMaterial(material: Material, wash: LcdWash) {
+  let patch = washPatches.get(wash);
+  if (!patch) washPatches.set(wash, (patch = lcdWashPatch(wash)));
+  patch(material);
+}
+
 /**
  * A new picture shown: in full, uploaded; fading, faded again; flat, held
  * back, its canvas put back when it is shown. No sooner than its kind
@@ -170,7 +278,7 @@ function refresh(w: Watched) {
     return;
   }
   const now = performance.now();
-  if (!mayRefresh(DISPLAY_PROFILES[w.kind], w.shownAt, now)) {
+  if (!mayRefresh(profileOf(w), w.shownAt, now)) {
     w.waiting = true;
     waiting.add(w);
     return;
@@ -360,6 +468,14 @@ function scan(scene: Scene, s: SceneWatch) {
         }
         const w = watched.get(t);
         if (!w) continue;
+        // Washed per pixel, if its kind washes out: only a flat face has a normal.
+        const wash = DISPLAY_PROFILES[w.kind].wash;
+        if (
+          wash &&
+          (object as Object3D & { geometry?: BufferGeometry }).geometry
+            ?.type === 'PlaneGeometry'
+        )
+          washMaterial(m, wash);
         let list = s.shown.get(w);
         if (!list) s.shown.set(w, (list = []));
         list.push(object);
@@ -421,10 +537,7 @@ function check(scene: Scene, camera: Camera, screenPixels: number) {
   }
   for (const [w, objects] of s.shown) {
     if (!isLiveDisplay(w.updates)) continue;
-    const profile = withinRoomLimits(
-      DISPLAY_PROFILES[w.kind],
-      roomLimits.get(scene),
-    );
+    const profile = withinRoomLimits(profileOf(w), roomLimits.get(scene));
     const level = Math.max(
       ...objects.map((o) =>
         displayVisibility(w.level > 0, sighting(o), profile),
