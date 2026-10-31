@@ -213,6 +213,8 @@ import { HEATING_CIRCULATOR } from '../../components/plant/logic/pump-sound';
 import { partAudio } from '../../components/core/audio/part-audio';
 import { createPartSet } from '../../components/core/parts/parts';
 import { createEngineerStorageCupboard } from '../../components/site-dressing/views/engineer-storage-cupboard';
+import { createEngineersDesk } from '../../components/site-dressing/views/engineers-desk';
+import { clock } from '../../../game/bathers';
 
 /**
  * An exhibit of a room's list, by its title: so a model is the one named,
@@ -537,6 +539,9 @@ function modelFor(
       dispose: () => cupboard.dispose(),
     };
   }
+  // The engineer's desk, late 1990s (the owner, 2026-10-31): set
+  // decoration, its PC woken by a touch, its clock the world's.
+  if (kind === 'desk' && room === 'engineers_office') return engineersDesk(kit);
   if (kind === 'scenario-simulator') return worldScenarioSimulator(kit);
   // The lighting board, its ways the world's lighting zones.
   if (kind === 'lighting-board') return worldLightingBoard(kit);
@@ -941,6 +946,50 @@ function bindSupplies() {
  * hinge side, for its pull (`SIMULATOR_SPACE`, `room-equipment.ts`).
  */
 export const SIMULATOR_DOOR_SWING = Math.PI / 2;
+
+/**
+ * The engineer's desk (`engineers-desk.ts`): set decoration with its
+ * Gateway 3000 PC, whose taskbar clock is the world's time of day.
+ */
+function engineersDesk(kit: PanelKit): LiveExhibit {
+  const store = typeof window === 'undefined' ? null : roomWorld();
+  const desk = createEngineersDesk(kit, {
+    clock: () =>
+      store ? (clock(store.world.value.time).hour * 60) % 1440 : 9 * 60,
+  });
+  const parts = createPartSet();
+  for (const [object, use] of desk.uses) parts.uses.set(object, use);
+  const object = desk.group;
+  return {
+    object,
+    parts,
+    update: desk.update,
+    // The carton beside it, on the floor beyond its footprint: in the
+    // room's frame, from where the desk was put.
+    solids: () =>
+      desk.footprints.map((f) => {
+        const c = Math.cos(object.rotation.y);
+        const s = Math.sin(object.rotation.y);
+        const corners = [
+          [f.minX, f.minZ],
+          [f.maxX, f.minZ],
+          [f.minX, f.maxZ],
+          [f.maxX, f.maxZ],
+        ].map(([x, z]) => [
+          object.position.x + x * c + z * s,
+          object.position.z - x * s + z * c,
+        ]);
+        const xs = corners.map(([x]) => x);
+        const zs = corners.map(([, z]) => z);
+        return {
+          minX: Math.min(...xs),
+          maxX: Math.max(...xs),
+          minZ: Math.min(...zs),
+          maxZ: Math.max(...zs),
+        };
+      }),
+  };
+}
 
 function worldScenarioSimulator(kit: PanelKit): LiveExhibit {
   const store = typeof window === 'undefined' ? null : roomWorld();

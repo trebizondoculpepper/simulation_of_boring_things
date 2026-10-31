@@ -53,7 +53,14 @@ describe.each(EQUIPPED_ROOMS)('%s, as built', (room) => {
     machines.forEach((object, i) => {
       const p = placed[i];
       if (p.item.mount !== 'floor') return;
-      const box = new Box3().setFromObject(object);
+      // Less what stands beside it on the floor by design, a solid of its
+      // own (the engineer's desk's carton and chair, `userData.beside`).
+      const box = new Box3();
+      object.traverse((o) => {
+        for (let up: typeof o | null = o; up && up !== object; up = up.parent)
+          if (up.userData.beside) return;
+        if (o instanceof Mesh) box.expandByObject(o, false);
+      });
       const f = p.footprint;
       expect(box.min.x, p.item.label).toBeGreaterThan(f.minX - SLACK);
       expect(box.max.x, p.item.label).toBeLessThan(f.maxX + SLACK);

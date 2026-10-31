@@ -25,6 +25,10 @@ Four of the things found in the skimmer (`resources/models/skimmer/`, tried in d
 
 The goggles and the crisp packet, like Hall 5's own six finds, are the project's own models (`src/toolkit/gallery/rooms/museum/hall-5-extra-finds.ts`, `hall-5-finds.ts`).
 
+## The engineer's desk: model
+
+The desk in the engineer's office (`resources/models/office/desk.glb`, loaded by `src/toolkit/components/site-dressing/views/engineers-desk.ts`) is [Desk](https://poly.pizza/m/YJyJam67hJ) by [CreativeTrio](https://poly.pizza/u/CreativeTrio), [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/), downloaded unchanged from [Poly Pizza](https://poly.pizza) on 2026-10-31 (SHA-256 `c3c85d0a0848030df3e6a5aa810066fcd8329e719726d1dbef14c9a33cef9717`); its licence is kept beside it (`LICENSE-desk.txt`). The game stretches it to a 1.6 × 0.8 m desk 0.73 m high and recolours its palette texture's dark wood to beech-effect laminate and its handles to aluminium as it loads. Everything on and around it (the Gateway 3000 PC, its carton, the boxed software and its art) is the project's own work, drawn in code.
+
 ## The bridge's ambience: original synthesis
 
 The bridge's room tone (`src/toolkit/components/sound/audio/bridge-ambience.ts`, `src/toolkit/components/sound/logic/bridge-ambience.ts`, mission 095) is the project's own work, synthesised live in Web Audio from oscillators, generated noise, filters and a seeded chirp scheduler. No recording is sampled, copied or downloaded: nothing from Star Trek or any upload taken from it. It was written in the spirit of the Next Generation bridge's background, from published descriptions of it. For character only, not sampled: the description of [control_room.wav](https://freesound.org/people/Diboz/sounds/211683/) by [Diboz](https://freesound.org/people/Diboz/) (CC0), "ambient sound akin to the bridge of a starship".
