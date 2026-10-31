@@ -76,8 +76,12 @@ export const newConsole = (): ConsoleState => ({
   pickedSize: false,
 });
 
-/** Whether the dose screen shows its DOSE button: a chemical and a size both picked. */
-export const armed = (s: ConsoleState) => s.pickedChemical && s.pickedSize;
+/**
+ * Whether the dose screen shows its DOSE button: once a chemical is picked,
+ * the size standing at Medium unless the visitor changes it (the owner,
+ * 2026-10-31: leaving it on Medium must not hide DOSE).
+ */
+export const armed = (s: ConsoleState) => s.pickedChemical;
 
 /** The console after a dose was taken: both picks to be made afresh. */
 export const afterDose = (s: ConsoleState): ConsoleState => ({

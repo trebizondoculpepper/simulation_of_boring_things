@@ -148,6 +148,8 @@ describe("Hall 4's dosing console screens", () => {
       expect(r.y + r.h).toBeLessThan(L.y);
     let s = newConsole();
     expect(armed(s)).toBe(false);
+    // A chemical alone arms it, the size left at its default Medium.
+    expect(armed(press(s, 'row-1'))).toBe(true);
     expect(hitScreen('dose', s, free(s), ...mid(L))).toBeNull();
     expect(pressConsole(s, 'dose', 7).effect).toBeUndefined();
     s = press(s, 'size-3');

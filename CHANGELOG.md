@@ -4,6 +4,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Hall 4's console: DOSE shows once a chemical is picked, the dose size left at its default Medium counting as chosen (2026-10-31).
 - Frutiger Aero interface sounds for Hall 4's dosing console in `resources/sound/effects/frutiger-aero/`: 37 from Kenney's Interface Sounds (CC0), named after the console's buttons and moments, credited in `CREDITS.md`, with notes on how each could be used. Not yet played by the game.
 - Hall 4's dosing console has no physical buttons (the owner, 2026-10-31): the red DOSE mushroom and its plate are gone, and DOSE is a big glossy green Aero button in the dose screen's lower third, shown only once the visitor has picked both a chemical and a dose size since the last dose taken or reset (the console always has a selection, so the picks must be active). It does what the mushroom did, the same engine call and the same valve and lamp flash. Without its shelf the desk becomes a stand: the raked three-screen panel on a slim pedestal and plinth (0.5 m deep, the panel's foot still at 0.86 m), in Hall 4 and dev57, still bound as M4-DS1. The screens are dimmed (their white below the bloom threshold) so white dialogs such as RESET's confirmation are readable.
 - Hall 4's tank labels show each hazard pictogram's GHS number beneath it (2026-10-31).
