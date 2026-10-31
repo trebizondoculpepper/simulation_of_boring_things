@@ -6,6 +6,7 @@ import type { GameEvent } from './game-event';
 import { INSTALLED_VALVES } from '../plant/installed-valves';
 import { identifiedPart } from '../plant/identification';
 import { MOTORS } from '../plant/motor-starters';
+import { amountText, handChemical } from '../plant/hand-dose';
 import { diffWorld } from './event-sources';
 
 /**
@@ -183,6 +184,20 @@ function said(
         subject: action.pool,
         text: `thermostat set to ${after.pools[action.pool].setpoint} °C`,
       };
+    case 'hand/dose': {
+      const info = handChemical(action.chemical);
+      if (!info)
+        return {
+          subject: action.pool,
+          text: `no chemical "${action.chemical}"`,
+        };
+      const into = action.into ?? info.into;
+      return {
+        subject: action.pool,
+        text: `${amountText(info, action.amount)} ${info.name} added to ${into === 'balance-tank' ? 'the balance tank' : action.chemical === 'co2' ? 'the pool, at the injection point' : 'the pool'}`,
+        severity: 'notice',
+      };
+    }
     case 'time/skip':
       return { subject: 'TIME', text: `skipped ${action.seconds} s on` };
     case 'air/unit': {

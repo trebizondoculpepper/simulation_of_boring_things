@@ -30,6 +30,8 @@ import {
   withWaterReadings,
 } from './plant/water-treatment';
 import type { StepFlows, WaterTreatment } from './plant/water-treatment';
+import { handDose, handChemical } from './plant/hand-dose';
+import type { DoseInto, HandChemical } from './plant/hand-dose';
 import {
   actOnIntake,
   newSiteIntake,
@@ -576,6 +578,18 @@ export type WorldAction =
   | { type: 'pool/make-up'; pool: PoolId; open: boolean }
   /** A pool's water's thermostat set, °C (kept within its range). */
   | { type: 'pool/setpoint'; pool: PoolId; celsius: number }
+  /**
+   * A chemical tipped in by hand (`plant/hand-dose.ts`), `amount` in its
+   * normal unit (kg, l or g), into its balance tank's water or the pool's
+   * return side (by default, where that chemical normally goes).
+   */
+  | {
+      type: 'hand/dose';
+      pool: PoolId;
+      chemical: HandChemical;
+      amount: number;
+      into?: DoseInto;
+    }
   /** The world run on at once, a second at a time: for trying things out. */
   | { type: 'time/skip'; seconds: number }
   /** An air handling unit's controls worked, on its controller. */
@@ -746,6 +760,29 @@ export function applyAction(world: World, action: WorldAction): World {
             pools: {
               ...world.pools,
               [action.pool]: { ...world.pools[action.pool], setpoint: celsius },
+            },
+          };
+    }
+    case 'hand/dose': {
+      const c = world.treatment.circuits[action.pool];
+      const info = handChemical(action.chemical);
+      if (!c || !info) return world;
+      const into = action.into ?? info.into;
+      const dosed = handDose(
+        c,
+        action.pool,
+        world.pools[action.pool],
+        action.chemical,
+        action.amount,
+        into,
+      );
+      return dosed === c
+        ? world
+        : {
+            ...world,
+            treatment: {
+              ...world.treatment,
+              circuits: { ...world.treatment.circuits, [action.pool]: dosed },
             },
           };
     }

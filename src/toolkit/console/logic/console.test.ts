@@ -295,3 +295,145 @@ describe('JavaScript at the console', () => {
     expect(bad[0].text).toMatch(/nothing/);
   });
 });
+
+describe('the stand-ins: dose, chemicals and test_kit', () => {
+  it('doses a chemical into the balance tank, and logs it', () => {
+    const f = fakeHost();
+    const before = f.world().treatment.circuits.pool_01.tank.alkalinity;
+    const out = runLine(f.host, 'dose pool_01 bicarbonate 18kg');
+    expect(out).toEqual([]);
+    expect(
+      f.world().treatment.circuits.pool_01.tank.alkalinity - before,
+    ).toBeGreaterThan(1000);
+    expect(f.events.at(-1)).toMatchObject({
+      subject: 'pool_01',
+      text: '18 kg sodium bicarbonate added to the balance tank',
+      by: 'console',
+    });
+  });
+
+  it('takes aliases, units as words, and where it goes', () => {
+    const f = fakeHost();
+    runLine(f.host, 'dose pool_02 hypo 500 ml pool');
+    expect(f.events.at(-1)?.text).toBe(
+      '500 ml sodium hypochlorite (14 %) added to the pool',
+    );
+    runLine(f.host, 'dose pool_02 hcl 2l tank');
+    expect(f.events.at(-1)?.text).toBe(
+      '2 l hydrochloric acid (10 %) added to the balance tank',
+    );
+    runLine(f.host, 'dose pool_01 co2 1.5kg');
+    expect(f.events.at(-1)?.text).toBe(
+      '1500 g CO₂ added to the pool, at the injection point',
+    );
+    runLine(f.host, 'dose pool_01 cacl2 5');
+    expect(f.events.at(-1)?.text).toBe(
+      '5 kg calcium chloride added to the balance tank',
+    );
+  });
+
+  it('says clearly what is wrong', () => {
+    const f = fakeHost();
+    const err = (line: string) => {
+      const out = runLine(f.host, line);
+      expect(out.every((l) => l.tone === 'error')).toBe(true);
+      return texts(out)[0];
+    };
+    expect(err('dose')).toMatch(/^dose: say <pool> <chemical>.*chemicals/);
+    expect(err('dose pool_09 bicarb 1kg')).toBe(
+      'dose: no pool "pool_09" (pools are pool_01, pool_02, pool_03, pool_04)',
+    );
+    expect(err('dose pool_01 treacle 1kg')).toBe(
+      'dose: no chemical "treacle" (chemicals lists them)',
+    );
+    expect(err('dose pool_01 bicarb 1 cups')).toBe(
+      'dose: no unit "cups" (say kg, g, l or ml)',
+    );
+    expect(err('dose pool_01 bicarb 1l')).toBe(
+      'dose: sodium bicarbonate is measured by weight: say kg or g',
+    );
+    expect(err('dose pool_01 bicarb')).toBe(
+      'dose: how much sodium bicarbonate? (in kg)',
+    );
+    expect(err('dose pool_01 bicarb 1kg sewer')).toBe(
+      'dose: put it into the balance-tank or the pool, not "sewer"',
+    );
+    expect(err('test_kit pool_9')).toMatch(/^test_kit: no pool "pool_9"/);
+    expect(f.events).toEqual([]);
+  });
+
+  it('completes pools, chemicals, an amount and where', () => {
+    const f = fakeHost();
+    expect(candidates(f.host, ['dose'])).toEqual([
+      'pool_01',
+      'pool_02',
+      'pool_03',
+      'pool_04',
+    ]);
+    const chems = candidates(f.host, ['dose', 'pool_01']);
+    for (const a of [
+      'bicarb',
+      'sodaash',
+      'cacl2',
+      'thio',
+      'hypo',
+      'acid',
+      'hcl',
+      'co2',
+    ])
+      expect(chems).toContain(a);
+    expect(candidates(f.host, ['dose', 'pool_01', 'hypo'])).toEqual(['1l']);
+    expect(candidates(f.host, ['dose', 'pool_01', 'hypo', '1l'])).toContain(
+      'pool',
+    );
+    expect(candidates(f.host, ['test_kit'])).toContain('pool_04');
+    expect(candidates(f.host, [])).toEqual(
+      expect.arrayContaining(['dose', 'chemicals', 'test_kit']),
+    );
+  });
+
+  it('lists the chemicals, with their units, aliases and where they go', () => {
+    const f = fakeHost();
+    const out = texts(runLine(f.host, 'chemicals'));
+    const line = (name: string) => out.find((l) => l.startsWith(`  ${name} `));
+    expect(line('sodium bicarbonate')).toMatch(
+      /kg +raises alkalinity +balance tank$/,
+    );
+    expect(line('sodium hypochlorite (14 %)')).toMatch(/l of 14 %/);
+    expect(line('hydrochloric acid (10 %)')).toMatch(/l of 10 %/);
+    expect(line('CO₂')).toMatch(/g +lowers pH, alkalinity unchanged +pool$/);
+    const all = out.join('\n');
+    expect(all).toMatch(
+      /aliases co2, carbon-dioxide; normally dosed by the CO₂ system/,
+    );
+    expect(all).toMatch(/aliases bicarbonate, bicarb,/);
+  });
+
+  it('test_kit prints the far side’s readings, logs the test, and changes nothing', () => {
+    const f = fakeHost();
+    const before = f.world();
+    const out = texts(runLine(f.host, 'test_kit pool_01'));
+    expect(out[0]).toBe('Test kit · Lounge pool (pool_01) · 00:00');
+    expect(out[1]).toMatch(/^ {2}Free chlorine \(DPD 1\) +\d\.\d mg\/l$/);
+    expect(out[3]).toMatch(/^ {2}pH \(phenol red\) +7\.\d$/);
+    expect(f.world()).toBe(before);
+    expect(f.events.at(-1)).toMatchObject({
+      kind: 'command',
+      subject: 'pool_01',
+      by: 'console',
+    });
+    expect(f.events.at(-1)?.text).toMatch(/^test kit taken: /);
+    // The same minute reads the same.
+    expect(texts(runLine(f.host, 'test_kit pool_01'))).toEqual(out);
+  });
+
+  it('help knows them', () => {
+    const f = fakeHost();
+    expect(texts(runLine(f.host, 'help dose'))[0]).toMatch(
+      /^dose <pool> <chemical> <amount>\[unit\] \[balance-tank\|pool\]/,
+    );
+    expect(texts(runLine(f.host, 'help test_kit'))[0]).toMatch(
+      /^test_kit <pool>/,
+    );
+  });
+});

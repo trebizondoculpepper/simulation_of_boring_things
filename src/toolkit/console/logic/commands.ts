@@ -8,6 +8,21 @@ import { MOTOR_TAGS, MOTORS } from '../../../game/plant/motor-starters';
 import type { MotorTag } from '../../../game/plant/motor-starters';
 import { GAS_ZONE_IDS } from '../../../game/plant/gas';
 import { worldClock } from '../../../game/events/game-event';
+import { POOL_IDS } from '../../../game/plant/pools';
+import {
+  DOSE_MIN_VOLUME,
+  HAND_CHEMICALS,
+  chemicalNamed,
+  doseVolume,
+  isPoolId,
+  parseAmount,
+} from '../../../game/plant/hand-dose';
+import type { DoseInto } from '../../../game/plant/hand-dose';
+import {
+  formatTestKit,
+  testKit,
+  testKitSummary,
+} from '../../../game/plant/test-kit';
 import { splitStatements, tokenise } from './command-line';
 import { objectStatus, statusNames } from './object-status';
 
@@ -18,6 +33,13 @@ import { objectStatus, statusNames } from './object-status';
  * (`open("PL1-F1-IV1")`), `world` and `act` in scope. The app is reached
  * only through `ConsoleHost`, so nothing here touches the page. Pure but
  * for what the host does.
+ *
+ * Stand-ins (the owner, 2026-10-31): a game feature not yet designed is
+ * stood in for by a console command, working through a real world action
+ * and the real model and logging what it did, until the feature is
+ * designed: `dose` (and `chemicals`) for hand-dosing and the chemical
+ * inventory (`game/plant/hand-dose.ts`), `test_kit` for the test-kit items
+ * (`game/plant/test-kit.ts`). Add the next one the same way.
  */
 
 /** What the console may do to the app and the player's world. */
@@ -80,6 +102,25 @@ const flag = (word: string | undefined, name: string): boolean | undefined => {
 };
 
 const ON_OFF = ['on', 'off'] as const;
+
+/** Where `dose` may put a chemical, as typed. */
+const INTO_WORDS: Record<string, DoseInto> = {
+  'balance-tank': 'balance-tank',
+  tank: 'balance-tank',
+  pool: 'pool',
+};
+
+const DOSE_USAGE = '<pool> <chemical> <amount>[unit] [balance-tank|pool]';
+
+/** A pool named by a command, or a failure listing them. */
+function poolNamed(command: string, word: string | undefined) {
+  if (!word) return fail(`${command}: which pool? (${POOL_IDS.join(', ')})`);
+  if (!isPoolId(word))
+    return fail(
+      `${command}: no pool "${word}" (pools are ${POOL_IDS.join(', ')})`,
+    );
+  return word;
+}
 
 /** Every valve the console can name: installed pipework and the identified plant. */
 export function valvesOf(world: World) {
@@ -445,6 +486,102 @@ export const COMMANDS: readonly ConsoleCommand[] = [
             ? ({ act } as const)
             : fail('starter: say hand, off, auto, start, stop or reset');
       host.dispatch({ type: 'motor/starter', tag: tag as MotorTag, action });
+    },
+  },
+  {
+    name: 'chemicals',
+    usage: '',
+    help: 'the chemicals dose knows: names, aliases, units, what each does and where it goes',
+    run: () => [
+      `Chemicals for dose ${DOSE_USAGE}: name, normal unit, what it does, where it goes`,
+      ...HAND_CHEMICALS.flatMap((c) => [
+        `  ${c.name.padEnd(28)}${c.unitText.padEnd(11)}${c.does.padEnd(33)}${c.into === 'pool' ? 'pool' : 'balance tank'}`,
+        `      aliases ${c.aliases.join(', ')}${c.note ? `; ${c.note}` : ''}`,
+      ]),
+      'Units: kg or g for solids and CO₂, l or ml for solutions; none means the normal unit.',
+    ],
+  },
+  {
+    name: 'dose',
+    usage: DOSE_USAGE,
+    help: 'tip a chemical in by hand, into its balance tank unless pool is said: dose pool_01 bicarbonate 18kg (chemicals lists them)',
+    complete(_host, args) {
+      if (args.length === 0) return POOL_IDS;
+      if (args.length === 1) return HAND_CHEMICALS.flatMap((c) => c.aliases);
+      if (args.length === 2) {
+        const c = chemicalNamed(args[1]);
+        return c ? [`1${c.unit}`] : [];
+      }
+      return Object.keys(INTO_WORDS);
+    },
+    run(host, args) {
+      if (!args.length)
+        return fail(`dose: say ${DOSE_USAGE} (chemicals lists them)`);
+      const pool = poolNamed('dose', args[0]);
+      if (!args[1]) return fail('dose: which chemical? (chemicals lists them)');
+      const chemical = chemicalNamed(args[1]);
+      if (!chemical)
+        return fail(`dose: no chemical "${args[1]}" (chemicals lists them)`);
+      if (!args[2])
+        return fail(`dose: how much ${chemical.name}? (in ${chemical.unit})`);
+      const rest = args.slice(3);
+      let typed = args[2];
+      // A unit given as a word of its own: 18 kg.
+      if (
+        rest[0] &&
+        !(rest[0].toLowerCase() in INTO_WORDS) &&
+        /^\d*\.?\d+$/.test(typed)
+      )
+        typed += rest.shift();
+      const parsed = parseAmount(chemical, typed);
+      if ('error' in parsed) return fail(`dose: ${parsed.error}`);
+      let into = chemical.into;
+      if (rest[0]) {
+        const where = INTO_WORDS[rest[0].toLowerCase()];
+        if (!where)
+          return fail(
+            `dose: put it into the balance-tank or the pool, not "${rest[0]}"`,
+          );
+        into = where;
+      }
+      if (rest.length > 1) return fail(`dose: say ${DOSE_USAGE}`);
+      const w = host.world();
+      if (doseVolume(pool, w.pools[pool], into) < DOSE_MIN_VOLUME)
+        return fail(
+          `dose: ${pool}'s ${into === 'pool' ? 'pool' : 'balance tank'} has no water to take it`,
+        );
+      host.dispatch({
+        type: 'hand/dose',
+        pool,
+        chemical: chemical.id,
+        amount: parsed.amount,
+        into,
+      });
+    },
+  },
+  {
+    name: 'test_kit',
+    usage: '<pool>',
+    help: 'test the pool’s water at its far side, as a poolside kit reads it: test_kit pool_01',
+    complete: (_host, args) => (args.length ? [] : POOL_IDS),
+    run(host, [word]) {
+      const pool = poolNamed('test_kit', word);
+      const w = host.world();
+      const t = testKit(
+        pool,
+        w.treatment.circuits[pool],
+        w.pools[pool].temperature,
+        w.time,
+      );
+      host.log({
+        time: w.time,
+        kind: 'command',
+        severity: 'info',
+        subject: pool,
+        text: testKitSummary(t),
+        by: 'console',
+      });
+      return formatTestKit(t);
     },
   },
   {
