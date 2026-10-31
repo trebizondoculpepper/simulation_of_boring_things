@@ -444,7 +444,6 @@ export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
     (w) => beyondAt(w, (w.from + w.to) / 2) === 'street',
   );
   const mainWall = street ?? walls.find((w) => w.side === 'south')!;
-  const mid = (mainWall.from + mainWall.to) / 2;
   if (!welcome) {
     // A sounder-beacon on the street wall, a third along.
     const third = mainWall.from + (mainWall.to - mainWall.from) / 3;
@@ -518,9 +517,12 @@ export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
     }
   }
   if (id === 'museum3') {
-    // A staff-only door, kept shut, on the street wall.
-    const u = free(mainWall, mid - 6.5, 0.6, 0, 2.3);
-    put('staff-door', mainWall, u, 0);
+    // A staff-only door, kept shut, on the west end wall between the two
+    // archways (layout C: on the street wall it stood behind the
+    // hypochlorite store).
+    const west = walls.find((w) => w.side === 'west')!;
+    const u = free(west, (west.from + west.to) / 2, 0.6, 0, 2.3);
+    put('staff-door', west, u, 0);
   }
 
   // ---- Hall 0: the way out, the lift's place, medical, notices ----
