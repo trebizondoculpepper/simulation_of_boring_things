@@ -1,40 +1,28 @@
-# Pool Plant
+# The Pool
 
-A first-person engineering game set in a leisure centre: walk the public pool hall and the plant rooms behind its staff doors, and keep the pools running. The design brief is `/Users/salimfadhley/Downloads/Pool-Plant-Project-Brief.md`.
+**The Pool** is a first-person simulation of the boring things behind a swimming pool. Out front is a leisure centre of serene, impossible pool halls; behind its staff doors is the plant that keeps them running: pumps, sand filters, boilers, heat exchangers, chemical stores, dosing pumps, air handling, switchgear and the control rooms that watch it all. Every machine is a working model of a real kind of plant, with gauges that read, switches that switch, lamps that light and recorders that record, all joined into one simulated building whose water has to stay clean, warm and safe. It is a game for adults who like the quiet satisfaction of machinery.
 
-**[Play it here](https://trebizondoculpepper.github.io/the_pool/).** Every push to `main` that passes CI is deployed there.
+**[Play the latest release on itch.io](https://salimfadhley.itch.io/the-pool)**, or the [bleeding-edge build](https://trebizondoculpepper.github.io/the_pool/), which follows every push to `main`. Desktop builds for Linux (and the Steam Deck), macOS and Windows are described under [Desktop builds](#desktop-builds).
 
-The development rooms can be opened directly, among them the modelling demonstrations:
+## How to play
 
-- [Dev19: a plant room laid out, plumbed and scored by the room-layout pipeline](https://trebizondoculpepper.github.io/the_pool/?room=dev19)
-- [Dev20: experimental sources and sinks of every substance](https://trebizondoculpepper.github.io/the_pool/?room=dev20)
-- [Dev21: each source plumbed to its sink, valves closed](https://trebizondoculpepper.github.io/the_pool/?room=dev21)
-- [Dev22: a pump on a battery-backed supply](https://trebizondoculpepper.github.io/the_pool/?room=dev22)
-- [Dev36: jacuzzi music-effects prototype](?room=dev36)
-- [Dev37: valve test rig, an electric spring-return butterfly valve with its panel and a throw switch to fail its power](?room=dev37)
-- [Duty manager’s office](?room=duty_managers_office)
-- [Dev35: isolated jacuzzi water-effects prototype](?room=dev35)
-- [Dev23: draining a jacuzzi by gravity](https://trebizondoculpepper.github.io/the_pool/?room=dev23)
-- [Dev24: duty and standby pumps](https://trebizondoculpepper.github.io/the_pool/?room=dev24)
-- [Dev25: a tank filled and drained through one port](https://trebizondoculpepper.github.io/the_pool/?room=dev25)
-- [Dev26: an Olympic filter on its five-valve battery](https://trebizondoculpepper.github.io/the_pool/?room=dev26)
-- [Dev27: heat exchange from a gas boiler, with its mimic board](https://trebizondoculpepper.github.io/the_pool/?room=dev27)
-- [Dev51: the ideal pool plant, a working 3D schematic of a pool's circulation, filtration and heating](https://trebizondoculpepper.github.io/the_pool/?room=dev51)
-- [Dev52: museum stuff, the museum's showcases tried in a dark room](https://trebizondoculpepper.github.io/the_pool/?room=dev52)
-- [Dev53: the skimmer reveal, Hall 5's skimmer as a film: gold caustics, an orbit, a jump cut and a fanfare](https://trebizondoculpepper.github.io/the_pool/?room=dev53)
+Start a **New Game** from the title screen: the plant begins in nominal operation, every pool full, warm and correctly dosed. **Continue** picks up your saved game where you left it; the game saves in your browser as you play.
 
-The room-layout pipeline is described in [`doc/room-layout-guide.md`](doc/room-layout-guide.md), and the test scenarios in [`doc/prompts/scenarios.md`](doc/prompts/scenarios.md).
+There is no single goal yet: the plant is the game. Walk the building, read its instruments, and keep the pools running. Plant drifts and things go wrong (filters clog, tanks run down, chemicals run low, pumps trip, alarms sound), and the control room is where you see it: its annunciators and mimic boards show every room's state. Putting a fault right usually means walking to the room concerned, since mode selectors (HAND · OFF · AUTO) and trip resets are local controls. Along the way there is a museum of pool plant to explore (PLANTROOMS, by the freight lift), with a pool-chemistry puzzle game in Hall 4, and a few secrets, such as what lies behind the control room doors when the CONTROL ROOM MODE knob is turned to NEW.
 
-## Current state
+**Controls**
 
-The building is laid out as separate room components in one continuous world. Each doorway has a self-closing door that opens on approach. The reception-to-changing entrance has sliding frosted-glass leaves; that adjacent room stays rendered to give the glass a blurred view. Other neighbours load only behind open doors. The pool hall contains three empty tiled basins, overflow gullies and two ladders. Suspended LED battens light public rooms, while service rooms have spotlights. High pool-hall windows and four shallow barrel rooflights follow the [architectural daylight references](doc/research/daylight-from-architect-plans.md). The glazed reception opens onto the concourse of an empty shopping mall (`src/scene/mall-concourse.ts`, laid out in `src/game/mall-plan.ts`): shuttered units, plastic planters, a dry fountain and a barrel-vault rooflight, fading into dimness at both ends. It is scenery only; the entrance doors stay locked and a solid outside them keeps the player in the leisure centre. The low windows elsewhere look into windowless back-of-house bays. See the [mall entrance notes](doc/research/mall-entrance.md). The service rooms use the Encabulator corridor’s painted blockwork, concrete, dark skirting, route stripes and high cable trays. The other rooms remain named shells:
+- **Walk** with WASD (or the arrow keys); hold Shift to run. **Click** the view to capture the mouse and look around; Esc frees the cursor again.
+- **Use** whatever the crosshair or pointer is on with a click, E, a tap on the Use button, or a gamepad's A: buttons press, switches switch, valves turn, doors open, and things can be picked up and carried.
+- **Knobs and selectors** turn anticlockwise when used on their left half and clockwise on their right (a gamepad's LB and RB turn them down and up); the crosshair shows an arrow for which way, green if it can turn and red at an end stop.
+- **Ladders**: use one to get on it, then hold forward to climb or back to descend.
+- **Torch**: F (the torch icon on touch, X on a gamepad) switches it on and off; it stays on from room to room.
+- **Settings**: Esc (once the cursor is free), a gamepad's Start, or the gear button opens the Penfold settings panel, which works by mouse, touch, keyboard or gamepad and does not pause the game. Lighter graphics presets (LOW · MED · HIGH) help on slower machines.
+- Touch screens get on-screen thumbsticks and buttons, and gamepads work throughout. The help line at the bottom of the screen always shows the controls for whatever you last used.
 
-- Public: Reception, Changing Village, Main Pool Hall (50 m pool, learner pool and spa pool, with space reserved for rapids), First Aid Room.
-- Back of house, off the Service Corridor behind two staff doors in the pool hall: Pump and Filtration Room, Balance Tank Room, Chemical Store, Boiler Room, Air Handling Plant, Electrical Switch Room, Duty Manager's Office, Plant Control Centre, Engineer’s Office, Stores, Maintenance Workshop, Janitorial Store, Staff Room.
+## How to build
 
-The east reception entrance, at `x=112, z=25`, is the locked door to the mall. The building plan is data in `src/game/facility-plan.ts`; its tests check that rooms do not overlap, that every doorway lies in a shared wall and that every room can be reached from reception. The basin footprints and depths are in `src/game/pool-layout.ts`. `src/scene/facility.ts` builds each room model separately and assembles them at their plan coordinates. The water treatment rooms now occupy a lower level below an Upper Plant Room. An enclosed side stair from the Service Corridor reaches the Lower Plant Landing; movement, walls and room labels use the player’s current elevation. This is a first spatial test of the split-level arrangement in the planning sketch. The [fitting research notes](doc/research/pool-architectural-fittings.md) identify references for the temporary pool edges, ladders and lights.
-
-## Running
+You need Node.js (a current release) and npm.
 
 ```sh
 npm ci
@@ -63,11 +51,55 @@ In a room, the key left of 1 (`on a UK or US keyboard, § on a UK Mac) drops dow
 
 The proposed definition of a healthy New Game and its repeatable audit are in [Healthy New Game](doc/healthy-start.md); [mission 067](doc/prompts/done/067-healthy-new-game.md) plans the executable contract and its maintenance as the model evolves.
 
+### Development rooms
+
+The development rooms can be opened directly, among them the modelling demonstrations:
+
+- [Dev19: a plant room laid out, plumbed and scored by the room-layout pipeline](https://trebizondoculpepper.github.io/the_pool/?room=dev19)
+- [Dev20: experimental sources and sinks of every substance](https://trebizondoculpepper.github.io/the_pool/?room=dev20)
+- [Dev21: each source plumbed to its sink, valves closed](https://trebizondoculpepper.github.io/the_pool/?room=dev21)
+- [Dev22: a pump on a battery-backed supply](https://trebizondoculpepper.github.io/the_pool/?room=dev22)
+- [Dev36: jacuzzi music-effects prototype](?room=dev36)
+- [Dev37: valve test rig, an electric spring-return butterfly valve with its panel and a throw switch to fail its power](?room=dev37)
+- [Duty manager’s office](?room=duty_managers_office)
+- [Dev35: isolated jacuzzi water-effects prototype](?room=dev35)
+- [Dev23: draining a jacuzzi by gravity](https://trebizondoculpepper.github.io/the_pool/?room=dev23)
+- [Dev24: duty and standby pumps](https://trebizondoculpepper.github.io/the_pool/?room=dev24)
+- [Dev25: a tank filled and drained through one port](https://trebizondoculpepper.github.io/the_pool/?room=dev25)
+- [Dev26: an Olympic filter on its five-valve battery](https://trebizondoculpepper.github.io/the_pool/?room=dev26)
+- [Dev27: heat exchange from a gas boiler, with its mimic board](https://trebizondoculpepper.github.io/the_pool/?room=dev27)
+- [Dev51: the ideal pool plant, a working 3D schematic of a pool's circulation, filtration and heating](https://trebizondoculpepper.github.io/the_pool/?room=dev51)
+- [Dev52: museum stuff, the museum's showcases tried in a dark room](https://trebizondoculpepper.github.io/the_pool/?room=dev52)
+- [Dev53: the skimmer reveal, Hall 5's skimmer as a film: gold caustics, an orbit, a jump cut and a fanfare](https://trebizondoculpepper.github.io/the_pool/?room=dev53)
+
+The room-layout pipeline is described in [`doc/room-layout-guide.md`](doc/room-layout-guide.md), and the test scenarios in [`doc/prompts/scenarios.md`](doc/prompts/scenarios.md).
+
 ## Checks
 
 `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm test` and `npm run build`. CI (`.github/workflows/ci.yml`) runs the same five and deploys the build to GitHub Pages.
 
 Slow tests (over about 1.5 s, or simulating long stretches of world time) live in `*.slow.test.ts` files beside their fast siblings. `npm test` runs everything and is run locally before every commit; on GitHub, where `CI` is set, `vite.config.ts` excludes the slow files so the checks stay quick. `npm run test:fast` runs the fast set alone locally.
+
+## Desktop builds
+
+Every release also carries the game as a desktop app (mission 111, `doc/prompts/111-desktop-builds.md`): the release's web build, unchanged, in Electron, from `desktop/`. The Release workflow's `desktop` job packages it on Linux, macOS and Windows and attaches the files to the GitHub release, with `SHA256SUMS.txt` and a build attestation for each (`gh attestation verify <file> --repo trebizondoculpepper/the_pool`). The names carry no version, so these links always fetch the newest:
+
+- Linux and the Steam Deck: [The-Pool-linux-x86_64.AppImage](https://github.com/trebizondoculpepper/the_pool/releases/latest/download/The-Pool-linux-x86_64.AppImage) (or `The-Pool-linux-x64.tar.gz`). On the Deck, in Desktop Mode: download it, make it executable (Properties, Permissions, or `chmod +x`), then in Steam choose Add a Game, Add a Non-Steam Game, and pick it; it then starts from Gaming Mode.
+- macOS (Apple silicon and Intel): [The-Pool-mac-universal.dmg](https://github.com/trebizondoculpepper/the_pool/releases/latest/download/The-Pool-mac-universal.dmg). Not yet signed: after copying it to Applications, run `xattr -cr "/Applications/The Pool.app"` once, or macOS calls it damaged.
+- Windows: [The-Pool-windows-x64-setup.exe](https://github.com/trebizondoculpepper/the_pool/releases/latest/download/The-Pool-windows-x64-setup.exe) (or the portable `The-Pool-windows-x64.zip`). Not yet signed: SmartScreen asks first; choose More info, Run anyway.
+
+To run or package it locally: `npm run build` at the root, then in `desktop/` `npm ci` once, `npm start` to run it, or `npm run package -- --linux` (or `--mac`, `--win`) to make the packages in `desktop/release/`. `desktop/` has its own `package.json` and lockfile, so Electron never touches the root's (and its `0.0.0` version is never changed: a release's packages take the tag's). The game is served on its own `app://game/` protocol, so its saves stay put between versions, and Sentry reports desktop runs as `desktop`. The Desktop check workflow (run by hand from the Actions tab) packages every platform from any branch into the run's artifacts, without a release.
+
+## Contributing with an AI
+
+Most of this project has been written with AI coding agents (Claude Code and OpenAI's Codex) working under the owner's direction, and the repository is set up so that an agent can pick up work safely.
+
+1. **Instructions.** `AGENTS.md` is the project's instructions for any agent, and `CLAUDE.md` is a symlink to it, so Claude Code and Codex read the same rules. Read it first: it covers the building and plant model, the engineering standards (every engineering item is a real, working component; displays redraw only when what they show changes; all input goes through `src/toolkit/controls/`; `logic/` folders are pure and tested), UK spelling, Markdown written one paragraph per line, and the commit rules below. Folders such as `src/toolkit/` carry their own `CLAUDE.md` for their part of the code.
+2. **Set up the agent.** Install [Claude Code](https://claude.com/claude-code) (or Codex) and start it in the repository's root, so it loads `AGENTS.md`/`CLAUDE.md`. Run `npm ci` and keep `npm run dev` running at http://127.0.0.1:5175/, which agents use to look at their work. For screenshots and in-browser checks, agents drive Chrome headlessly with `playwright-core`; screenshots belong in a scratch folder, not the repository.
+3. **Find work.** `TODO.md` is the one to-do list. Larger pieces of work are missions: numbered briefs in `doc/prompts/` (finished ones in `doc/prompts/done/`), written with the owner before any code, often with plans and a second opinion from another model in `doc/plans/<number>/`. New equipment and controls are tried in the development rooms first (the `?dev` panel lists them).
+4. **Work safely in a shared checkout.** Several agents often work in this checkout at once. Stage your own files by name, never with `git add -A`, `git add .` or `git add src`; commit through a private index (`GIT_INDEX_FILE=<somewhere private> git read-tree HEAD`, add your files, commit, then `git reset -- <files>`), so other sessions' staged work is untouched; then `git pull --rebase --autostash` and push. Do not create git worktrees unless the owner asks, and never commit `agent-mailbox.toml`, `agent-inbox.toml`, or `package.json`/`package-lock.json` outside a dependency change or a release.
+5. **Before every commit** run the [checks](#checks), add a `CHANGELOG.md` entry under Unreleased with its Keep a Changelog heading (`### Added`, `### Changed`, `### Fixed`), and tick or add the `TODO.md` item. Releases are cut only when the owner asks.
+6. **Ask, one question at a time.** Agents ask the owner one question at a time and record decisions in the mission brief or `AGENTS.md`, so the next agent inherits them.
 
 ## Versions and releases
 
@@ -85,16 +117,6 @@ Every change goes under Unreleased in `CHANGELOG.md` as it is made. A release is
 - The tag starts the Release workflow (`.github/workflows/release.yml`). It checks that the tag is annotated, points at the commit it builds, is on `main`, and matches `package.json`, both of the lockfile's version fields and a changelog section; runs the checks; rebuilds at the tag's exact version (`npm run build -- --release`); publishes a GitHub release whose notes are that section's headlines sorted into Major features and Minor fixes, with a link to the full section (`scripts/release-notes.ts`; an entry under a `### Fixed` heading is a fix, under any other heading a feature, and under none a fix when its headline says so: fixed, no longer, bug, audit and the like; `node scripts/release-notes.ts --dry-run` prints Unreleased's notes), the same notes on the run's summary page for an itch.io devlog (itch.io takes no notes with a build); and uploads the build to itch.io with butler (`--userversion` the release's version).
 - If the Release workflow fails after the tag is pushed, do not move, delete or remake the tag, and do not re-run the failed run (a re-run uses the workflow file at the tag's commit). Fix the cause on `main`, then publish the same tag again with main's workflow: `gh workflow run release.yml -f tag=vX.Y.Z` (watch it with `gh run watch`). It checks out that tag and makes every check the tag push makes; a GitHub release that already exists is kept, and the build goes on to itch.io.
 
-## Desktop builds
-
-Every release also carries the game as a desktop app (mission 111, `doc/prompts/111-desktop-builds.md`): the release's web build, unchanged, in Electron, from `desktop/`. The Release workflow's `desktop` job packages it on Linux, macOS and Windows and attaches the files to the GitHub release, with `SHA256SUMS.txt` and a build attestation for each (`gh attestation verify <file> --repo trebizondoculpepper/the_pool`). The names carry no version, so these links always fetch the newest:
-
-- Linux and the Steam Deck: [The-Pool-linux-x86_64.AppImage](https://github.com/trebizondoculpepper/the_pool/releases/latest/download/The-Pool-linux-x86_64.AppImage) (or `The-Pool-linux-x64.tar.gz`). On the Deck, in Desktop Mode: download it, make it executable (Properties, Permissions, or `chmod +x`), then in Steam choose Add a Game, Add a Non-Steam Game, and pick it; it then starts from Gaming Mode.
-- macOS (Apple silicon and Intel): [The-Pool-mac-universal.dmg](https://github.com/trebizondoculpepper/the_pool/releases/latest/download/The-Pool-mac-universal.dmg). Not yet signed: after copying it to Applications, run `xattr -cr "/Applications/The Pool.app"` once, or macOS calls it damaged.
-- Windows: [The-Pool-windows-x64-setup.exe](https://github.com/trebizondoculpepper/the_pool/releases/latest/download/The-Pool-windows-x64-setup.exe) (or the portable `The-Pool-windows-x64.zip`). Not yet signed: SmartScreen asks first; choose More info, Run anyway.
-
-To run or package it locally: `npm run build` at the root, then in `desktop/` `npm ci` once, `npm start` to run it, or `npm run package -- --linux` (or `--mac`, `--win`) to make the packages in `desktop/release/`. `desktop/` has its own `package.json` and lockfile, so Electron never touches the root's (and its `0.0.0` version is never changed: a release's packages take the tag's). The game is served on its own `app://game/` protocol, so its saves stay put between versions, and Sentry reports desktop runs as `desktop`. The Desktop check workflow (run by hand from the Actions tab) packages every platform from any branch into the run's artifacts, without a release.
-
 ## Error reporting
 
 Every run sends its errors to Sentry (`src/toolkit/errors/error-reporting.ts`): uncaught errors, unhandled rejections and the errors the game catches itself. Each carries its release, `the-pool@` and the version (the build's derived version; on the dev server the same, worked out from git by `vite.config.ts`), and its environment, so runs are told apart: `prod` (releases on itch.io), `pre-release` (GitHub Pages), `desktop` (the desktop app) and `dev` (the dev server, or a build served anywhere else); and tags for its build (commit and date, marked if it had uncommitted changes), the room and the graphics preset. Errors only: no tracing, profiling or replays, no cookies and no personal data. `?dev` and automated browsers (`navigator.webdriver`, the headless checks) never report.
@@ -105,4 +127,4 @@ The build tooling (Vite+, TypeScript 7, Oxlint, Oxfmt) and the first-person cont
 
 ## Licence
 
-Pool Plant is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. It is distributed in the hope that it will be useful, but without any warranty; see `LICENSE` for the full terms. As an additional permission under the GPL's section 7, it may be linked with game platform libraries, such as the Steamworks and Epic Online Services SDKs, without those libraries falling under the GPL (`LICENSE-EXCEPTION.md`). The recordings and textures it uses keep their own licences, listed in `CREDITS.md`.
+The Pool is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. It is distributed in the hope that it will be useful, but without any warranty; see `LICENSE` for the full terms. As an additional permission under the GPL's section 7, it may be linked with game platform libraries, such as the Steamworks and Epic Online Services SDKs, without those libraries falling under the GPL (`LICENSE-EXCEPTION.md`). The recordings and textures it uses keep their own licences, listed in `CREDITS.md`.

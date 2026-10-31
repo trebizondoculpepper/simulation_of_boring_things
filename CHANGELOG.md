@@ -4,6 +4,10 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+### Changed
+
+- The README opens with what The Pool is and how to play it, then how to build it and how to set up an AI agent to contribute (the owner, 2026-10-31).
+
 ## [0.8.0] - 2026-10-31
 
 - The crosshair says how a thing is used: an arrow into the screen to push (buttons, keypads, resets), out of it to pull (an emergency stop pushed in, a pull cord), the turn arrow for knobs (now also the overload dial, dimmers and dial thermostats), and a plain green ring for anything used another way; red wherever the use would have no effect (no power, latched, an overload not tripped or still hot). Toggles, doors, valves and pick-ups keep the plain ring for now.
