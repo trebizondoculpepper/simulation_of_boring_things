@@ -249,3 +249,17 @@ export function setCylinderValve(
   banks[bank][index] = { ...banks[bank][index], open };
   return { ...s, banks };
 }
+
+/**
+ * The manifold's alarms, on its volt-free contacts (CO₂ dosing, the owner,
+ * 2026-10-31): BANK EMPTY, CHANGE CYLINDERS while either bank is spent (its
+ * flag red: the manifold has changed over, or the reserve was never
+ * changed), and SUPPLY EXHAUSTED when neither bank can feed the regulator.
+ */
+export function co2SupplyAlarms(s: Co2Supply) {
+  const empty = CO2_BANKS.filter((b) => bankFlag(s, b) === 'empty');
+  return {
+    bankEmpty: empty.length > 0,
+    exhausted: empty.length === CO2_BANKS.length,
+  };
+}

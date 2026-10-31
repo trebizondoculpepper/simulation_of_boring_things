@@ -6,6 +6,7 @@ import {
   bankFlag,
   bankInUse,
   bankPressure,
+  co2SupplyAlarms,
   co2Pressures,
   cylinderPressure,
   drawCo2,
@@ -85,5 +86,25 @@ describe('the changeover manifold', () => {
     expect(co2Pressures(s).line).toBe(0);
     const shut = setIsolation(newCo2Supply(20), false);
     expect(drawCo2(shut, 5)).toBe(shut);
+  });
+});
+
+describe('the manifold’s alarms', () => {
+  it('says nothing with both banks full', () => {
+    expect(co2SupplyAlarms(newCo2Supply(20))).toEqual({
+      bankEmpty: false,
+      exhausted: false,
+    });
+  });
+  it('calls BANK EMPTY, CHANGE CYLINDERS once it has changed over, and EXHAUSTED once both are spent', () => {
+    const changed = drawCo2(newCo2Supply(20), 4 * 34 - 2);
+    expect(co2SupplyAlarms(changed)).toEqual({
+      bankEmpty: true,
+      exhausted: false,
+    });
+    expect(co2SupplyAlarms(drawCo2(changed, 1000))).toEqual({
+      bankEmpty: true,
+      exhausted: true,
+    });
   });
 });
