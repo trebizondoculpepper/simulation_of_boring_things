@@ -357,17 +357,21 @@ async function candidates(usage: Map<string, Usage>): Promise<Candidate[]> {
     },
   });
   // The Aqualis cabinet (mission 114): its screen redrawn every two seconds
-  // (a screen of its cycle changing), its lamps and sample meter worked.
+  // (a screen of its cycle changing) and Dr Aqualis's overlay (230 × 300)
+  // at his 10 Hz, as while he animates; its lamps, sample meter and pump worked.
   usage.set('part:aqualis-cabinet', { count: 1, busy: 0, rooms: ['dev58'] });
   list.push({
     id: 'part:aqualis-cabinet',
-    label: 'Aqualis cabinet (7-inch touch screen, HAND · OFF · AUTO)',
+    label: 'Aqualis cabinet (12-inch touch screen, HAND · OFF · AUTO)',
     source: 'part',
     room: 'dev58',
     build: (kit) => {
       const cab = createAqualisCabinet(kit, { screenTouch: () => {} });
+      const o = cab.overlay;
+      o.visible(true);
       let t = 0;
       let second = -1;
+      let frame = -1;
       return {
         object: cab.group,
         update: (d) => {
@@ -382,6 +386,23 @@ async function candidates(usage: Map<string, Usage>): Promise<Candidate[]> {
               alarm: false,
             });
             cab.setSampleFlow(20 + (second % 5) * 4);
+          }
+          if (Math.floor(t * 10) !== frame) {
+            frame = Math.floor(t * 10);
+            // A stand-in for his frame: a drop bobbing.
+            const c = o.context;
+            c.clearRect(0, 0, o.box.w, o.box.h);
+            c.fillStyle = '#3aa8f0';
+            c.beginPath();
+            c.arc(
+              o.box.w / 2,
+              170 + 8 * Math.sin(frame / 3),
+              60,
+              0,
+              2 * Math.PI,
+            );
+            c.fill();
+            o.changed();
           }
           cab.update(d);
         },

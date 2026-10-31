@@ -5,6 +5,9 @@ import {
   glandsOf,
   portsOf,
   KNOB_AT,
+  OVERLAY,
+  overlayCanvasSize,
+  overlayPixel,
   LEDS,
   PORTS,
   SCREEN_AREA,
@@ -26,11 +29,12 @@ describe('the Aqualis cabinet', () => {
     expect(CABINET.split).toBeLessThan(CABINET.h - 0.5);
   });
 
-  it('has a 7-inch screen, its pixels nearly square', () => {
+  it('has a 12-inch 4:3 screen that fits its door', () => {
     const diagonal = Math.hypot(SCREEN_AREA.w, SCREEN_AREA.h) / 0.0254;
-    expect(diagonal).toBeCloseTo(7, 0);
-    const ratio = SCREEN.h / SCREEN_AREA.h / SCREEN_PX_PER_M;
-    expect(Math.abs(ratio - 1)).toBeLessThan(0.1);
+    expect(diagonal).toBeCloseTo(12, 0);
+    expect(SCREEN_AREA.w / SCREEN_AREA.h).toBeCloseTo(4 / 3, 1);
+    expect(SCREEN_AREA.w + 2 * SCREEN_AREA.bezel).toBeLessThan(CABINET.w - 0.1);
+    expect(SCREEN_PX_PER_M).toBeCloseTo(SCREEN.w / SCREEN_AREA.w);
   });
 
   it('keeps the screen, knob and lamps on the upper door', () => {
@@ -82,5 +86,24 @@ describe('the Dr Aqualis series', () => {
       ['acid', 'alarm', 'hypochlorite', 'sampleIn', 'sampleOut'].sort(),
     );
     expect(portsOf('consultant').co2).toBeUndefined();
+  });
+});
+
+describe('Dr Aqualis’s overlay', () => {
+  it('lies within the screen and maps its touches to screen pixels', () => {
+    expect(OVERLAY.x + OVERLAY.w).toBeLessThanOrEqual(SCREEN.w);
+    expect(OVERLAY.y + OVERLAY.h).toBeLessThanOrEqual(SCREEN.h);
+    expect(overlayPixel(0, 1)).toEqual([OVERLAY.x, OVERLAY.y]);
+    expect(overlayPixel(1, 0)).toEqual([
+      OVERLAY.x + OVERLAY.w,
+      OVERLAY.y + OVERLAY.h,
+    ]);
+  });
+
+  it('uploads a small part of the screen at 10 Hz, within the bench budget', () => {
+    const { w, h } = overlayCanvasSize();
+    expect(w * h).toBeLessThan((SCREEN.w * SCREEN.h) / 4);
+    // The component bench's running budget: 300k texels a second.
+    expect(w * h * 10).toBeLessThan(300_000);
   });
 });

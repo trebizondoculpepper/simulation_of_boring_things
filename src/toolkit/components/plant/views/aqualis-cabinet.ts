@@ -1,4 +1,10 @@
-import { Group, Mesh, MeshBasicMaterial, PlaneGeometry } from 'three';
+import {
+  Group,
+  Mesh,
+  MeshBasicMaterial,
+  PlaneGeometry,
+  TorusGeometry,
+} from 'three';
 import type { Object3D, Vector2 } from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { PanelKit } from '../../core/views/eighties-controls';
@@ -13,6 +19,13 @@ import type { Selector } from '../../../../game/plant/aqualis-types';
 import {
   CABINET,
   CABINET_MODELS,
+  DOOR_OPEN,
+  OVERLAY,
+  OVERLAY_SCALE,
+  overlayCanvasSize,
+  POSTIT,
+  POSTIT_TEXT,
+  overlayPixel,
   GLAND_LABELS,
   glandsOf,
   portsOf,
@@ -120,11 +133,55 @@ export function drawBootScreen(
   c.fillText('© 2003 Aqualis Interactive', w - 16, h - 18);
 }
 
+/** The handwriting the developer's note is in: whatever of these the browser has. */
+const HAND =
+  "'Bradley Hand', 'Segoe Print', 'Comic Sans MS', 'Chalkboard SE', cursive";
+
+/** The developer's Post-it: yellow, a little shadowed at its top, in a hurried hand. */
+function drawPostIt(c: CanvasRenderingContext2D, cw: number, ch: number) {
+  c.fillStyle = '#fbe96a';
+  c.fillRect(0, 0, cw, ch);
+  const glue = c.createLinearGradient(0, 0, 0, ch * 0.18);
+  glue.addColorStop(0, 'rgba(160,130,0,0.25)');
+  glue.addColorStop(1, 'rgba(160,130,0,0)');
+  c.fillStyle = glue;
+  c.fillRect(0, 0, cw, ch * 0.18);
+  c.fillStyle = '#1d2a6b';
+  c.textBaseline = 'top';
+  const pad = cw * 0.06;
+  let y = pad;
+  const line = (text: string, size: number, gap: number) => {
+    c.font = `${size}px ${HAND}`;
+    let row = '';
+    for (const word of text.split(' ')) {
+      const next = row ? `${row} ${word}` : word;
+      if (c.measureText(next).width > cw - 2 * pad && row) {
+        c.fillText(row, pad, y);
+        y += size * 1.12;
+        row = word;
+      } else row = next;
+    }
+    if (row) c.fillText(row, pad, y);
+    y += size * 1.12 + gap;
+  };
+  const s = cw / 384;
+  line(POSTIT_TEXT[0], 30 * s, 6 * s);
+  line(POSTIT_TEXT[1], 26 * s, 8 * s);
+  line(POSTIT_TEXT[2], 26 * s, 4 * s);
+  // A signature and a little heart.
+  c.font = `${28 * s}px ${HAND}`;
+  c.textAlign = 'right';
+  c.fillText('— the dev ♥', cw - pad, Math.min(y, ch - pad - 30 * s));
+  c.textAlign = 'left';
+}
+
 export function createAqualisCabinet(
   kit: PanelKit,
   host: CabinetHost,
   /** Which of the Dr Aqualis series: its name, and its control glands (3, 2 or 0). */
   model: CabinetModel = 'trio',
+  /** The overlay canvas's resolution against the screen's (`OVERLAY_SCALE`). */
+  overlayScale = OVERLAY_SCALE,
 ) {
   const info = CABINET_MODELS[model];
   const t = tools(kit);
@@ -189,15 +246,24 @@ export function createAqualisCabinet(
   t.box(group, blue, w + 0.004, 0.014, 0.004, 0, h - cap + 0.004, d + 0.012);
   t.box(group, dark, w, 0.008, 0.004, 0, split, front);
 
-  // ---- The lower section: the wet chemistry behind its window -----------------------
+  // ---- The lower section: the wet chemistry behind its windowed door -----------------
   const lowH = split - plinth - 0.006;
   const lowY = plinth + lowH / 2;
   const frameW = 0.05;
-  // The door: a frame round a clear window.
-  for (const x of [-w / 2 + frameW / 2, w / 2 - frameW / 2])
-    t.box(group, whiteDoor, frameW, lowH, door, x, lowY, front - door / 2);
+  // The door: a frame round a clear window, hinged on its right edge so it
+  // swings clear of the sample valve on the left; its handle on the left.
+  const lowerDoor = new Group();
+  lowerDoor.name = `${info.name} lower door`;
+  lowerDoor.position.set(w / 2, 0, front - door / 2);
+  group.add(lowerDoor);
+  const leaf = (mesh: Mesh) => {
+    mesh.name = lowerDoor.name;
+    return mesh;
+  };
+  for (const x of [-w + frameW / 2, -frameW / 2])
+    leaf(t.box(lowerDoor, whiteDoor, frameW, lowH, door, x, lowY, 0));
   for (const y of [plinth + frameW / 2, split - 0.006 - frameW / 2])
-    t.box(group, whiteDoor, w, frameW, door, 0, y, front - door / 2);
+    leaf(t.box(lowerDoor, whiteDoor, w, frameW, door, -w / 2, y, 0));
   const glass = createPs1Material({
     color: '#cfe6f2',
     transparent: true,
@@ -205,23 +271,52 @@ export function createAqualisCabinet(
     roughness: 0.05,
   });
   kit.materials.push(glass);
-  const pane = new Mesh(
-    new PlaneGeometry(w - 2 * frameW, lowH - 2 * frameW),
-    glass,
+  const pane = leaf(
+    new Mesh(new PlaneGeometry(w - 2 * frameW, lowH - 2 * frameW), glass),
   );
-  pane.position.set(0, lowY, front - door / 2);
+  pane.position.set(-w / 2, lowY, 0);
   pane.renderOrder = 2;
-  group.add(pane);
-  t.box(
-    group,
-    grey,
-    0.012,
-    0.08,
-    0.02,
-    w / 2 - frameW - 0.01,
-    lowY,
-    front + 0.004,
+  lowerDoor.add(pane);
+  leaf(
+    t.box(
+      lowerDoor,
+      grey,
+      0.012,
+      0.08,
+      0.02,
+      -w + frameW + 0.01,
+      lowY,
+      door / 2 + 0.004,
+    ),
   );
+  // Its hinges, on the right.
+  for (const y of [plinth + 0.12, split - 0.12])
+    t.cyl(
+      group,
+      steel,
+      0.006,
+      0.06,
+      w / 2 + 0.002,
+      y,
+      front - door / 2,
+      'y',
+      8,
+    );
+  // The developer's note, stuck inside the door's left stile.
+  // Drawn once on its own canvas: it never changes, so it never uploads again.
+  const noteCanvas = createCanvasTexture(256, 256);
+  drawPostIt(noteCanvas.context, 256, 256);
+  noteCanvas.texture.needsUpdate = true;
+  kit.textures.push(noteCanvas.texture);
+  const notePaper = createPs1Material({ map: noteCanvas.texture });
+  kit.materials.push(notePaper);
+  const note = new Mesh(new PlaneGeometry(POSTIT.m, POSTIT.m), notePaper);
+  note.position.set(-w + frameW / 2 + 0.012, plinth + 0.3, -door / 2 - 0.001);
+  note.rotation.set(0, Math.PI, 0.06);
+  note.name = lowerDoor.name;
+  lowerDoor.add(note);
+  const doorMeshes = new Set<Object3D>();
+  lowerDoor.traverse((o) => doorMeshes.add(o));
   // Inside: a pale back plate, with the analyser's plumbing on it.
   const back = 0.03;
   t.box(
@@ -264,7 +359,7 @@ export function createAqualisCabinet(
       0.05,
     );
   });
-  t.label(inside, 'FLOW CELL', 0.06, cellY - 0.07, 0.092, 0.012, '#30383e');
+  t.label(inside, 'ANALYSIS CELL', 0.06, cellY - 0.07, 0.092, 0.012, '#30383e');
   // The sample rotameter, upright on the left, its float riding with the flow.
   const meter = createGlassRotameter(kit, { od: 0.016, tag: 'AQ-FI', max: 60 });
   meter.group.rotation.z = Math.PI / 2;
@@ -330,9 +425,159 @@ export function createAqualisCabinet(
   ) => t.cyl(inside, pvc, 0.007, len, x, y, z, axis, 10);
   pipe(0.13, -w / 2 + 0.065, PORTS.sampleIn.at[1], 0.05, 'x');
   pipe(0.33, -0.19, (PORTS.sampleIn.at[1] + 0.53) / 2, 0.05, 'y');
-  pipe(0.14, -0.13, 0.69, 0.05, 'x');
   pipe(0.18, 0.2, cellY - 0.09 - 0.09, 0.05, 'y');
   pipe(0.47, -0.035, PORTS.sampleOut.at[1] + 0.13, 0.03, 'x');
+  // The sample pump: a small peristaltic pump drawing the sample from the
+  // meter and driving it up into the analysis cell, its rotor turning while
+  // the sample flows.
+  const pumpAt = { x: 0.03, y: 0.47, z: 0.04 };
+  t.box(
+    inside,
+    t.paint('#3b4a57', 0.5),
+    0.09,
+    0.09,
+    0.06,
+    pumpAt.x,
+    pumpAt.y,
+    pumpAt.z,
+  );
+  t.cyl(
+    inside,
+    t.paint('#d7dde0', 0.3),
+    0.036,
+    0.012,
+    pumpAt.x,
+    pumpAt.y,
+    pumpAt.z + 0.036,
+    'z',
+    24,
+  );
+  const rotor = new Group();
+  rotor.position.set(pumpAt.x, pumpAt.y, pumpAt.z + 0.046);
+  inside.add(rotor);
+  const rollerPaint = t.paint('#e3e6e8', 0.3, 0.5);
+  t.cyl(rotor, t.paint('#2a2f33', 0.4), 0.008, 0.012, 0, 0, 0, 'z', 12);
+  for (let k = 0; k < 3; k++) {
+    const a = (k * 2 * Math.PI) / 3;
+    t.box(
+      rotor,
+      t.paint('#2a2f33', 0.4),
+      0.004,
+      0.022,
+      0.004,
+      Math.sin(a) * 0.011,
+      Math.cos(a) * 0.011,
+      0,
+    ).rotation.z = -a;
+    t.cyl(
+      rotor,
+      rollerPaint,
+      0.006,
+      0.012,
+      Math.sin(a) * 0.022,
+      Math.cos(a) * 0.022,
+      0,
+      'z',
+      10,
+    );
+  }
+  const tubing = createPs1Material({
+    color: '#efe9d8',
+    transparent: true,
+    opacity: 0.85,
+    roughness: 0.3,
+  });
+  kit.materials.push(tubing);
+  // The pump's tube round its rollers, then in from the meter and up to the cell.
+  const loop = new Mesh(new TorusGeometry(0.03, 0.004, 6, 20, Math.PI), tubing);
+  loop.position.set(pumpAt.x, pumpAt.y, pumpAt.z + 0.046);
+  loop.rotation.z = Math.PI;
+  inside.add(loop);
+  const tube = (
+    len: number,
+    x: number,
+    y: number,
+    z: number,
+    axis: 'x' | 'y' | 'z',
+  ) => t.cyl(inside, tubing, 0.004, len, x, y, z, axis, 8);
+  tube(0.17, -0.115, 0.69, pumpAt.z + 0.046, 'x');
+  tube(0.22, -0.03, 0.58, pumpAt.z + 0.046, 'y');
+  tube(0.11, 0.06, 0.525, pumpAt.z + 0.046, 'y');
+  t.label(
+    inside,
+    'SAMPLE PUMP',
+    pumpAt.x,
+    pumpAt.y - 0.058,
+    pumpAt.z + 0.031,
+    0.009,
+    '#30383e',
+  );
+  // The analyser's circuit boards, green, on brass standoffs: one on the
+  // back plate, one on the right-hand wall.
+  const pcb = t.paint('#1f6b35', 0.45);
+  const chip = t.paint('#16181a', 0.4);
+  const brass = t.paint('#b08d3c', 0.35, 0.7);
+  const board = (parent: Group, bw: number, bh: number, seed: number) => {
+    const g = new Group();
+    parent.add(g);
+    t.box(g, pcb, bw, bh, 0.002, 0, 0, 0.012);
+    for (const [sx, sy] of [
+      [-1, -1],
+      [1, -1],
+      [-1, 1],
+      [1, 1],
+    ])
+      t.cyl(
+        g,
+        brass,
+        0.003,
+        0.012,
+        (sx * (bw - 0.012)) / 2,
+        (sy * (bh - 0.012)) / 2,
+        0.006,
+        'z',
+        6,
+      );
+    // Its chips, a crystal and a row of header pins, laid out by its seed.
+    for (let k = 0; k < 4; k++) {
+      const cw = 0.012 + ((seed * 7 + k * 5) % 4) * 0.004;
+      t.box(
+        g,
+        chip,
+        cw,
+        0.01,
+        0.003,
+        -bw / 2 + 0.014 + (k * (bw - 0.02)) / 4 + cw / 2 - 0.004,
+        bh / 2 - 0.022 - (k % 2) * 0.022,
+        0.0145,
+      );
+    }
+    t.box(
+      g,
+      t.paint('#c9cdd0', 0.3, 0.8),
+      0.008,
+      0.004,
+      0.003,
+      bw / 2 - 0.014,
+      -bh / 2 + 0.012,
+      0.0145,
+    );
+    t.box(
+      g,
+      t.paint('#202224', 0.4),
+      bw * 0.6,
+      0.005,
+      0.006,
+      0,
+      -bh / 2 + 0.008,
+      0.016,
+    );
+    return g;
+  };
+  board(inside, 0.1, 0.085, 1).position.set(-0.115, 0.475, -0.012);
+  const sideBoard = board(group, 0.14, 0.1, 2);
+  sideBoard.position.set(w / 2 - 0.015, 0.56, 0.16);
+  sideBoard.rotation.y = -Math.PI / 2;
   // The sample pipes out of the side, and the inlet's ball valve on its pipe.
   for (const port of [PORTS.sampleIn, PORTS.sampleOut]) {
     const [x, y, z] = port.at;
@@ -421,6 +666,46 @@ export function createAqualisCabinet(
   screen.position.set(SCREEN_AT.x, SCREEN_AT.y, 0.0125);
   screen.name = 'Aqualis touch screen';
   face.add(screen);
+  // Dr Aqualis's overlay: a canvas of its own just in front of the screen,
+  // transparent where he is not, so his frames upload a fraction of it.
+  const overSize = overlayCanvasSize(overlayScale);
+  const over = createCanvasTexture(overSize.w, overSize.h, 'touch');
+  // Drawn in the box's own pixels (0 to OVERLAY.w across), whatever its resolution.
+  const toBox = () =>
+    over.context.setTransform(
+      overSize.w / OVERLAY.w,
+      0,
+      0,
+      overSize.h / OVERLAY.h,
+      0,
+      0,
+    );
+  toBox();
+  kit.textures.push(over.texture);
+  const overMaterial = new MeshBasicMaterial({
+    map: over.texture,
+    toneMapped: false,
+    color: SCREEN_LEVEL,
+    transparent: true,
+    depthWrite: false,
+  });
+  kit.materials.push(overMaterial);
+  const pxW = S.w / SCREEN.w;
+  const pxH = S.h / SCREEN.h;
+  const overlayMesh = new Mesh(
+    new PlaneGeometry(OVERLAY.w * pxW, OVERLAY.h * pxH),
+    overMaterial,
+  );
+  overlayMesh.position.set(
+    SCREEN_AT.x - S.w / 2 + (OVERLAY.x + OVERLAY.w / 2) * pxW,
+    SCREEN_AT.y + S.h / 2 - (OVERLAY.y + OVERLAY.h / 2) * pxH,
+    0.013,
+  );
+  overlayMesh.renderOrder = 3;
+  overlayMesh.name = 'Aqualis touch screen (Dr Aqualis)';
+  overlayMesh.visible = false;
+  face.add(overlayMesh);
+  over.context.clearRect(0, 0, OVERLAY.w, OVERLAY.h);
   // The software's name under the screen, the maker's badge above it.
   t.label(
     face,
@@ -562,6 +847,8 @@ export function createAqualisCabinet(
   let valveOpen = true;
   let leverAngle = 0;
   let sampleFlow = 30;
+  let doorOpen = false;
+  let doorAngle = 0;
 
   drawBootScreen(context, 0.6, model);
   texture.needsUpdate = true;
@@ -574,11 +861,26 @@ export function createAqualisCabinet(
     return null;
   };
 
-  const touchables: Object3D[] = [screen, handle, ...parts.uses.keys()];
+  const touchables: Object3D[] = [
+    screen,
+    overlayMesh,
+    handle,
+    ...doorMeshes,
+    ...parts.uses.keys(),
+  ];
+  /** A touch on the screen or its overlay, as the screen's pixels. */
+  const pixelOf = (object: Object3D, uv: Vector2 | undefined) =>
+    !uv
+      ? null
+      : object === screen
+        ? screenPixel(uv.x, uv.y)
+        : object === overlayMesh
+          ? overlayPixel(uv.x, uv.y)
+          : null;
 
   return {
     group,
-    /** The meshes that take touches and turns: the screen, the knob, the sample valve's lever. */
+    /** The meshes that take touches and turns: the screen and its overlay, the knob, the sample valve's lever, the lower door. */
     touchables,
     /** The screen's 2D context, 800 × 480, for the host to draw into. */
     context,
@@ -590,9 +892,14 @@ export function createAqualisCabinet(
     },
     /** A use on `object` (the knob turned `direction`, a screen touch at `uv`): whether it did anything. */
     touch(object: Object3D, uv?: Vector2, direction = 1) {
-      if (object === screen) {
-        if (!uv) return false;
-        host.screenTouch(...screenPixel(uv.x, uv.y));
+      if (object === screen || object === overlayMesh) {
+        const p = pixelOf(object, uv);
+        if (!p) return false;
+        host.screenTouch(...p);
+        return true;
+      }
+      if (doorMeshes.has(object)) {
+        doorOpen = !doorOpen;
         return true;
       }
       if (object === handle) {
@@ -607,12 +914,13 @@ export function createAqualisCabinet(
     },
     /** Whether a use there would do anything (the crosshair). */
     aimed(object: Object3D, uv?: Vector2) {
-      if (object === screen)
-        return (
-          Boolean(uv) &&
-          (host.screenAimed?.(...screenPixel(uv!.x, uv!.y)) ?? true)
-        );
-      return object === handle || useOf(object) !== null;
+      if (object === screen || object === overlayMesh) {
+        const p = pixelOf(object, uv);
+        return p !== null && (host.screenAimed?.(...p) ?? true);
+      }
+      return (
+        object === handle || doorMeshes.has(object) || useOf(object) !== null
+      );
     },
     get selector() {
       return sel;
@@ -635,7 +943,29 @@ export function createAqualisCabinet(
       ][])
         leds.get(id)?.set(lit);
     },
-    /** The sample's flow through the rotameter, l/h. */
+    /**
+     * Dr Aqualis's overlay over the screen's pixels `OVERLAY` (230 × 300):
+     * draw into `context` (transparent where he is not), `changed()` to
+     * upload it, `visible(false)` to hide it while another screen shows.
+     */
+    overlay: {
+      context: over.context,
+      box: OVERLAY,
+      changed() {
+        over.texture.needsUpdate = true;
+      },
+      visible(on: boolean) {
+        overlayMesh.visible = on;
+      },
+    },
+    get doorOpen() {
+      return doorOpen;
+    },
+    /** Open or shut the lower door, as a click on it would. */
+    setDoorOpen(open: boolean) {
+      doorOpen = open;
+    },
+    /** The sample's flow through the rotameter and its pump, l/h. */
     setSampleFlow(lh: number) {
       sampleFlow = lh;
     },
@@ -644,7 +974,17 @@ export function createAqualisCabinet(
     ports: portsOf(model),
     update(dt: number) {
       parts.update(dt);
-      meter.show(valveOpen ? sampleFlow : 0, dt);
+      const flowing = valveOpen ? sampleFlow : 0;
+      meter.show(flowing, dt);
+      // The sample pump's rotor: about a turn a second at 30 l/h.
+      if (flowing > 0) rotor.rotation.z -= dt * 2 * Math.PI * (flowing / 30);
+      const swing = doorOpen ? DOOR_OPEN : 0;
+      if (doorAngle !== swing) {
+        doorAngle +=
+          Math.sign(swing - doorAngle) *
+          Math.min(Math.abs(swing - doorAngle), dt * 3);
+        lowerDoor.rotation.y = doorAngle;
+      }
       const target = valveOpen ? 0 : Math.PI / 2;
       if (leverAngle !== target) {
         leverAngle +=

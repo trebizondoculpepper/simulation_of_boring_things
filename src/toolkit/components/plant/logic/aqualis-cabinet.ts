@@ -1,5 +1,7 @@
 import type { ChannelId, Selector } from '../../../../game/plant/aqualis-types';
 import { SCREEN } from '../../../../game/plant/aqualis-types';
+import type { Rect } from '../../../../ui2d/geometry';
+import { DOCTOR } from './aqualis-display';
 
 /**
  * The Aqualis cabinet's form (mission 114, `doc/plans/114/`): an early-2000s
@@ -23,23 +25,26 @@ export const CABINET = {
   door: 0.022,
 } as const;
 
-/** The 7-inch panel's active area, m (154 × 86 mm), and its bezel's margin. */
-export const SCREEN_AREA = { w: 0.154, h: 0.086, bezel: 0.018 } as const;
+/**
+ * The 12-inch 4:3 panel's active area, m (244 × 183 mm), and its bezel's
+ * margin (the owner, 2026-10-31). Its pixels are `SCREEN`'s, whatever they are.
+ */
+export const SCREEN_AREA = { w: 0.244, h: 0.183, bezel: 0.024 } as const;
 
-/** The screen's pixels for each metre of its active area (about 5.2 px/mm). */
+/** The screen's pixels for each metre of its active area, across. */
 export const SCREEN_PX_PER_M = SCREEN.w / SCREEN_AREA.w;
 
 /** The screen's middle, on the upper door's face. */
-export const SCREEN_AT = { x: 0, y: 1.5 } as const;
+export const SCREEN_AT = { x: 0, y: 1.475 } as const;
 
 /** The HAND · OFF · AUTO knob's middle, below the screen. */
-export const KNOB_AT = { x: -0.14, y: 1.24 } as const;
+export const KNOB_AT = { x: -0.15, y: 1.18 } as const;
 
 /** The status lamps, right of the knob: label and where. */
 export const LEDS = [
-  { id: 'power', label: 'POWER', colour: '#3ddc5a', x: 0.08, y: 1.27 },
-  { id: 'dosing', label: 'DOSING', colour: '#ffb21c', x: 0.15, y: 1.27 },
-  { id: 'alarm', label: 'ALARM', colour: '#ff3b2f', x: 0.22, y: 1.27 },
+  { id: 'power', label: 'POWER', colour: '#3ddc5a', x: 0.06, y: 1.21 },
+  { id: 'dosing', label: 'DOSING', colour: '#ffb21c', x: 0.14, y: 1.21 },
+  { id: 'alarm', label: 'ALARM', colour: '#ff3b2f', x: 0.22, y: 1.21 },
 ] as const;
 
 export type LedId = (typeof LEDS)[number]['id'];
@@ -142,3 +147,42 @@ export function portsOf(
   for (const id of glandsOf(model)) out[id] = PORTS[id];
   return out;
 }
+
+/**
+ * Dr Aqualis's overlay: a small canvas of its own just in front of the
+ * screen over the display's box for him (`DOCTOR.him`), so his 10 Hz frames
+ * upload only that box, not the whole screen.
+ */
+export const OVERLAY: Rect = DOCTOR.him;
+
+/**
+ * The overlay canvas's pixels for each of the screen's it covers. At a half
+ * his 10 Hz frames upload a quarter of the box's texels, which keeps the
+ * cabinet within the component bench's budget; his drawing is in the
+ * screen's pixels either way (the context is scaled to suit).
+ */
+export const OVERLAY_SCALE = 0.5;
+
+/** The overlay canvas's size in its own pixels. */
+export const overlayCanvasSize = (scale = OVERLAY_SCALE) => ({
+  w: Math.max(1, Math.round(OVERLAY.w * scale)),
+  h: Math.max(1, Math.round(OVERLAY.h * scale)),
+});
+
+/** A touch's UV on the overlay's mesh, as the screen's pixels it covers. */
+export function overlayPixel(u: number, v: number): readonly [number, number] {
+  return [OVERLAY.x + u * OVERLAY.w, OVERLAY.y + (1 - v) * OVERLAY.h];
+}
+
+/** The developer's Post-it inside the lower door: 76 mm square. */
+export const POSTIT = { m: 0.076 } as const;
+
+/** Its words, in the developer's hand. */
+export const POSTIT_TEXT = [
+  'Note from the developer:',
+  'We know a machine like this is pure science fiction. Nothing in a box this size could really measure all of that!',
+  'We beg your forgiveness: we just thought it was a fun idea.',
+] as const;
+
+/** The lower door's swing when open, rad (about its right-hand hinge). */
+export const DOOR_OPEN = 1.9;
