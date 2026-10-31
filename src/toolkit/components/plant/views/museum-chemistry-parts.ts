@@ -28,12 +28,12 @@ import type { GhsKind } from './chemicals-signs';
  */
 
 /** Each hazard's CLP pictogram, as drawn (`drawGhs`), and its word on the label. */
-const HAZARD: Record<string, { ghs: GhsKind; word: string }> = {
-  corrosive: { ghs: 'corrosive', word: 'Corrosive' },
-  oxidiser: { ghs: 'oxidiser', word: 'Oxidiser' },
-  irritant: { ghs: 'exclamation', word: 'Irritant' },
-  environment: { ghs: 'environment', word: 'Environment' },
-  gas: { ghs: 'gas', word: 'Gas under pressure' },
+const HAZARD: Record<string, { ghs: GhsKind; code: string; word: string }> = {
+  corrosive: { ghs: 'corrosive', code: 'GHS05', word: 'Corrosive' },
+  oxidiser: { ghs: 'oxidiser', code: 'GHS03', word: 'Oxidiser' },
+  irritant: { ghs: 'exclamation', code: 'GHS07', word: 'Irritant' },
+  environment: { ghs: 'environment', code: 'GHS09', word: 'Environment' },
+  gas: { ghs: 'gas', code: 'GHS04', word: 'Gas under pressure' },
 };
 
 /**
@@ -127,19 +127,17 @@ export function createChemicalTank(
         h * 0.655,
         w * 0.8,
       );
-      // The pictograms themselves (the owner, 2026-10-31: the symbols,
-      // not their GHS numbers), in a row kept to the label's front,
-      // where its curve does not turn them away.
-      const s = Math.min(h * 0.26, (w * 0.76) / Math.max(1, hazards.length));
-      hazards.forEach((z, k) =>
-        drawGhs(
-          c,
-          w / 2 + (k - (hazards.length - 1) / 2) * s,
-          h * 0.83,
-          s * 0.96,
-          HAZARD[z].ghs,
-        ),
-      );
+      // The pictograms themselves, each with its GHS number beneath (the
+      // owner, 2026-10-31), in a row kept to the label's front, where its
+      // curve does not turn them away.
+      const s = Math.min(h * 0.22, (w * 0.76) / Math.max(1, hazards.length));
+      hazards.forEach((z, k) => {
+        const x = w / 2 + (k - (hazards.length - 1) / 2) * s;
+        drawGhs(c, x, h * 0.8, s * 0.96, HAZARD[z].ghs);
+        c.fillStyle = '#16232b';
+        c.font = `bold ${h * 0.035}px Arial`;
+        c.fillText(HAZARD[z].code, x, h * 0.96, s * 0.95);
+      });
     },
     512,
   );
