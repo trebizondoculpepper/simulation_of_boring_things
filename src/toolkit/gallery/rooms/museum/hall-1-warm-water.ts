@@ -131,8 +131,11 @@ import type { HallExhibit } from './exhibits';
  * In the hall's frame, metres.
  */
 
-/** The east wall's face, where its panels hang, facing west. */
-const EAST = 7.66;
+/**
+ * The east wall's inside face, where its panels hang, facing west (the
+ * audit, 2026-10-31: they hung 40 mm off it, at 7.66).
+ */
+const EAST = hallInterior('museum1').maxX - hallOrigin('museum1').x;
 /** The street (west) wall's inside face, in the hall's frame. */
 const WEST_FACE = hallInterior('museum1').minX - hallOrigin('museum1').x;
 const FACE_WEST = -Math.PI / 2;
@@ -371,7 +374,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     tripped: () => state().tripped,
     resetTrip: () => act({ type: 'trip-reset' }),
   });
-  turnTo(station.group, -3.1, 0, -2.6, FACE_EAST);
+  turnTo(station.group, -3.1, 0, -1.4, FACE_EAST);
   object.add(
     markComponent(station.group, {
       name: `${TAGS.poolPump} pool pump local control station`,
@@ -380,7 +383,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   );
   take(station.parts);
   updates.push(station.update);
-  footprint(-3.1, -2.6, 0.2);
+  footprint(-3.1, -1.4, 0.2);
 
   const pool = createIdealVessel(kit, {
     ...POOL_SHAPE,
@@ -993,7 +996,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     },
   });
   const lossStand = new Group();
-  turnTo(lossStand, -2.45, 0, -5.6, FACE_EAST);
+  turnTo(lossStand, -2.45, 0, -6.4, FACE_EAST);
   t.box(
     lossStand,
     t.paint('#2b3438', 0.5, 0.3),
@@ -1037,16 +1040,18 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       delta,
     ),
   );
-  solids.push({ minX: -2.6, maxX: -2.3, minZ: -6.35, maxZ: -4.85 });
+  solids.push({ minX: -2.6, maxX: -2.3, minZ: -7.15, maxZ: -5.65 });
 
   // ---- The placards ----
   const LECTERNS: Record<number, { x: number; z: number; yaw: number }> = {
     1: { x: -2.0, z: 5.4, yaw: FACE_EAST },
     2: { x: -2.0, z: 4.0, yaw: FACE_EAST },
     3: { x: -2.0, z: 1.2, yaw: FACE_EAST },
-    4: { x: -2.0, z: -1.6, yaw: FACE_EAST },
-    5: { x: -2.0, z: -3.0, yaw: FACE_EAST },
-    6: { x: -2.0, z: -4.3, yaw: FACE_EAST },
+    // Each before its machine (the audit, 2026-10-31: moved with the
+    // pump and the pool, the losses board beyond them).
+    4: { x: -2.0, z: -2.3, yaw: FACE_EAST },
+    5: { x: -2.0, z: -3.6, yaw: FACE_EAST },
+    6: { x: -2.0, z: -4.9, yaw: FACE_EAST },
     7: { x: 6.6, z: -3.2, yaw: FACE_WEST },
   };
   for (const p of hall1Placards()) {

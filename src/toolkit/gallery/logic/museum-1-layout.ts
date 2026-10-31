@@ -97,18 +97,27 @@ export interface MachinePlace {
 
 const studTop = SOURCE_SHAPE.height + SOURCE_SHAPE.stud;
 
-/** Each machine's place, south (gas) to north (pool). */
+/**
+ * Each machine's place, south (gas) to north (pool). By the facing rule
+ * (`doc/museum-hall-model.md`) every machine stands with its front (its
+ * own +z: controls, gauges, nameplate) turned to +x, out from the street
+ * wall into the room, so `yaw` is a quarter turn for all (the audit,
+ * 2026-10-31: the gas main, both pumps, the exchanger and the pool faced
+ * along the wall or into it). So turned, the pool pump's suction faces
+ * away from the pool, and its suction line loops round to it; the
+ * exchanger's frame plate faces south, its ports toward the tees.
+ */
 export const PLACES: Record<MachineId, MachinePlace> = {
-  gasMain: { x: -5.0, z: 6.1, yaw: 0 },
+  gasMain: { x: -5.0, z: 6.1, yaw: Math.PI / 2 },
   boiler: { x: -5.4, z: 4.0, yaw: Math.PI / 2 },
   atmosphere: { x: -5.4, z: 4.0, yaw: Math.PI / 2 },
   pressurisation: { x: -7.15, z: 5.7, yaw: Math.PI / 2 },
-  primaryPump: { x: -6.9, z: 2.4, yaw: -Math.PI / 2 },
+  primaryPump: { x: -6.9, z: 2.4, yaw: Math.PI / 2 },
   flowTee: { x: -4.2, z: 1.9, yaw: 0 },
   returnTee: { x: -4.2, z: 1.9, yaw: 0 },
-  hx: { x: -5.0, z: 0.9, yaw: Math.PI },
-  poolPump: { x: -4.8, z: -1.9, yaw: -Math.PI / 2 },
-  pool: { x: -6.15, z: -5.3, yaw: 0 },
+  hx: { x: -5.0, z: 0.9, yaw: Math.PI / 2 },
+  poolPump: { x: -4.4, z: -2.9, yaw: Math.PI / 2 },
+  pool: { x: -6.55, z: -5.4, yaw: Math.PI / 2 },
 };
 
 export interface Port {
