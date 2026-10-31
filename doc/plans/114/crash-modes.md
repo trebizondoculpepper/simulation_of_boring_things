@@ -8,6 +8,7 @@ The owner, 2026-10-31: one of the game's failure modes is the Trio's operating s
 - **Two failure modes in dev58**, each forced from its crash board:
   - **Blue screen**: the stop screen; the outputs **hold** whatever they were sending when it crashed. Bad, but predictable.
   - **Glitch**: the buffer-overflow screen; the outputs go **random**, each channel's signal jumping to new values as the glitch's bursts come, so pumps lurch between stopped and flat out. Much the worse.
+- **The watchdog is the trigger's choice** (a heartbeat monitor that does not always work): each forced crash, blue screen or glitch, is triggered with the watchdog either working (it drops the release contacts, so nothing doses, and lights CONTROLLER FAULT on the annunciator) or not (the outputs hold or go random, and the annunciator says nothing). dev58's crash board has a WATCHDOG WORKS / FAILS switch beside its two crash buttons; scenarios set it as they need.
 - The freeze and the reboot loop, and the off, full and mixed behaviours below, stay ideas on file for later scenarios.
 
 ## What crashes, and what the plant sees
