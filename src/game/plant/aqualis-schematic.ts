@@ -24,10 +24,9 @@ export interface TrioPort {
 }
 
 /**
- * The Trio's ports: its sample in and out, its glands (each channel's
- * control port and the alarm output, as the cabinet's `portsOf('trio')`
- * has them: checked by its test), and its mains entry (the gland the
- * cabinet's view has still to gain, placement.md).
+ * The Trio's ports: its sample in and out, and its glands (each channel's
+ * control port, the alarm output and its mains entry), as the cabinet's
+ * `portsOf('trio')` has them: checked by its test.
  */
 export const TRIO_PORTS: readonly TrioPort[] = [
   { id: 'sampleIn', medium: 'water' },

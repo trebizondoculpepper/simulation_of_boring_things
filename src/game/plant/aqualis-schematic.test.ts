@@ -254,9 +254,9 @@ describe('the Trios’ plumbing', () => {
     expect(isolator?.kind).toBe('power-isolator');
   });
 
-  it('declares the cabinet’s ports as its view has them, and its mains entry', () => {
+  it('declares the cabinet’s ports as its view has them, its mains entry among them', () => {
     expect(TRIO_PORTS.map((p) => p.id).sort()).toEqual(
-      [...Object.keys(portsOf('trio')), 'power'].sort(),
+      Object.keys(portsOf('trio')).sort(),
     );
   });
 });

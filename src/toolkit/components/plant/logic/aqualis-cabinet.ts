@@ -126,12 +126,13 @@ export interface CabinetPort {
   out: readonly [number, number, number];
 }
 
-export type PortId = 'sampleIn' | 'sampleOut' | ChannelId | 'alarm';
+export type PortId = 'sampleIn' | 'sampleOut' | ChannelId | 'alarm' | 'power';
 
 /**
  * Its ports: the sample inlet and outlet out of the lower section's left
  * side near the floor, and the cable glands on top for the three control
- * ports and the alarm output to the annunciator.
+ * ports, the alarm output to the annunciator and its mains entry (mission
+ * 114's placement plan found it missing: every room device has its supply).
  */
 export const PORTS: Record<PortId, CabinetPort> = {
   sampleIn: { at: [-CABINET.w / 2, 0.2, 0.1], out: [-1, 0, 0] },
@@ -140,7 +141,27 @@ export const PORTS: Record<PortId, CabinetPort> = {
   acid: { at: [-0.08, CABINET.h, 0.12], out: [0, 1, 0] },
   co2: { at: [0.02, CABINET.h, 0.12], out: [0, 1, 0] },
   alarm: { at: [0.16, CABINET.h, 0.12], out: [0, 1, 0] },
+  power: { at: [0.25, CABINET.h, 0.12], out: [0, 1, 0] },
 };
+
+/**
+ * How far the sample inlet's and outlet's stubs stand out of its side, m:
+ * the room's tube joins each stub's end (`sampleStubEnd`), beyond the
+ * inlet's ball valve (`SAMPLE_VALVE_AT`).
+ */
+export const SAMPLE_STUB = 0.18;
+
+/** Where a sample stub ends, in the cabinet's frame: the room's tube joins it there. */
+export function sampleStubEnd(
+  id: 'sampleIn' | 'sampleOut',
+): readonly [number, number, number] {
+  const p = PORTS[id];
+  return [
+    p.at[0] + p.out[0] * SAMPLE_STUB,
+    p.at[1] + p.out[1] * SAMPLE_STUB,
+    p.at[2] + p.out[2] * SAMPLE_STUB,
+  ];
+}
 
 /** The glands' labels, engraved beside each on the top. */
 export const GLAND_LABELS: Record<
@@ -151,6 +172,7 @@ export const GLAND_LABELS: Record<
   acid: 'HCl',
   co2: 'CO₂',
   alarm: 'ALM',
+  power: 'MAINS',
 };
 
 /** A touch's UV on the screen's mesh, as the screen's pixels (y down). */
@@ -188,9 +210,9 @@ export const CABINET_MODELS: Record<
 
 export type GlandId = Exclude<PortId, 'sampleIn' | 'sampleOut'>;
 
-/** A model's glands on top: its channels' control ports, then its alarm output. */
+/** A model's glands on top: its channels' control ports, then its alarm output and its mains entry. */
 export function glandsOf(model: CabinetModel): readonly GlandId[] {
-  return [...CABINET_MODELS[model].channels, 'alarm'];
+  return [...CABINET_MODELS[model].channels, 'alarm', 'power'];
 }
 
 /** A model's ports: the sample pipes and its glands. */

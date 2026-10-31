@@ -22,6 +22,9 @@ import {
   selectorAt,
   selectorIndex,
   turnSelector,
+  GLAND_LABELS,
+  SAMPLE_VALVE_AT,
+  sampleStubEnd,
 } from './aqualis-cabinet';
 import { SCREEN } from '../../../../game/plant/aqualis-types';
 
@@ -81,10 +84,29 @@ describe('the Aqualis cabinet', () => {
     expect(PORTS.sampleIn.at[1]).toBeLessThan(CABINET.split);
     expect(PORTS.sampleOut.at[1]).toBeLessThan(CABINET.split);
     expect(PORTS.sampleIn.at[0]).toBeCloseTo(-CABINET.w / 2);
-    for (const id of ['hypochlorite', 'acid', 'co2', 'alarm'] as const) {
+    for (const id of [
+      'hypochlorite',
+      'acid',
+      'co2',
+      'alarm',
+      'power',
+    ] as const) {
       expect(PORTS[id].at[1]).toBeCloseTo(CABINET.h);
       expect(PORTS[id].out).toEqual([0, 1, 0]);
     }
+  });
+
+  it('gives it a mains gland on top, within its top, clear of the other glands', () => {
+    const x = PORTS.power.at[0];
+    expect(Math.abs(x) + 0.016).toBeLessThan(CABINET.w / 2);
+    for (const id of ['hypochlorite', 'acid', 'co2', 'alarm'] as const)
+      expect(Math.abs(PORTS[id].at[0] - x)).toBeGreaterThan(0.05);
+    expect(GLAND_LABELS.power).toBe('MAINS');
+  });
+
+  it('ends each sample stub beyond the inlet valve, out of its side', () => {
+    expect(sampleStubEnd('sampleIn')[0]).toBeLessThan(SAMPLE_VALVE_AT[0]);
+    expect(sampleStubEnd('sampleOut')[1]).toBeCloseTo(PORTS.sampleOut.at[1]);
   });
 
   it('turns a touch UV into screen pixels, y down', () => {
@@ -96,15 +118,28 @@ describe('the Aqualis cabinet', () => {
 
 describe('the Dr Aqualis series', () => {
   it('gives the Trio three control glands, the Duo two, the Consultant none, each an alarm', () => {
-    expect(glandsOf('trio')).toEqual(['hypochlorite', 'acid', 'co2', 'alarm']);
-    expect(glandsOf('duo')).toEqual(['hypochlorite', 'acid', 'alarm']);
-    expect(glandsOf('consultant')).toEqual(['alarm']);
+    expect(glandsOf('trio')).toEqual([
+      'hypochlorite',
+      'acid',
+      'co2',
+      'alarm',
+      'power',
+    ]);
+    expect(glandsOf('duo')).toEqual(['hypochlorite', 'acid', 'alarm', 'power']);
+    expect(glandsOf('consultant')).toEqual(['alarm', 'power']);
     expect(CABINET_MODELS.trio.name).toBe('Dr Aqualis Trio');
   });
 
   it('lists only a model’s own ports', () => {
     expect(Object.keys(portsOf('duo')).sort()).toEqual(
-      ['acid', 'alarm', 'hypochlorite', 'sampleIn', 'sampleOut'].sort(),
+      [
+        'acid',
+        'alarm',
+        'hypochlorite',
+        'power',
+        'sampleIn',
+        'sampleOut',
+      ].sort(),
     );
     expect(portsOf('consultant').co2).toBeUndefined();
   });

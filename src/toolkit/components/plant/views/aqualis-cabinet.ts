@@ -58,7 +58,12 @@ import {
   selectorAt,
   selectorIndex,
 } from '../logic/aqualis-cabinet';
-import type { CabinetModel, LedId, LedState } from '../logic/aqualis-cabinet';
+import type {
+  CabinetModel,
+  GlandId,
+  LedId,
+  LedState,
+} from '../logic/aqualis-cabinet';
 
 /**
  * The Aqualis Interactive water-quality controller (mission 114,
@@ -155,6 +160,13 @@ export function createAqualisCabinet(
   model: CabinetModel = 'trio',
   /** The overlay canvas's resolution against the screen's (`OVERLAY_SCALE`). */
   overlayScale = OVERLAY_SCALE,
+  options: {
+    /**
+     * Glands left blanked, as an installer leaves a spare one: a plug in it
+     * and no cable (an installed Trio's CO₂ gland until CO₂ dosing exists).
+     */
+    blanked?: readonly GlandId[];
+  } = {},
 ) {
   const info = CABINET_MODELS[model];
   const t = tools(kit);
@@ -904,18 +916,36 @@ export function createAqualisCabinet(
       'y',
       6,
     );
-    // Its cable away up the wall, cut short (the room routes the rest).
-    t.cyl(
-      group,
-      t.paint(id === 'alarm' ? '#d43a2a' : '#30363b', 0.6),
-      0.006,
-      0.25,
-      x,
-      h + 0.15,
-      z,
-      'y',
-      8,
-    );
+    if (options.blanked?.includes(id))
+      // A blanking plug in the spare gland: no cable.
+      t.cyl(
+        group,
+        t.paint('#1b1d1f', 0.5),
+        0.009,
+        0.008,
+        x,
+        h + 0.035,
+        z,
+        'y',
+        10,
+      );
+    // Its cable away up the wall, cut short (the room routes the rest): the
+    // alarm's red, the mains' grey, the controls' black.
+    else
+      t.cyl(
+        group,
+        t.paint(
+          id === 'alarm' ? '#d43a2a' : id === 'power' ? '#7d8388' : '#30363b',
+          0.6,
+        ),
+        id === 'power' ? 0.008 : 0.006,
+        0.25,
+        x,
+        h + 0.15,
+        z,
+        'y',
+        8,
+      );
     const tag = t.label(
       group,
       label,
