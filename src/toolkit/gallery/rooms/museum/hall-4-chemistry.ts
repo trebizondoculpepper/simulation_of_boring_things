@@ -769,10 +769,10 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     beam.group,
     t.paint('#2b3438', 0.5, 0.3),
     1.9,
-    1.05,
+    1.25,
     0.06,
     0,
-    0.525,
+    0.625,
     -0.22,
   );
   {

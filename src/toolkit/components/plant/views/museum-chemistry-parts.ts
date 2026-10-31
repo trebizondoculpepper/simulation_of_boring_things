@@ -711,7 +711,9 @@ export function createBalanceBeam(
   const dark = t.paint('#2b3438', 0.5, 0.3);
   const brass = t.paint('#b8913a', 0.35, 0.8);
   t.box(group, dark, 1.9, 0.05, 0.5, 0, 0.025, 0);
-  t.box(group, dark, 1.9, 1.0, 0.08, 0, 0.55, -0.15);
+  // The back panel, a bezel of even width (0.2 m) all round the coloured
+  // card above the term windows (the owner, 2026-10-31).
+  t.box(group, dark, 1.9, 1.2, 0.08, 0, 0.65, -0.15);
   // The arc scale and the pillar.
   const scale = t.printed(
     1.5,
@@ -747,7 +749,7 @@ export function createBalanceBeam(
         );
       }
       c.font = `bold ${h * 0.1}px Arial`;
-      c.fillText('AGGRESSIVE: EATS GROUT', w * 0.18, h * 0.95);
+      c.fillText('AGGRESSIVE: EATS GROUT', w * 0.26, h * 0.95);
       c.fillText('BALANCED', cx, h * 0.12);
       c.fillText('SCALING', w * 0.84, h * 0.95);
     },
@@ -764,10 +766,10 @@ export function createBalanceBeam(
     beam,
     t.paint('#c8261c', 0.4),
     0.012,
-    0.5,
+    0.22,
     0.01,
     0,
-    0.25,
+    0.11,
     0.02,
   );
   void pointer;

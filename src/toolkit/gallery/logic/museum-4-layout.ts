@@ -178,13 +178,13 @@ export const READOUT = { z: 0, y: 2.35, h: 1.5, w: 2.96 } as const;
 /**
  * The Balance Beam hung as the readout board's match across the hall (the
  * owner, 2026-10-31): scaled to the board's width and height (its own
- * 1.9 × 1.05 m without its plaque), at the board's height, its foot shelf's
+ * 1.9 × 1.25 m without its plaque), at the board's height, its foot shelf's
  * back to the wall; its words on a lectern of its own before it.
  */
 export const BEAM_SCALE = {
   x: READOUT.w / 1.9,
-  y: READOUT.h / 1.05,
-  z: READOUT.h / 1.05,
+  y: READOUT.h / 1.25,
+  z: READOUT.h / 1.25,
 } as const;
 export const BEAM = {
   x: WEST + 0.25 * BEAM_SCALE.z,
