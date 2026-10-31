@@ -877,6 +877,8 @@ export function createSandFilter(
     show(s: { inlet: number; outlet: number }, delta: number): void;
     /** Its sight glass's view of the bed, as the filter's state has it. */
     showGlass(inputs: GlassInputs, delta: number): void;
+    /** Its inlet and outlet gauges, for binding each to its instrument. */
+    gauges: { inlet: Group; outlet: Group };
   };
   const livery = brandLivery(kit, liveryOf);
   const glass = livery.paint.casing;
@@ -1023,6 +1025,7 @@ export function createSandFilter(
     });
   });
   group.showGlass = (inputs, delta) => sightGlass.update(inputs, delta);
+  group.gauges = { inlet: inletGauge.group, outlet: outletGauge.group };
   group.show = ({ inlet, outlet }, delta) => {
     inletGauge.set(inlet);
     outletGauge.set(outlet);
@@ -1109,6 +1112,8 @@ export function createUvUnit(kit: PanelKit) {
       intensity?: number;
       hours?: number;
     }): void;
+    /** Its intensity display, for binding to its sensor's instrument. */
+    screen: Object3D;
   };
   const ss = t.paint(FINISH.stainless, 0.25, 0.85);
   const y = 0.8,
@@ -1251,6 +1256,7 @@ export function createUvUnit(kit: PanelKit) {
   }
   badge(kit, panel, 'lidoluxe', [0.1, 1.17, 0.102], 0.03);
   screen.mesh.userData.live = true;
+  group.screen = screen.mesh;
   group.show = ({ on, flowing, intensity = 87, hours = 6120 }) => {
     const uv = `UV ${Math.round(on ? intensity : 0)
       .toString()

@@ -440,7 +440,8 @@ export type InstrumentKind =
   | 'dissolved-ozone'
   | 'ozone-in-air'
   | 'uv-intensity'
-  | 'level';
+  | 'level'
+  | 'mimic';
 
 /** A gauge, analyser or meter that is not set into a line as a fitting. */
 export interface Instrument {
@@ -462,7 +463,8 @@ export interface Instrument {
  * differential gauge; the waste's sight glass; the injector's vacuum
  * gauge; the dissolved-ozone analysers after the contact tank and after
  * the carbon; the ozone-in-air monitor on the wall; the UV unit's
- * intensity sensor; and the pool's thermometer.
+ * intensity sensor; the pool's thermometer; and the mimic panel that
+ * repeats them.
  */
 export const INSTRUMENTS: readonly Instrument[] = [
   {
@@ -555,6 +557,14 @@ export const INSTRUMENTS: readonly Instrument[] = [
     role: 'pool water',
     on: 'pool',
   },
+  // The mimic panel on the south wall: a panel of repeaters (the readouts
+  // and lamps above), coded MP as the plant rooms' mimic panels are.
+  {
+    id: 'mimic',
+    kind: 'mimic',
+    reads: 'hall',
+    role: 'mimic panel',
+  },
 ];
 
 // ---- Tags, derived -------------------------------------------------------------
@@ -575,6 +585,7 @@ const LETTERS: Record<InstrumentKind, string> = {
   'ozone-in-air': 'AI',
   'uv-intensity': 'RI',
   level: 'LI',
+  mimic: 'MP',
 };
 
 /**

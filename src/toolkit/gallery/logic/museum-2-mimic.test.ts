@@ -36,6 +36,7 @@ describe('Hall 2’s mimic', () => {
           'filter.outlet.pi',
           'injector.pi',
           'hall.ai',
+          'mimic',
         ].includes(i.id),
     ))
       expect(MIMIC_READOUTS).toContain(i.id);

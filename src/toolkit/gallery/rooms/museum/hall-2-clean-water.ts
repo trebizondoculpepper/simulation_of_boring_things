@@ -329,6 +329,13 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       model,
       ...(status ? { status } : {}),
     });
+  /** An instrument of the model, drawn by `thing`, bound to it by its id. */
+  const instrument = (
+    thing: Object3D,
+    id: string,
+    name: string,
+    status?: () => string | undefined,
+  ) => describe(thing, id, name, { node: id }, status);
   const atMachine = (o: Object3D, id: MachineId) =>
     turnTo(o, PLACES[id].x, 0, PLACES[id].z, PLACES[id].yaw);
   const solids: { minX: number; maxX: number; minZ: number; maxZ: number }[] = [
@@ -386,6 +393,12 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     name: 'Ideal balance tank',
     ports: vesselPorts('tank'),
   });
+  instrument(
+    tank.display,
+    'tank.li',
+    'balance tank level display',
+    () => `shows ${state.tankWater.toFixed(1)} m³`,
+  );
   object.add(
     describe(
       still(atMachine(tank.group, 'tank')),
@@ -401,6 +414,12 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     name: 'Ideal pool',
     ports: vesselPorts('pool'),
   });
+  instrument(
+    pool.display,
+    'pool.ti',
+    'pool water temperature display',
+    () => `shows ${PLANT.poolC.toFixed(1)} °C`,
+  );
   object.add(
     describe(
       still(atMachine(pool.group, 'pool')),
@@ -423,6 +442,18 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
 
   // ---- The circulation pump and its local station ----
   const pump = createEndSuctionPump(kit);
+  instrument(
+    pump.gauges.suction.group,
+    'pump.suction.pi',
+    'pump suction compound gauge',
+    () => `reads ${pump.gauges.suction.value.toFixed(2)} bar`,
+  );
+  instrument(
+    pump.gauges.discharge.group,
+    'pump.discharge.pi',
+    'pump discharge pressure gauge',
+    () => `reads ${pump.gauges.discharge.value.toFixed(2)} bar`,
+  );
   object.add(
     describe(
       still(atMachine(pump, 'pump')),
@@ -456,7 +487,12 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     resetTrip: () => act({ type: 'trip-reset' }),
   });
   turnTo(station.group, -2.2, 0, 5.5, FACE_EAST);
-  object.add(station.group);
+  object.add(
+    markComponent(station.group, {
+      name: `${TAGS.pump} circulation pump local control station`,
+      model: { node: 'pump' },
+    }),
+  );
   take(station.parts);
   updates.push(station.update);
   footprint(-2.2, 5.5, 0.2);
@@ -469,6 +505,18 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     label: `SAND FILTER ${shortTag('filter')}`,
     bedDepth: 1.0,
   });
+  instrument(
+    filter.gauges.inlet,
+    'filter.inlet.pi',
+    'filter inlet gauge',
+    () => `reads ${readings.flows.gauge['filter.inlet.pi'].toFixed(2)} bar`,
+  );
+  instrument(
+    filter.gauges.outlet,
+    'filter.outlet.pi',
+    'filter outlet gauge',
+    () => `reads ${readings.flows.gauge['filter.outlet.pi'].toFixed(2)} bar`,
+  );
   object.add(
     describe(still(atMachine(filter, 'filter')), 'filter', nodeName('filter'), {
       node: 'filter',
@@ -487,6 +535,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       }),
     );
   }
+  const dpStand = new Group();
   const dp = createDialGauge(kit, {
     dia: 0.1,
     min: 0,
@@ -497,17 +546,17 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   const dpAt = inHall('filter', [-FILTER_SHAPE.dia / 2 + 0.05, 1.45, 0.55]);
   dp.group.position.set(...dpAt);
   dp.group.rotation.y = FACE_EAST;
+  dpStand.add(dp.group);
   object.add(
-    describe(
-      dp.group,
+    instrument(
+      dpStand,
       'filter.pdi',
-      'filter differential pressure gauge',
-      { node: 'filter' },
+      'filter differential pressure gauge, on its stand',
       () => `reads ${dp.value.toFixed(2)} bar`,
     ),
   );
   t.box(
-    object,
+    dpStand,
     t.paint('#55616a', 0.5),
     0.04,
     1.4,
@@ -668,7 +717,14 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       entry: 'back',
     });
     vac.group.position.set(0.11, 2.22, 0.02);
-    g.add(vac.group);
+    g.add(
+      instrument(
+        vac.group,
+        'injector.pi',
+        'injector vacuum gauge',
+        () => `reads ${vac.value.toFixed(2)} bar`,
+      ),
+    );
     object.add(
       describe(
         still(g),
@@ -861,6 +917,13 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   // ---- The UV unit, its switch on its panel's stand ----
   {
     const uv = createUvUnit(kit);
+    instrument(
+      uv.screen,
+      'uv.ri',
+      'UV intensity display',
+      () =>
+        `shows ${readings.uvLit ? readings.uvIntensity.toFixed(0) : 0} W/m²`,
+    );
     const g = atMachine(new Group(), 'uv');
     g.add(uv);
     const sw = onOff(
@@ -922,7 +985,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
         monitor.group,
         'hall.ai',
         'ozone-in-air monitor (Trioxa)',
-        { node: 'generator' },
+        { node: 'hall.ai' },
         () =>
           readings.ozone.roomAlarm
             ? 'its ALARM lamp lit'
@@ -959,13 +1022,20 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       });
       object.add(pipe);
     }
+    // Its plates and flow arrows are its own: bound to its link.
     object.add(
-      markPipe(kit, line.points, {
-        radius: line.od / 2,
-        service: SERVICE[line.edge],
-        text: LINK_NAMES[line.edge].toUpperCase(),
-        flow: 1,
-      }),
+      markComponent(
+        markPipe(kit, line.points, {
+          radius: line.od / 2,
+          service: SERVICE[line.edge],
+          text: LINK_NAMES[line.edge].toUpperCase(),
+          flow: 1,
+        }),
+        {
+          name: `${LINK_NAMES[line.edge]} pipe markings`,
+          model: { link: line.edge },
+        },
+      ),
     );
   }
   for (const id of ['feedTee', 'wasteTee', 'sideTee', 'mixTee'] as const) {
@@ -1096,7 +1166,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       object.add(
         markComponent(glass.group, {
           name: `${tag} sight glass on the backwash waste`,
-          model: { node: 'filter' },
+          model: { node: item.id },
           status: () =>
             state.wasteDirt > 100
               ? 'the water in it murky'
@@ -1139,7 +1209,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
         : readings.ozone.carbonResidual;
     markComponent(holder, {
       name: `${tag} dissolved ozone analyser (Trioxa)`,
-      model: { link: item.edge },
+      model: { node: item.id },
       status: () => `shows ${read().toFixed(2)} mg/l`,
     });
     let text = '';
@@ -1170,7 +1240,11 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   // Found by the walls' test (it has no name of its own).
   board.group.userData.onWall = 'Hall 2 mimic board';
   turnTo(board.group, 6.5, 1.5, SOUTH, FACE_NORTH);
-  object.add(board.group);
+  // The mimic panel is in the model (M2-MP1), its lamps, readouts and
+  // buttons bound through it.
+  object.add(
+    instrument(board.group, 'mimic', 'mimic panel (Penfold Controls)'),
+  );
   take(board.parts);
 
   const activity = hall2ActivityCard();
@@ -1189,6 +1263,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   object.add(
     markComponent(clock.group, {
       name: 'Pool clock, showing the plant’s time',
+      // The exhibit's clock, not plant: it shows the simulation's time.
+      decorative: true,
       status: () => `shows ${clockText(state).slice(0, 5)}`,
     }),
   );
@@ -1207,6 +1283,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   object.add(
     markComponent(timeBox, {
       name: 'Plant time display',
+      // The exhibit's own time readout, not plant (as the clock).
+      decorative: true,
       status: () => `shows ${clockText(state)} at TIME ×${state.speed}`,
     }),
   );
@@ -1292,7 +1370,13 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     lit: () => state.sinceReset < 2.5,
   });
   turnTo(resetButton.group, EAST - 0.45, 0, 4.8, FACE_WEST);
-  object.add(resetButton.group);
+  // The exhibit's RESET: it restarts the simulation, it works no plant.
+  object.add(
+    markComponent(resetButton.group, {
+      name: 'RESET SIMULATION pedestal',
+      decorative: true,
+    }),
+  );
   take(resetButton.parts);
   updates.push(resetButton.update);
   footprint(EAST - 0.45, 4.8, 0.25);

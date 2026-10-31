@@ -143,6 +143,8 @@ export function createIdealVessel(
   let shown = '';
   return {
     group,
+    /** Its display on its post, for binding to the instrument it shows. */
+    display: lcd.group,
     /** Its display's two lines. */
     show(lines: readonly string[]) {
       const key = lines.join('|');
