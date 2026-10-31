@@ -91,6 +91,16 @@ export function createControlRoomModeKnob(
   a.uses.set(knob.spindle, () =>
     selector.turn(selector.position.peek() ? -1 : 1),
   );
+  // Its cue: the way it will turn, whichever side is aimed at; red while
+  // the doors stand open and it is locked.
+  a.cue(knob.spindle, () => {
+    const direction = selector.position.value ? -1 : 1;
+    return {
+      gesture: 'turn',
+      direction,
+      possible: selector.canTurn(direction),
+    };
+  });
   a.updates.push((delta) => {
     knob.set(share(selector.position.value));
     knob.update(delta);

@@ -10,6 +10,7 @@ import {
 } from 'three';
 import type { BufferGeometry, MeshBasicMaterial, Object3D } from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { markUsable } from '../../../controls/input/use-marking';
 import { createPs1Material } from '../../core/parts/ps1-material';
 import { kitGlow, kitPaint } from '../../core/views/eighties-controls';
 import type { PanelKit } from '../../core/views/eighties-controls';
@@ -1019,6 +1020,7 @@ export function createPeriodPc(kit: PanelKit, options: PeriodPcOptions = {}) {
     show();
     lamps();
   });
+  markUsable(box.power, () => ({ gesture: 'push', possible: true }));
   uses.set(keyboard, wake);
   uses.set(mouse, wake);
   uses.set(screen.face, wake);

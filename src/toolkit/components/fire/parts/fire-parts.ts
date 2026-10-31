@@ -125,6 +125,7 @@ export function callPoint(
     props.press();
     e.emit('press');
   });
+  a.cue(view.face, () => ({ gesture: 'push', possible: !props.latched.value }));
   a.uses.set(view.key, () => {
     props.reset();
     e.emit('release');
@@ -191,14 +192,19 @@ export function firePanel(
   const e = emitter();
   a.voice(e, { press: BEEP, refused: ERROR, on: KEY_TURN, off: KEY_TURN });
   const buzzerMuted = signal(false);
+  // Each button's cue: green unless it is known to do nothing (`can`);
+  // what silence, resound and reset will do is the panel's own to say.
   const button = (
     mesh: Part['object']['children'][number],
     act: () => boolean,
-  ) =>
+    can = true,
+  ) => {
     a.uses.set(mesh, () => {
       play(PRESS, a.object);
       e.emit(act() ? 'press' : 'refused');
     });
+    a.cue(mesh, () => ({ gesture: 'push', possible: can }));
+  };
   button(view.silenceBuzzer, () => {
     buzzerMuted.value = true;
     return true;
@@ -215,17 +221,21 @@ export function firePanel(
   // The numbered keys: 2 leaves access mode, 4 tests the lamps; 1 and 3
   // (override delays, next option) have nothing to do on this system.
   view.keys.forEach((mesh, i) =>
-    button(mesh, () => {
-      if (i === 1) {
-        props.key.set(false);
-        return true;
-      }
-      if (i === 3) {
-        view.lampTest();
-        return true;
-      }
-      return false;
-    }),
+    button(
+      mesh,
+      () => {
+        if (i === 1) {
+          props.key.set(false);
+          return true;
+        }
+        if (i === 3) {
+          view.lampTest();
+          return true;
+        }
+        return false;
+      },
+      i === 1 || i === 3,
+    ),
   );
   const turnKey = () => {
     props.key.set(!props.key.value);
@@ -442,6 +452,8 @@ export function valveSet(
     props.reset();
     e.emit('press');
   });
+  // It resets only an alarm valve that has tripped.
+  a.cue(view.reset, () => ({ gesture: 'push', possible: props.tripped.value }));
   show(a, () => view.set(props.main.value, props.tripped.value));
   return a.part();
 }

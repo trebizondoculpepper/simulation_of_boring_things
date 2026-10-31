@@ -37,6 +37,7 @@ import {
   createWindowWithVent,
 } from '../views/building-fittings';
 import type { PanelKit } from '../../core/views/eighties-controls';
+import { markTurnable } from '../../../controls/input/knob-turning';
 import { beginPart } from '../../core/parts/parts';
 import type { Part } from '../../core/parts/parts';
 import {
@@ -315,6 +316,11 @@ export function dimmer(
   a.object.add(view.group);
   const e = emitter();
   a.voice(e, { detent: DETENT, 'end-stop': LOCKED });
+  a.disposers.push(
+    markTurnable(view.knob, {
+      canTurn: (d) => (d < 0 ? props.bound.value > 0 : props.bound.value < 10),
+    }),
+  );
   a.uses.set(view.knob, (direction = 1) => {
     const next = Math.max(0, Math.min(10, props.bound.value + direction));
     if (next === props.bound.value) return e.emit('end-stop');
@@ -335,6 +341,7 @@ export function pullCordSwitch(
   a.object.add(view.group);
   const e = emitter();
   a.voice(e, { on: CORD, off: CORD });
+  a.cue(view.bobble, () => ({ gesture: 'pull', possible: true }));
   a.uses.set(view.bobble, () => {
     view.pull();
     props.bound.set(!props.bound.value);
@@ -588,20 +595,31 @@ export function acController(
   a.object.add(view.group);
   const e = emitter();
   a.voice(e, { press: BEEP });
-  const button = (mesh: Part['object']['children'][number], act: () => void) =>
+  const button = (
+    mesh: Part['object']['children'][number],
+    act: () => void,
+    can: () => boolean = () => true,
+  ) => {
     a.uses.set(mesh, () => {
       act();
       e.emit('press');
     });
+    a.cue(mesh, () => ({ gesture: 'push', possible: can() }));
+  };
   button(view.power, () => props.power.set(!props.power.value));
   button(view.mode, () =>
     props.mode.set((props.mode.value + 1) % props.modes.length),
   );
-  button(view.up, () =>
-    props.setpoint.set(Math.min(30, props.setpoint.value + 0.5)),
+  // Up and down stop at 30 °C and 16 °C.
+  button(
+    view.up,
+    () => props.setpoint.set(Math.min(30, props.setpoint.value + 0.5)),
+    () => props.setpoint.value < 30,
   );
-  button(view.down, () =>
-    props.setpoint.set(Math.max(16, props.setpoint.value - 0.5)),
+  button(
+    view.down,
+    () => props.setpoint.set(Math.max(16, props.setpoint.value - 0.5)),
+    () => props.setpoint.value > 16,
   );
   show(a, () =>
     view.set(
@@ -639,6 +657,11 @@ export function thermostat(
   a.object.add(view.group);
   const e = emitter();
   a.voice(e, { detent: DETENT, 'end-stop': LOCKED });
+  a.disposers.push(
+    markTurnable(view.dial, {
+      canTurn: (d) => (d < 0 ? props.bound.value > 5 : props.bound.value < 30),
+    }),
+  );
   a.uses.set(view.dial, (direction = 1) => {
     const next = Math.max(5, Math.min(30, props.bound.value + direction));
     if (next === props.bound.value) return e.emit('end-stop');
@@ -749,10 +772,16 @@ export function accessDoor(
     play(PRESS, a.object);
     props.exit();
   });
+  a.cue(view.exitButton, () => ({ gesture: 'push', possible: true }));
   a.uses.set(view.release, () => {
     props.breakGlass();
     e.emit('trip');
   });
+  // Its glass breaks once; then only its key resets it.
+  a.cue(view.release, () => ({
+    gesture: 'push',
+    possible: !props.broken.value,
+  }));
   a.uses.set(view.releaseKey, () => {
     props.resetGlass();
     e.emit('release');
@@ -788,5 +817,6 @@ export function intercom(kit: PanelKit): Part {
   const e = emitter();
   a.voice(e, { press: CHIME });
   a.uses.set(view.button, () => e.emit('press'));
+  a.cue(view.button, () => ({ gesture: 'push', possible: true }));
   return a.part();
 }

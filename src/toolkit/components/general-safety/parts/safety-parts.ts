@@ -176,7 +176,10 @@ export function toiletAlarmCord(
     props.pull();
     e.emit('press');
   };
-  for (const child of view.cord.children) a.uses.set(child, pull);
+  for (const child of view.cord.children) {
+    a.uses.set(child, pull);
+    a.cue(child, () => ({ gesture: 'pull', possible: true }));
+  }
   a.updates.push(view.update);
   return a.part();
 }
@@ -195,6 +198,8 @@ export function toiletAlarmReset(
     props.reset();
     e.emit('press');
   });
+  // It resets only an alarm that is on.
+  a.cue(view.button, () => ({ gesture: 'push', possible: props.on.value }));
   show(a, () => view.set(props.on.value));
   a.holdWhile(props.on, ALARM_BUZZER);
   return a.part();

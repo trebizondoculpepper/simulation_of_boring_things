@@ -64,6 +64,7 @@ export function membraneKey(
     action();
     partAudio.play(CLICK, a.object);
   });
+  a.cue(cap, () => ({ gesture: 'push', possible: true }));
   a.updates.push((delta) => {
     pressed = Math.max(0, pressed - delta);
     cap.position.z = pressed > 0 ? 0.0008 : 0.002;
@@ -102,6 +103,7 @@ export function fasciaKey(
     action();
     partAudio.play(CLICK, a.object);
   });
+  a.cue(area, () => ({ gesture: 'push', possible: true }));
   return a.part();
 }
 

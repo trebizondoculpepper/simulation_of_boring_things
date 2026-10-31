@@ -3,6 +3,8 @@ import type { PartDescription } from '../../../../game/plant/part-inspection';
 import { createElectrolyticCapacitorView } from '../../industrial-control/views/electrolytic-capacitor';
 import type { Attachment } from '../../../controls/logic/drop-profile';
 import { markTurnable } from '../../../controls/input/knob-turning';
+import { markUsable } from '../../../controls/input/use-marking';
+import type { Usable } from '../../../controls/input/use-marking';
 import { computed, effect, signal } from '@preact/signals-core';
 import type { ReadonlySignal } from '@preact/signals-core';
 import { BoxGeometry, CylinderGeometry, Group, Mesh } from 'three';
@@ -192,6 +194,14 @@ export function beginPart(kit: PanelKit, name: string) {
         partAudio.hold(owner, null);
       });
     },
+    /**
+     * What a use on `on` (one of its `uses`) would do now, for the
+     * crosshair's cue (prompt 115): its gesture, and whether it will have
+     * a consequence. Unmarked, a use shows the plain ring.
+     */
+    cue(on: Object3D, usable: Usable) {
+      disposers.push(markUsable(on, usable));
+    },
     /** What can be seen of it now, for the information overlay (prompt 068). */
     shows(what: () => string | undefined) {
       seen.shows = what;
@@ -230,6 +240,20 @@ export function beginPart(kit: PanelKit, name: string) {
     },
   };
 }
+
+// ---- Cues --------------------------------------------------------------------
+
+/**
+ * A push's answer for the crosshair's cue: red where the press would have
+ * no consequence (no power, latched; the owner, 2026-10-31), though the
+ * button still clicks in.
+ */
+export const pushCue =
+  (button: { powered: Readable<boolean>; latched: Readable<boolean> }) =>
+  () => ({
+    gesture: 'push' as const,
+    possible: button.powered.value && !button.latched.value,
+  });
 
 // ---- Sounds ------------------------------------------------------------------
 
@@ -416,6 +440,7 @@ export function pushButton(
     view.press();
     button.press();
   });
+  a.cue(view.cap, pushCue(button));
   a.updates.push((delta) => {
     view.setLit(button.lit.value);
     const damage = props.damage?.value ?? 'intact';
@@ -460,6 +485,7 @@ export function ledPushbutton(
     view.press();
     button.press();
   });
+  a.cue(view.cap, pushCue(button));
   a.updates.push((delta) => {
     view.setLit(button.lit.value);
     view.update(delta);
@@ -515,6 +541,7 @@ export function studioSwitch(
   a.object.add(view.group);
   let lit: ReadonlySignal<boolean>;
   let press: () => void;
+  let cue: Usable;
   if (props.mode === 'latching') {
     const button = createLedPushbutton({
       initial: props.initial,
@@ -528,6 +555,7 @@ export function studioSwitch(
     press = () => {
       if (button.press()) props.action?.();
     };
+    cue = pushCue(button);
   } else {
     const flash = signal(0);
     const button = createMomentary({
@@ -548,11 +576,13 @@ export function studioSwitch(
       if (flash.peek() > 0) flash.value = Math.max(0, flash.peek() - delta);
     });
     press = () => void button.press();
+    cue = pushCue(button);
   }
   a.uses.set(view.group, () => {
     view.press();
     press();
   });
+  a.cue(view.group, cue);
   a.updates.push((delta) => {
     view.setLit(lit.value);
     view.update(delta);
@@ -608,6 +638,13 @@ export function pilotLight(
         offView.press();
         lamp.press();
       });
+    // A test lights the lamp only while its circuit is live and its bulb good.
+    const test = () => ({
+      gesture: 'push' as const,
+      possible: (props.power?.value ?? true) && !lamp.burntOut.value,
+    });
+    a.cue(view.lens, test);
+    if (offView) a.cue(offView.lens, test);
   }
   a.updates.push((delta) => {
     lamp.step(delta);
@@ -781,6 +818,11 @@ export function mushroomStop(
   });
   a.voice(stop, { press: MUSHROOM, release: MUSHROOM });
   a.uses.set(view.head, () => stop.operate());
+  // Struck in while out; pulled back out, to reset, while in.
+  a.cue(view.head, () => ({
+    gesture: stop.pushed.value ? 'pull' : 'push',
+    possible: true,
+  }));
   a.updates.push((delta) => {
     view.set(stop.pushed.value);
     view.update(delta);
@@ -968,6 +1010,7 @@ export function pushbuttonStation(
       cap.press();
       button.press();
     });
+    a.cue(cap.cap, pushCue(button));
     a.disposers.push(button.dispose);
   });
   a.updates.push(view.update);
@@ -998,6 +1041,7 @@ export function driveKeypad(
       key.press();
       button.press();
     });
+    a.cue(key.group, pushCue(button));
     a.disposers.push(button.dispose);
   }
   a.updates.push(view.update);
@@ -1030,6 +1074,7 @@ export function operatorTerminal(
       key.press();
       button.press();
     });
+    a.cue(key.cap, pushCue(button));
     a.disposers.push(button.dispose);
   }
   a.updates.push(view.update);
@@ -1167,6 +1212,11 @@ export function rackUnit(
   const slide = props.style === 'drawer' ? DRAWER : SLIDE;
   a.voice(out, { on: slide, off: slide, refused: LOCKED });
   a.uses.set(view.group, () => out.flip());
+  // Pulled out on its slides while in, pushed home while out.
+  a.cue(view.group, () => ({
+    gesture: out.state.value ? 'push' : 'pull',
+    possible: !out.latched.value,
+  }));
   const travel = props.travel ?? Math.min(0.45, view.depth * 0.7);
   // It slides from wherever it was mounted, which may be in a cabinet.
   let home: number | null = null;
@@ -1308,14 +1358,21 @@ export function overloadRelay(
   a.voice(relay, { trip: TRIP, press: PRESS });
   a.voice(relay.dial, { detent: KNOB, refused: LOCKED }, view.dial);
   a.uses.set(view.dial, (direction = 1) => relay.dial.turn(direction));
+  a.disposers.push(markTurnable(view.dial, relay.dial));
   a.uses.set(view.reset, () => {
     view.pressReset();
     relay.reset();
   });
+  // RESET does something only once tripped and cooled; TEST only untripped.
+  a.cue(view.reset, () => ({
+    gesture: 'push',
+    possible: relay.tripped.value && relay.heat.value < 1,
+  }));
   a.uses.set(view.test, () => {
     view.pressTest();
     relay.test();
   });
+  a.cue(view.test, () => ({ gesture: 'push', possible: !relay.tripped.value }));
   a.updates.push((delta) => {
     relay.step(delta);
     view.set(relay.dial.share.value, relay.tripped.value);

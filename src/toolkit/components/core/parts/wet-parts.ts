@@ -163,6 +163,8 @@ export function piezoButton(
     partAudio.play(TICK, a.object);
   });
   a.uses.set(face, a.uses.get(disc)!);
+  a.cue(disc, () => ({ gesture: 'push', possible: true }));
+  a.cue(face, () => ({ gesture: 'push', possible: true }));
   a.updates.push((delta) => {
     flash = Math.max(0, flash - delta);
     led.color.set(flash > 0 || lit?.value ? RING[ring] : off);

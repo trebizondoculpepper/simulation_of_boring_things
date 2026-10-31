@@ -22,6 +22,7 @@ import {
   Raycaster,
   Scene,
   Vector2,
+  Vector3,
 } from 'three';
 import type { Object3D } from 'three';
 import { devPortals, devWalls } from '../logic/dev-room-links';
@@ -447,24 +448,28 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
 
   const raycaster = new Raycaster();
   const pointer = new Vector2();
-  const use = (x: number, y: number) => {
+  /** What a use at a normalised screen point would do, or null. */
+  const usableAt = (x: number, y: number): (() => void) | null => {
     pointer.set(x, y);
     raycaster.setFromCamera(pointer, camera);
     const hit = raycaster
       .intersectObjects([...passages.uses.keys(), ...uses.keys()], true)
       .find((hit) => !isHeldPortableHit(hit.object));
-    if (!hit) return false;
-    if (passages.uses.has(hit.object as Mesh)) {
-      passages.uses.get(hit.object as Mesh)?.();
-      return true;
-    }
+    if (!hit) return null;
+    const passage = passages.uses.get(hit.object as Mesh);
+    if (passage) return passage;
     for (let o: Object3D | null = hit.object; o; o = o.parent) {
       const work = uses.get(o);
       if (!work) continue;
-      work(knobDirection(o, hit.point, camera));
-      return true;
+      const shaft = o;
+      return () => work(knobDirection(shaft, hit.point, camera));
     }
-    return false;
+    return null;
+  };
+  const use = (x: number, y: number) => {
+    const act = usableAt(x, y);
+    act?.();
+    return Boolean(act);
   };
 
   const views: Record<
@@ -535,6 +540,8 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
       ...footprints,
     ],
     use,
+    // Whether anything is aimed at, for the crosshair's plain ring.
+    aimed: () => usableAt(0, 0) !== null,
     useWhileHolding: (_object, x, y) => use(x, y),
     // What is aimed at, named in the help line (prompt 061): dev0's trial.
     // Its exhibits carry no plant tags: a control is named by its part's
@@ -614,6 +621,17 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
     },
     /** The names of every part that takes a click. */
     parts: () => [...uses.keys()].map(partName).sort(),
+    /**
+     * Where each piece of the part `name` that takes a click is, in
+     * metres, and the way it faces (its +z), for a scripted look at it.
+     */
+    where: (name: string) =>
+      [...uses.keys()]
+        .filter((object) => partName(object) === name)
+        .map((object) => ({
+          at: object.getWorldPosition(new Vector3()).divideScalar(m).toArray(),
+          facing: object.getWorldDirection(new Vector3()).toArray(),
+        })),
     log: () => [...log.children].map((item) => item.textContent),
   };
 

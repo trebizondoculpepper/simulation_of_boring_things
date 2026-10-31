@@ -31,7 +31,8 @@ How inputs work. This is the one control scheme every room in every game built o
 - `logic/hidden-spot.ts`: places out of the player's view.
 - `input/first-person.ts`: the scheme implemented once, for every room.
 - `input/object-handling.ts`: picking up, carrying and dropping, with the fall simulated.
-- `input/knob-turning.ts`: which way a use turns a knob.
+- `input/knob-turning.ts`: which way a use turns a knob, and `markTurnable` for a knob's cue.
+- `logic/use-cue.ts`, `input/use-marking.ts`, `input/use-cue-markup.ts`: the crosshair's use cue (prompt 115, `doc/plans/115/push-pull-cue.md`): a component marks what a use on it does (`markUsable`, or a part's `a.cue`: turn, push, pull, or some other way) and whether it will have any consequence now; the controls find the mark by one raycast of the scene a few times a second and draw a turn arrow, a perspective push or pull arrow, or the plain ring, green or red. Anything the room says is aimed at but unmarked gets the plain green ring.
 - `logic/use-hold.ts`, `input/use-holding.ts`: a use's hold, from its press until its source is let go, for a component that repeats while held.
 - `logic/torch.ts`, `input/torch.ts`: the torch, its beam's lag, and its light in a room's scene.
 - `input/touch-sticks.ts`: the on-screen thumbsticks and CROUCH button for touch.
