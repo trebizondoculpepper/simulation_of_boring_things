@@ -17,7 +17,8 @@ import type { BootFrame } from '../../core/logic/boot-sequence';
 import { setLcdBacklight } from '../../core/views/display-reach';
 import { createBrandBadge } from '../../core/views/brand-badge';
 import { createPs1Material } from '../../core/parts/ps1-material';
-import { createPartSet, selector } from '../../core/parts/parts';
+import { createPartSet, doorLatch, selector } from '../../core/parts/parts';
+import { signal } from '@preact/signals-core';
 import { createGlassRotameter } from './small-flowmeters';
 import { piezoSounder } from '../../sound/audio/piezo-recordings';
 import type {
@@ -40,7 +41,9 @@ import {
   GLAND_LABELS,
   glandsOf,
   portsOf,
+  CONTROL_PLATE,
   KNOB_AT,
+  POWER_AT,
   LEDS,
   PORTS,
   SAMPLE_VALVE_AT,
@@ -65,8 +68,9 @@ import type { CabinetModel, LedId, LedState } from '../logic/aqualis-cabinet';
  * inlet and outlet out of its side, an isolating ball valve on the inlet;
  * its upper section the compute and control: on its door a 12-inch colour
  * TFT (a canvas texture, `SCREEN`, a backlit `lcd`, washing out off its
- * narrow angle and black with its power off), an engraved
- * HAND · OFF · AUTO selector and its status lamps; cable glands on top for
+ * narrow angle and black with its power off) and its status lamps; its
+ * engraved HAND · OFF · AUTO selector and its power switch on a plate
+ * inside the lower section, behind its door's catch; cable glands on top for
  * its three control ports and its alarm output. A glossy rounded top cap and
  * a blue accent strip, as the period liked.
  *
@@ -211,7 +215,7 @@ export function createAqualisCabinet(
   const lowY = plinth + lowH / 2;
   const frameW = 0.05;
   // The door: an opaque white leaf, as the cabinet, hinged on its right edge
-  // so it swings clear of the sample valve on the left; its handle on the left.
+  // so it swings clear of the sample valve on the left; its catch on the left.
   const lowerDoor = new Group();
   lowerDoor.name = `${info.name} lower door`;
   lowerDoor.position.set(w / 2, 0, front - door / 2);
@@ -221,18 +225,6 @@ export function createAqualisCabinet(
     return mesh;
   };
   leaf(t.box(lowerDoor, whiteDoor, w, lowH, door, -w / 2, lowY, 0));
-  leaf(
-    t.box(
-      lowerDoor,
-      grey,
-      0.012,
-      0.08,
-      0.02,
-      -w + frameW + 0.01,
-      lowY,
-      door / 2 + 0.004,
-    ),
-  );
   // Its hinges, on the right.
   for (const y of [plinth + 0.12, split - 0.12])
     t.cyl(
@@ -261,6 +253,30 @@ export function createAqualisCabinet(
   lowerDoor.add(note);
   const doorMeshes = new Set<Object3D>();
   lowerDoor.traverse((o) => doorMeshes.add(o));
+  const parts = createPartSet();
+  // The door's catch (the owner, 2026-10-31): the quarter-turn wing latch
+  // the game's other cabinet doors have (`doorLatch`), with its sounds; a
+  // click on it, or on the door, turns it and opens the door or shuts it.
+  const doorState = signal(false);
+  const latch = parts.add(
+    doorLatch(kit, {
+      material: t.paint('#25292c', 0.45),
+      bound: {
+        get value() {
+          return doorState.value;
+        },
+        set: (open: boolean) => {
+          doorState.value = open;
+          showContents();
+        },
+      },
+      name: `${info.name} lower door catch`,
+    }),
+  );
+  latch.object.position.set(-w + frameW / 2 + 0.008, lowY, door / 2);
+  lowerDoor.add(latch.object);
+  const latchUse = [...latch.uses.values()][0];
+  let latchAngle = 0;
   // Everything inside the lower section, drawn only while its door is
   // open or opening (the owner, 2026-10-31); the note inside the door with it.
   const contents = new Group();
@@ -581,8 +597,8 @@ export function createAqualisCabinet(
   // ---- The upper section: the compute and control -----------------------------------
   const upH = h - cap - split - 0.006;
   const upY = split + 0.006 + upH / 2;
+  // Its door is fixed, not meant to be opened: no handle (the owner, 2026-10-31).
   t.box(group, whiteDoor, w, upH, door, 0, upY, front - door / 2);
-  t.box(group, grey, 0.012, 0.08, 0.02, w / 2 - 0.03, upY - 0.1, front + 0.004);
   const face = new Group();
   face.position.set(0, 0, front);
   group.add(face);
@@ -731,103 +747,111 @@ export function createAqualisCabinet(
   face.add(badge);
   // A blue accent strip across the door below the badge, the period's swoosh.
   t.box(face, blue, w - 0.06, 0.006, 0.002, 0, h - cap - 0.085, 0.001);
-  // The HAND · OFF · AUTO selector, engraved, on its own plate.
-  const parts = createPartSet();
-  let sel: Selector = 'auto';
+  // ---- The inside control plate: the selector and the power switch -----------------
+  // Inside the lower section, near its top (the owner, 2026-10-31): reached
+  // by opening the lower door, drawn and usable only while it is open, with
+  // the rest of the section's insides. Their positions are signals, so the
+  // knobs' views follow what they are bound to (a plain variable behind a
+  // binding never told the knob's computed position it had moved, so the
+  // knob never turned on screen and every later turn started from where it
+  // was built).
+  const P = CONTROL_PLATE;
+  const plateZ = P.z - 0.003;
+  t.box(contents, t.paint('#dfe4e7', 0.4), P.w, P.h, 0.004, P.x, P.y, plateZ);
+  // Its flange back to the section's left wall, which holds it.
+  t.box(
+    contents,
+    t.paint('#c9cfd2', 0.45),
+    0.004,
+    P.h,
+    0.06,
+    P.x - P.w / 2 + 0.002,
+    P.y,
+    plateZ - 0.03,
+  );
+  // The HAND · OFF · AUTO selector, its positions engraved under it.
+  const sel = signal<Selector>('auto');
   const knob = parts.add(
     selector(kit, {
       positions: 3,
-      initial: selectorIndex(sel),
+      initial: selectorIndex(sel.peek()),
       bound: {
         get value() {
-          return selectorIndex(sel);
+          return selectorIndex(sel.value);
         },
         set: (k: number) => {
-          sel = selectorAt(k);
-          host.selector?.(sel);
+          sel.value = selectorAt(k);
+          host.selector?.(sel.peek());
         },
       },
       legend: 'HAND · OFF · AUTO',
       name: `${info.name} HAND OFF AUTO selector`,
     }),
   );
-  t.box(
-    face,
-    t.paint('#dfe4e7', 0.4),
-    0.13,
-    0.15,
-    0.004,
-    KNOB_AT.x,
-    KNOB_AT.y + 0.01,
-    0.002,
-  );
-  knob.object.position.set(KNOB_AT.x, KNOB_AT.y, 0.004);
-  face.add(knob.object);
+  knob.object.position.set(KNOB_AT.x, KNOB_AT.y, P.z);
+  contents.add(knob.object);
   t.label(
-    face,
+    contents,
     'HAND  OFF  AUTO',
     KNOB_AT.x,
-    KNOB_AT.y - 0.048,
-    0.0045,
+    KNOB_AT.y - 0.03,
+    P.z + 0.0005,
     0.0065,
     '#1b1b1b',
   );
-  // Its own power switch (the owner, 2026-10-31): a rotary switch near the
-  // top of the lower door, OFF · ON, on from the start; off and on again,
-  // it power-cycles the computer. On the door, it swings with it.
-  let mainOn = true;
+  // Its own power switch (the owner, 2026-10-31): OFF · ON, on from the
+  // start; off and on again, it power-cycles the computer.
+  const mainOn = signal(true);
   const mainSwitch = parts.add(
     selector(kit, {
       positions: 2,
       initial: 1,
       bound: {
         get value() {
-          return mainOn ? 1 : 0;
+          return mainOn.value ? 1 : 0;
         },
         set: (k: number) => {
-          mainOn = k === 1;
-          host.power?.(mainOn);
+          mainOn.value = k === 1;
+          host.power?.(mainOn.peek());
         },
       },
       legend: 'OFF · ON',
       name: `${info.name} power switch`,
     }),
   );
-  const switchAt = { x: -w + 0.13, y: split - 0.1 };
-  t.box(
-    lowerDoor,
-    t.paint('#dfe4e7', 0.4),
-    0.11,
-    0.12,
-    0.004,
-    switchAt.x,
-    switchAt.y,
-    door / 2 + 0.002,
-  );
-  mainSwitch.object.position.set(
-    switchAt.x,
-    switchAt.y - 0.005,
-    door / 2 + 0.004,
-  );
-  lowerDoor.add(mainSwitch.object);
+  mainSwitch.object.position.set(POWER_AT.x, POWER_AT.y, P.z);
+  contents.add(mainSwitch.object);
   t.label(
-    lowerDoor,
+    contents,
     'POWER',
-    switchAt.x,
-    switchAt.y + 0.045,
-    door / 2 + 0.0045,
+    POWER_AT.x,
+    POWER_AT.y + 0.05,
+    P.z + 0.0005,
     0.009,
     '#1b1b1b',
   );
   t.label(
-    lowerDoor,
+    contents,
     'OFF  ON',
-    switchAt.x,
-    switchAt.y - 0.045,
-    door / 2 + 0.0045,
+    POWER_AT.x,
+    POWER_AT.y - 0.03,
+    P.z + 0.0005,
     0.0065,
     '#1b1b1b',
   );
+  t.label(
+    contents,
+    'CONTROL',
+    KNOB_AT.x,
+    KNOB_AT.y + 0.05,
+    P.z + 0.0005,
+    0.009,
+    '#1b1b1b',
+  );
+  /** Each knob's whole part (its ring nut and legend too), to the use it works. */
+  const knobs = new Map<Object3D, (direction?: number) => void>();
+  for (const k of [knob, mainSwitch])
+    knobs.set(k.object, [...k.uses.values()][0]);
   // Its piezo sounder, behind the upper door.
   const sounder = piezoSounder({ pitch: 'high', room: 'small' }, group);
   let looping: PiezoLoopMeaning | null = null;
@@ -913,7 +937,8 @@ export function createAqualisCabinet(
   let valveOpen = true;
   let leverAngle = 0;
   let sampleFlow = 30;
-  let doorOpen = false;
+  /** The lower door: open or shut (its catch's state), and where its swing is. */
+  const doorOpen = () => doorState.peek();
   let doorAngle = 0;
   let powered = true;
   /** Whether the host wants Dr Aqualis's overlay shown, and whether a drawing waits for the power. */
@@ -922,7 +947,7 @@ export function createAqualisCabinet(
   let overlayWaiting = false;
   /** The lower section's insides drawn only while its door is open or opening. */
   const showContents = () => {
-    const shown = doorOpen || doorAngle > 0;
+    const shown = doorOpen() || doorAngle > 0;
     contents.visible = shown;
     note.visible = shown;
   };
@@ -932,21 +957,36 @@ export function createAqualisCabinet(
   context.fillRect(0, 0, SCREEN.w, SCREEN.h);
   texture.needsUpdate = true;
 
+  /** Whether an object is drawn: it and every parent visible (a ray hits hidden meshes too). */
+  const drawn = (object: Object3D) => {
+    for (let o: Object3D | null = object; o; o = o.parent)
+      if (!o.visible) return false;
+    return true;
+  };
+  /**
+   * The use a hit works, from the mesh up: a knob's whole part (its ring
+   * nut and legend as well as its lever), the door's catch, or the door
+   * itself through its catch; nothing hidden (the knobs while the door is
+   * shut).
+   */
   const useOf = (object: Object3D) => {
+    if (!drawn(object)) return null;
+    if (doorMeshes.has(object)) return latchUse;
     for (let o: Object3D | null = object; o; o = o.parent) {
-      const use = parts.uses.get(o);
+      const use = parts.uses.get(o) ?? knobs.get(o);
       if (use) return use;
     }
     return null;
   };
 
-  const touchables: Object3D[] = [
+  const doorTouchables: Object3D[] = [
     screen,
     overlayMesh,
     handle,
     ...doorMeshes,
-    ...parts.uses.keys(),
+    ...latch.uses.keys(),
   ];
+  const insideTouchables: Object3D[] = [knob.object, mainSwitch.object];
   /** A touch on the screen or its overlay, as the screen's pixels. */
   const pixelOf = (object: Object3D, uv: Vector2 | undefined) =>
     !uv
@@ -959,8 +999,16 @@ export function createAqualisCabinet(
 
   return {
     group,
-    /** The meshes that take touches and turns: the screen and its overlay, the knob, the sample valve's lever, the lower door. */
-    touchables,
+    /**
+     * What takes touches and turns: the screen and its overlay, the sample
+     * valve's lever, the lower door and its catch; and, only while the door
+     * is open (and so they are drawn), the selector and power switch inside.
+     */
+    get touchables(): Object3D[] {
+      return contents.visible
+        ? [...doorTouchables, ...insideTouchables]
+        : doorTouchables;
+    },
     /** The screen's 2D context, `SCREEN` (640 × 480), for the host to draw into. */
     context,
     /** The screen's mesh. */
@@ -976,11 +1024,11 @@ export function createAqualisCabinet(
     },
     /** Its own power switch's position. */
     get mainSwitchOn() {
-      return mainOn;
+      return mainOn.peek();
     },
-    /** Set its own power switch, as a turn of it would (without telling the host). */
+    /** Show its own power switch at `on` (it does not tell the host). */
     setMainSwitch(on: boolean) {
-      mainOn = on;
+      mainOn.value = on;
     },
     /** Its piezo sounder: a one-shot beep. */
     beep(meaning: PiezoOneShot) {
@@ -1024,11 +1072,6 @@ export function createAqualisCabinet(
         host.screenTouch(...p);
         return true;
       }
-      if (doorMeshes.has(object)) {
-        doorOpen = !doorOpen;
-        showContents();
-        return true;
-      }
       if (object === handle) {
         valveOpen = !valveOpen;
         host.sampleValve?.(valveOpen);
@@ -1045,16 +1088,14 @@ export function createAqualisCabinet(
         const p = pixelOf(object, uv);
         return p !== null && (host.screenAimed?.(...p) ?? true);
       }
-      return (
-        object === handle || doorMeshes.has(object) || useOf(object) !== null
-      );
+      return object === handle || useOf(object) !== null;
     },
     get selector() {
-      return sel;
+      return sel.peek();
     },
     /** Show the knob at `s` (it does not tell the host). */
     setSelector(s: Selector) {
-      sel = s;
+      sel.value = s;
     },
     get sampleValveOpen() {
       return valveOpen;
@@ -1088,11 +1129,11 @@ export function createAqualisCabinet(
       },
     },
     get doorOpen() {
-      return doorOpen;
+      return doorOpen();
     },
-    /** Open or shut the lower door, as a click on it would. */
+    /** Open or shut the lower door, as a click on it would (silently). */
     setDoorOpen(open: boolean) {
-      doorOpen = open;
+      doorState.value = open;
       showContents();
     },
     /** The lower section's insides, drawn only while its door is open or opening. */
@@ -1107,7 +1148,15 @@ export function createAqualisCabinet(
     update(dt: number) {
       parts.update(dt);
       const flowing = valveOpen ? sampleFlow : 0;
-      const swing = doorOpen ? DOOR_OPEN : 0;
+      const swing = doorOpen() ? DOOR_OPEN : 0;
+      // The catch turns a quarter to open, and back to shut.
+      const turned = doorOpen() ? Math.PI / 2 : 0;
+      if (latchAngle !== turned) {
+        latchAngle +=
+          Math.sign(turned - latchAngle) *
+          Math.min(Math.abs(turned - latchAngle), dt * 12);
+        latch.object.rotation.z = latchAngle;
+      }
       if (doorAngle !== swing) {
         doorAngle +=
           Math.sign(swing - doorAngle) *

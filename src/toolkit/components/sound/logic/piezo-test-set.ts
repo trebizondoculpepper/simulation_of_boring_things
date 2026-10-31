@@ -58,6 +58,7 @@ const ONE_SHOT_SECONDS: Record<PiezoOneShot, number> = {
   fault: 0.8,
   'priority-high': 2.5,
   'priority-medium': 0.95,
+  startup: 1.15,
 };
 
 export const piezoTestPress = (

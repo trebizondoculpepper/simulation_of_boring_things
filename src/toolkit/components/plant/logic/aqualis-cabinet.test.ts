@@ -4,7 +4,9 @@ import {
   CABINET_MODELS,
   glandsOf,
   portsOf,
+  CONTROL_PLATE,
   KNOB_AT,
+  POWER_AT,
   OVERLAY,
   overlayCanvasSize,
   overlayPixel,
@@ -40,15 +42,31 @@ describe('the Aqualis cabinet', () => {
     expect(SCREEN_PX_PER_M).toBeCloseTo(SCREEN.w / SCREEN_AREA.w);
   });
 
-  it('keeps the screen, knob and lamps on the upper door', () => {
+  it('keeps the screen and lamps on the upper door', () => {
     const top = SCREEN_AT.y + SCREEN_AREA.h / 2 + SCREEN_AREA.bezel;
     expect(top).toBeLessThan(CABINET.h - CABINET.cap);
-    for (const y of [SCREEN_AT.y, KNOB_AT.y, ...LEDS.map((l) => l.y)])
+    for (const y of [SCREEN_AT.y, ...LEDS.map((l) => l.y)])
       expect(y).toBeGreaterThan(CABINET.split);
-    expect(KNOB_AT.y + 0.06).toBeLessThan(
-      SCREEN_AT.y - SCREEN_AREA.h / 2 - SCREEN_AREA.bezel,
-    );
     for (const l of LEDS) expect(Math.abs(l.x)).toBeLessThan(CABINET.w / 2);
+  });
+
+  it('puts the selector and power switch on a plate inside, near the top of the lower section', () => {
+    const p = CONTROL_PLATE;
+    const inner = CABINET.w / 2 - 0.015;
+    expect(p.x - p.w / 2).toBeGreaterThanOrEqual(-inner - 1e-9);
+    expect(p.x + p.w / 2).toBeLessThan(inner);
+    expect(p.y + p.h / 2).toBeLessThan(CABINET.split);
+    expect(p.y - p.h / 2).toBeGreaterThan(CABINET.split - 0.25);
+    // Behind the shut door, with room for the knobs' levers.
+    expect(p.z + 0.026).toBeLessThan(CABINET.d - CABINET.door);
+    for (const k of [KNOB_AT, POWER_AT]) {
+      expect(Math.abs(k.x - p.x) + 0.04).toBeLessThan(p.w / 2);
+      // Each knob with its legend above and its positions below.
+      expect(k.y + 0.04).toBeLessThan(p.y + p.h / 2);
+      expect(k.y - 0.04).toBeGreaterThan(p.y - p.h / 2);
+    }
+    // Side by side, their legends clear of each other.
+    expect(Math.abs(POWER_AT.x - KNOB_AT.x)).toBeGreaterThan(0.09);
   });
 
   it('turns its knob a detent at a time and stops at the ends', () => {

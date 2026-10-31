@@ -993,6 +993,10 @@ function stepAt(script: BootScript, t: number) {
   return { i, step: steps[i], local: t - steps[i].start };
 }
 
+/** The id of the step showing `t` seconds after power-on ('post', 'app' and the rest): cheaper than a whole frame, for a sound at a step's start. */
+export const bootStepAt = (script: BootScript, t: number): string =>
+  stepAt(script, Math.max(0, t)).step.id;
+
 /** What the screen shows `t` seconds after power-on. */
 export function bootFrame(script: BootScript, t: number): BootFrame {
   t = Math.max(0, t);

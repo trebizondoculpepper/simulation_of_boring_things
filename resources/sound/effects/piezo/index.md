@@ -33,6 +33,7 @@ A two-tone cadence's second tone is the pitch times 0.84.
 | `fault`           | 3 beeps of 150 ms at 0, 300, 600 ms                                                                                            | A controller's fault on power-up or in running                              |
 | `priority-high`   | 10 beeps of 100 ms at 0, 175, 350, 700, 875, 1475, 1650, 1825, 2175, 2350 ms                                                   | A grave alarm, repeated by the caller                                       |
 | `priority-medium` | 3 beeps of 200 ms at 0, 350, 700 ms                                                                                            | A caution, repeated by the caller                                           |
+| `startup`         | 6 beeps of 80, 120, 400 ms at 0, 150 (x1.12246), 300 (x1.25992), 450 (x1.12246), 560 (x1.25992), 720 (x1.49831) ms             | An application coming up at the end of a boot: a short original jingle      |
 | `countdown`       | 1 beep of 60 ms at 0 ms, a 1 s loop                                                                                            | An entry or exit delay, a timed action running                              |
 | `hurry`           | 4 beeps of 60 ms at 0, 250, 500, 750 ms, a 1 s loop                                                                            | The last seconds of a countdown                                             |
 | `warning`         | 2 beeps of 250 ms at 0, 500 ms, a 1 s loop                                                                                     | A condition needing attention, until acknowledged                           |
@@ -132,6 +133,15 @@ A two-tone cadence's second tone is the pitch times 0.84.
 | [piezo_priority-medium_high_dry.mp3](piezo_priority-medium_high_dry.mp3)     | priority-medium | high  | dry   | 0.95    |        | -7.68       | -7.32     |
 | [piezo_priority-medium_high_small.mp3](piezo_priority-medium_high_small.mp3) | priority-medium | high  | small | 1.17    |        | -7.68       | -7.79     |
 | [piezo_priority-medium_high_large.mp3](piezo_priority-medium_high_large.mp3) | priority-medium | high  | large | 2.46    |        | -7.68       | -5.48     |
+| [piezo_startup_low_dry.mp3](piezo_startup_low_dry.mp3)                       | startup         | low   | dry   | 1.17    |        | -7.68       | -2.90     |
+| [piezo_startup_low_small.mp3](piezo_startup_low_small.mp3)                   | startup         | low   | small | 1.39    |        | -7.68       | -2.66     |
+| [piezo_startup_low_large.mp3](piezo_startup_low_large.mp3)                   | startup         | low   | large | 3.00    |        | -7.68       | -1.82     |
+| [piezo_startup_mid_dry.mp3](piezo_startup_mid_dry.mp3)                       | startup         | mid   | dry   | 1.17    |        | -7.68       | -5.29     |
+| [piezo_startup_mid_small.mp3](piezo_startup_mid_small.mp3)                   | startup         | mid   | small | 1.41    |        | -7.68       | -4.33     |
+| [piezo_startup_mid_large.mp3](piezo_startup_mid_large.mp3)                   | startup         | mid   | large | 2.88    |        | -7.68       | -3.26     |
+| [piezo_startup_high_dry.mp3](piezo_startup_high_dry.mp3)                     | startup         | high  | dry   | 1.17    |        | -7.68       | -4.39     |
+| [piezo_startup_high_small.mp3](piezo_startup_high_small.mp3)                 | startup         | high  | small | 1.25    |        | -7.68       | -4.67     |
+| [piezo_startup_high_large.mp3](piezo_startup_high_large.mp3)                 | startup         | high  | large | 2.20    |        | -7.68       | -2.62     |
 | [piezo_countdown_low_dry.mp3](piezo_countdown_low_dry.mp3)                   | countdown       | low   | dry   | 1.00    | 1 s    | -7.68       | -5.06     |
 | [piezo_countdown_low_small.mp3](piezo_countdown_low_small.mp3)               | countdown       | low   | small | 1.00    | 1 s    | -7.68       | -5.35     |
 | [piezo_countdown_low_large.mp3](piezo_countdown_low_large.mp3)               | countdown       | low   | large | 1.00    | 1 s    | -7.68       | -5.24     |

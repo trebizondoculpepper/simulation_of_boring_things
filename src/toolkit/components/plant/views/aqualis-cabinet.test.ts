@@ -141,3 +141,123 @@ describe('the Aqualis cabinet’s screen', () => {
     expect(overlay.visible).toBe(true);
   });
 });
+
+describe('the Aqualis cabinet’s knobs, inside the lower section', () => {
+  const partOf = (cab: Cabinet, name: string) =>
+    cab.group.getObjectByName(`${cab.group.name} ${name}`)!;
+  /** A mesh of a part: its lever, or (`last`) its legend plate. */
+  const meshOf = (o: Object3D, last = false) => {
+    const meshes: Object3D[] = [];
+    o.traverse((m) => {
+      if ((m as Mesh).isMesh) meshes.push(m);
+    });
+    return last ? meshes[meshes.length - 1] : meshes[0];
+  };
+  /** Every rotation about z in a part, which its lever turns by. */
+  const turns = (o: Object3D) => {
+    const out: number[] = [];
+    o.traverse((m) => out.push(Number(m.rotation.z.toFixed(4))));
+    return out.join();
+  };
+  const settle = (cab: Cabinet) => {
+    for (let i = 0; i < 40; i++) cab.update(0.05);
+  };
+
+  it('are inside the section, drawn and usable only while its door is open', () => {
+    const cab = build();
+    const knob = partOf(cab, 'HAND OFF AUTO selector');
+    const power = partOf(cab, 'power switch');
+    for (const part of [knob, power]) {
+      expect(drawn(part)).toBe(false);
+      expect(cab.touchables).not.toContain(part);
+      expect(cab.aimed(meshOf(part))).toBe(false);
+      expect(cab.touch(meshOf(part), undefined, -1)).toBe(false);
+    }
+    expect(cab.selector).toBe('auto');
+    cab.setDoorOpen(true);
+    for (const part of [knob, power]) {
+      expect(drawn(part)).toBe(true);
+      expect(cab.touchables).toContain(part);
+      expect(cab.aimed(meshOf(part))).toBe(true);
+    }
+  });
+
+  it('turn when used, a detent at a time, and show it', () => {
+    const turned: string[] = [];
+    const power: boolean[] = [];
+    const cab = createAqualisCabinet(createPanelKit(), {
+      screenTouch() {},
+      selector: (s) => turned.push(s),
+      power: (on) => power.push(on),
+    });
+    cab.setDoorOpen(true);
+    const knob = partOf(cab, 'HAND OFF AUTO selector');
+    settle(cab);
+    const atAuto = turns(knob);
+    expect(cab.touch(meshOf(knob), undefined, -1)).toBe(true);
+    expect(cab.selector).toBe('off');
+    settle(cab);
+    const atOff = turns(knob);
+    expect(atOff).not.toBe(atAuto);
+    // A second turn goes on from where the first left it, to HAND.
+    cab.touch(meshOf(knob), undefined, -1);
+    expect(cab.selector).toBe('hand');
+    settle(cab);
+    expect(turns(knob)).not.toBe(atOff);
+    // Its legend plate works it too, not only its lever.
+    cab.touch(meshOf(knob, true), undefined, 1);
+    expect(cab.selector).toBe('off');
+    expect(turned).toEqual(['off', 'hand', 'off']);
+    // The world moving it shows on the knob.
+    cab.setSelector('auto');
+    settle(cab);
+    expect(turns(knob)).toBe(atAuto);
+
+    const sw = partOf(cab, 'power switch');
+    const on = turns(sw);
+    cab.touch(meshOf(sw), undefined, -1);
+    expect(cab.mainSwitchOn).toBe(false);
+    settle(cab);
+    expect(turns(sw)).not.toBe(on);
+    cab.touch(meshOf(sw), undefined, 1);
+    expect(cab.mainSwitchOn).toBe(true);
+    expect(power).toEqual([false, true]);
+  });
+});
+
+describe('the Aqualis cabinet’s doors', () => {
+  it('opens and shuts its lower door by its catch, which turns a quarter', () => {
+    const cab = build();
+    const latch = cab.group.getObjectByName(
+      `${cab.group.name} lower door catch`,
+    )!;
+    expect(cab.touchables).toContain(latch);
+    let mesh: Object3D | undefined;
+    latch.traverse((m) => {
+      if (!mesh && (m as Mesh).isMesh) mesh = m;
+    });
+    expect(cab.aimed(mesh!)).toBe(true);
+    expect(cab.touch(mesh!)).toBe(true);
+    expect(cab.doorOpen).toBe(true);
+    for (let i = 0; i < 40; i++) cab.update(0.05);
+    expect(latch.rotation.z).toBeCloseTo(Math.PI / 2);
+    cab.touch(mesh!);
+    expect(cab.doorOpen).toBe(false);
+    for (let i = 0; i < 40; i++) cab.update(0.05);
+    expect(latch.rotation.z).toBeCloseTo(0);
+  });
+
+  it('has no handle on its upper door, which does not open', () => {
+    const cab = build();
+    // Nothing stands proud of the upper door's right-hand side, where its handle was.
+    const proud = cab.group.children.filter(
+      (o) =>
+        (o as Mesh).isMesh &&
+        o.position.y > 0.98 &&
+        o.position.y < 1.3 &&
+        o.position.x > 0.2 &&
+        o.position.z > 0.3,
+    );
+    expect(proud).toEqual([]);
+  });
+});

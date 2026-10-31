@@ -1,9 +1,12 @@
 """The piezo beep library: every beep synthesised from scratch (mission 100).
 
 One cheap piezo sounder behind a panel, played three ways (pitch), with
-thirteen cadences (meaning), each rendered dry and in two rooms (reverb):
-13 x 3 x 3 = 117 MP3s, named piezo_<meaning>_<pitch>_<room>.mp3. Nothing
-here is recorded, sampled or derived from any recording.
+fifteen cadences (meaning), each rendered dry and in two rooms (reverb):
+15 x 3 x 3 = 135 MP3s, named piezo_<meaning>_<pitch>_<room>.mp3. Nothing
+here is recorded, sampled or derived from any recording. A cadence's beeps
+may each be at their own multiple of the pitch: a warble's two tones, or a
+melody's notes (`_melody`, in semitones from the pitch), as a piezo plays a
+tune.
 
 The chain, per file (doc/research/piezo-beeper-sounds.md):
   band-limited pulse-wave drive (duty 0.46, pulling in to pitch over 4 ms,
@@ -106,6 +109,27 @@ def _priority_high() -> tuple[tuple[float, float, float], ...]:
     return _train(onsets, pulse)
 
 
+def _melody(notes: list[tuple[float, float, float]]) -> tuple[tuple[float, float, float], ...]:
+    """A tune, as a piezo plays one: square-wave notes, each (onset s, length s, semitones from the pitch)."""
+    return tuple((round(o, 6), length, round(2 ** (semis / 12), 6)) for o, length, semis in notes)
+
+
+# An original start-up jingle (the owner, 2026-10-31, for the Dr Aqualis
+# Trio's application coming up): up a step at a time from the pitch, a
+# skip back, and up to a held fifth, about 1.1 s. Its notes are kept
+# within a fifth so that no file of it peaks above the library's loudest,
+# which would change the library's one gain and every other file.
+STARTUP = _melody(
+    [
+        (0.00, 0.12, 0),
+        (0.15, 0.12, 2),
+        (0.30, 0.12, 4),
+        (0.45, 0.08, 2),
+        (0.56, 0.12, 4),
+        (0.72, 0.40, 7),
+    ]
+)
+
 CADENCES: dict[str, Cadence] = {
     "entry": Cadence(_train([0.0], 0.035), use="A key pressed, a card presented"),
     "confirm": Cadence(_train([0.0, 0.12], 0.07), use="A value stored, a command accepted, a card read and accepted"),
@@ -116,6 +140,7 @@ CADENCES: dict[str, Cadence] = {
     "fault": Cadence(_train([0.0, 0.30, 0.60], 0.15), use="A controller's fault on power-up or in running"),
     "priority-high": Cadence(_priority_high(), use="A grave alarm, repeated by the caller"),
     "priority-medium": Cadence(_train([0.0, 0.35, 0.70], 0.2), use="A caution, repeated by the caller"),
+    "startup": Cadence(STARTUP, use="An application coming up at the end of a boot: a short original jingle"),
     "countdown": Cadence(_train([0.0], 0.06), cycle=1.0, use="An entry or exit delay, a timed action running"),
     "hurry": Cadence(_train([0.0, 0.25, 0.5, 0.75], 0.06), cycle=1.0, use="The last seconds of a countdown"),
     "warning": Cadence(_train([0.0, 0.5], 0.25), cycle=1.0, use="A condition needing attention, until acknowledged"),

@@ -66,12 +66,14 @@ import {
 import {
   bootFrame,
   bootScript,
+  bootStepAt,
 } from '../../components/core/logic/boot-sequence';
 import type {
   BootFrame,
   BootScript,
 } from '../../components/core/logic/boot-sequence';
 import { drawBootPicture } from '../../components/core/views/boot-screens';
+import type { PiezoOneShot } from '../../components/sound/logic/piezo-beeps';
 import type { BootDrawOptions } from '../../components/core/views/boot-screens';
 import {
   drawDrAqualis,
@@ -211,6 +213,13 @@ export interface AqualisRoomHost {
   restart(): void;
   /** What its boot shows now, or null when it is not booting. */
   bootFrame(): BootFrame | null;
+  /**
+   * The piezo's one-shots its boot has asked for since this was last
+   * called, oldest first, for the room to play (`cabinet.beep`): one short
+   * `ready` beep as its POST begins, as a PC's, and the `startup` jingle as
+   * its application comes up at the boot's end.
+   */
+  takeBeeps(): PiezoOneShot[];
   /** Its computer's state. */
   os(): OsState;
   /** Crash it now (the crash board's buttons), its watchdog as switched. */
@@ -316,6 +325,9 @@ export function createAqualisRoomHost(
     }
     return boot;
   };
+  /** The boot step last seen, and of which boot; the piezo's one-shots not yet played. */
+  let seenStep = { n: -1, step: '' };
+  let beeps: PiezoOneShot[] = [];
   const running = () => osRunning(os);
   const NO_DEMAND: Outputs = { hypochlorite: 0, acid: 0, co2: 0 };
   // The crash board: its watchdog switch, the next crash's number, and
@@ -525,7 +537,25 @@ export function createAqualisRoomHost(
       clock += realDt;
       const r = stepOs(os, realDt, os.boot ? bootNow().total : 0);
       os = r.os;
-      if (r.event === 'booted') booted();
+      // Its piezo: a short beep as POST begins (seen to begin: a boot
+      // looked at first part-way through, `&boot=20`, gives none), and its
+      // jingle as the application comes up.
+      if (os.boot) {
+        const step = bootStepAt(bootNow(), os.boot.t);
+        // A boot not seen before: from nothing if it began this step.
+        const before =
+          seenStep.n === os.boot.n
+            ? seenStep.step
+            : os.boot.t <= realDt + 1e-9
+              ? ''
+              : step;
+        if (step === 'post' && before !== 'post') beeps.push('ready');
+        seenStep = { n: os.boot.n, step };
+      }
+      if (r.event === 'booted') {
+        beeps.push('startup');
+        booted();
+      }
       if (r.event === 'rebooting') freshSoftware();
       if (running()) {
         display = tickDisplay(display, realDt);
@@ -617,6 +647,11 @@ export function createAqualisRoomHost(
       freshSoftware();
     },
     bootFrame: () => (os.boot ? bootFrame(bootNow(), os.boot.t) : null),
+    takeBeeps() {
+      const out = beeps;
+      beeps = [];
+      return out;
+    },
     os: () => os,
     crash(kind) {
       // The board's buttons crash it after a countdown (the owner,

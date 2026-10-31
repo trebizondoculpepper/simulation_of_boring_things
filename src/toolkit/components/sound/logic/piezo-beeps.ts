@@ -43,6 +43,8 @@ export const PIEZO_ONE_SHOTS = [
   'priority-high',
   /** Three 0.2 s pulses: a caution, repeated by the caller. */
   'priority-medium',
+  /** An original six-note jingle, about 1.1 s, square-wave notes as a piezo plays a tune: an application coming up at the end of its boot. */
+  'startup',
 ] as const;
 export type PiezoOneShot = (typeof PIEZO_ONE_SHOTS)[number];
 
@@ -101,6 +103,7 @@ export const PIEZO_LEVELS: Record<PiezoMeaning, number> = {
   alarm: 0.24,
   'priority-high': 0.26,
   'buffer-full': 0.2,
+  startup: 0.16,
 };
 
 /** A device's own sounder: its pitch and the room it stands in, set where it is built. */

@@ -668,16 +668,25 @@ export function selector(
           : createLeverSelector(kit, props.positions, { key: props.key });
   a.object.add(view.group);
   a.legend(props.legend, 0.03);
+  // A binding may read a plain value (a room host's getter) rather than a
+  // signal, which its position, a computed, would never see change: the
+  // knob would neither show a turn nor turn on from it (mission 114, dev58's
+  // knobs). So its reading is looked at afresh after every write and every
+  // update, by a tick the binding reads.
+  const fresh = signal(0);
   const part = createSelector({
     positions: props.positions,
     initial: props.initial,
     bound: props.bound
       ? {
           get value() {
+            void fresh.value;
             return props.bound!.value / Math.max(1, props.positions - 1);
           },
-          set: (share: number) =>
-            props.bound!.set(Math.round(share * (props.positions - 1))),
+          set: (share: number) => {
+            props.bound!.set(Math.round(share * (props.positions - 1)));
+            fresh.value++;
+          },
         }
       : undefined,
     latch: props.latch,
@@ -688,6 +697,7 @@ export function selector(
   });
   a.uses.set(view.knob, (direction = 1) => part.turn(direction));
   a.updates.push((delta) => {
+    if (props.bound) fresh.value++;
     view.set(part.position.value);
     view.update(delta);
   });

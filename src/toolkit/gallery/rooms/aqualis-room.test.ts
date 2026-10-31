@@ -77,6 +77,45 @@ describe('dev58’s host: the Trio’s boot', () => {
   });
 });
 
+describe('dev58’s host: the Trio’s piezo through its boot', () => {
+  /** Every beep asked for over a boot, and the boot step each came in. */
+  const beepsOfBoot = (host: ReturnType<typeof createAqualisRoomHost>) => {
+    const heard: { beep: string; step: string | null }[] = [];
+    for (let t = 0; t < 80; t += 0.1) {
+      const step = host.bootFrame()?.step ?? null;
+      host.step(0.1);
+      for (const beep of host.takeBeeps()) heard.push({ beep, step });
+    }
+    return heard;
+  };
+
+  it('beeps once as POST begins, and plays its jingle once as the application comes up', () => {
+    const host = createAqualisRoomHost('good', { boot: false });
+    expect(host.takeBeeps()).toEqual([]);
+    host.setPower(false);
+    host.setPower(true);
+    const heard = beepsOfBoot(host);
+    expect(heard.map((h) => h.beep)).toEqual(['ready', 'startup']);
+    // The beep as POST's first frame shows; the jingle at the splash's end.
+    expect(heard[0].step).toBe('power');
+    expect(heard[1].step).toBe('app');
+    expect(host.booting()).toBe(false);
+  });
+
+  it('beeps again on each boot, and not at all when it starts running', () => {
+    const host = createAqualisRoomHost('good', { boot: false });
+    run(host, 5);
+    expect(host.takeBeeps()).toEqual([]);
+    host.restart();
+    expect(beepsOfBoot(host).map((h) => h.beep)).toEqual(['ready', 'startup']);
+  });
+
+  it('gives no POST beep for a boot first seen past its POST (`&boot=20`)', () => {
+    const host = createAqualisRoomHost('good', { boot: true, bootAt: 20 });
+    expect(beepsOfBoot(host).map((h) => h.beep)).toEqual(['startup']);
+  });
+});
+
 describe('dev58’s host: the crash board', () => {
   /** Run at 1000× until the hypochlorite pump doses hard. */
   const dosingHard = () => {

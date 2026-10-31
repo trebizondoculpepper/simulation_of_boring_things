@@ -921,7 +921,15 @@ export function startAqualisControllerRoom(canvas: HTMLCanvasElement) {
   const observer = new ResizeObserver(resize);
   observer.observe(canvas);
   resize();
-  Object.assign(window, { dev58: { host, cabinet } });
+  // For scripts checking the room: `dev58.useAt(0, 0)` uses whatever is under the crosshair, as a click does.
+  Object.assign(window, {
+    dev58: {
+      host,
+      cabinet,
+      camera,
+      useAt: (x = 0, y = 0) => usableAt(x, y)?.(),
+    },
+  });
 
   // ---- Each frame --------------------------------------------------------------------
   let last = 0;
@@ -933,6 +941,8 @@ export function startAqualisControllerRoom(canvas: HTMLCanvasElement) {
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
     last = time;
     host.step(delta);
+    // Its boot's beeps: one as POST begins, its jingle as the application comes up.
+    for (const b of host.takeBeeps()) cabinet.beep(b);
     cabinet.setSelector(host.selector());
     cabinet.setLeds(host.leds());
     cabinet.setSampleFlow(host.sampleLh());

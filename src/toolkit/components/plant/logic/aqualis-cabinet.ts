@@ -76,10 +76,28 @@ export function facingDistance(tilt: number, eye = EYE) {
 /** The screen's middle as built: on its raked pod (`x` across the door, `y` up, `z` out from the door's face). */
 export const SCREEN_AT = { x: 0, ...screenCentre(screenTilt()) } as const;
 
-/** The HAND · OFF · AUTO knob's middle, below the screen. */
-export const KNOB_AT = { x: -0.15, y: 1.18 } as const;
+/**
+ * The inside control plate (the owner, 2026-10-31: the knobs inside the
+ * cabinet, reached by opening the lower door): a small plate near the top
+ * of the lower section, on its left, standing just behind the door, clear
+ * of the analysis cell's probes and their cables. `z` is its face, m from
+ * the cabinet's back.
+ */
+export const CONTROL_PLATE = {
+  x: -0.175,
+  y: 0.895,
+  w: 0.22,
+  h: 0.13,
+  z: 0.25,
+} as const;
 
-/** The status lamps, right of the knob: label and where. */
+/** The HAND · OFF · AUTO selector's middle, on the inside control plate. */
+export const KNOB_AT = { x: -0.225, y: 0.88 } as const;
+
+/** The cabinet's own power switch (OFF · ON), beside the selector on the plate. */
+export const POWER_AT = { x: -0.115, y: 0.88 } as const;
+
+/** The status lamps on the upper door, below the screen: label and where. */
 export const LEDS = [
   { id: 'power', label: 'POWER', colour: '#3ddc5a', x: 0.06, y: 1.21 },
   { id: 'dosing', label: 'DOSING', colour: '#ffb21c', x: 0.14, y: 1.21 },
