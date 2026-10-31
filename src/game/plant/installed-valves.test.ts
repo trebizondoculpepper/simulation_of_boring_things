@@ -12,6 +12,7 @@ import {
 } from './installed-valves';
 import { plantInventory } from './equipment-catalogue';
 import { EQUIPMENT_VALVES } from './chemical-valves';
+import { TRIO_VALVES_NOT_YET_DRAWN } from './aqualis-schematic';
 
 const ROOMS = [
   'plant_pool_01',
@@ -25,9 +26,11 @@ const ROOMS = [
   'acid_store',
   'loading_bay',
 ].filter((r) => !BEING_LAID_OUT.includes(r));
-/** The registered valves of rooms not being laid out afresh. */
+/** The registered valves of rooms not being laid out afresh (and not the Trios' lines, in the model but not yet drawn, mission 114). */
 const REGISTERED = Object.entries(INSTALLED_VALVES).filter(
-  ([key]) => !BEING_LAID_OUT.includes(key.split('|')[0]),
+  ([key, v]) =>
+    !BEING_LAID_OUT.includes(key.split('|')[0]) &&
+    !TRIO_VALVES_NOT_YET_DRAWN.has(v.assetId),
 );
 
 describe('installed pipework valves', () => {

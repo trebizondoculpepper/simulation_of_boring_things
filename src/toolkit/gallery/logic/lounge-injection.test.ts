@@ -6,17 +6,21 @@ import { REACH, roomInjections, roomPipes } from './room-pipes';
 
 /**
  * The lounge's dosing put right (prompt 089, item 4; the owner,
- * 2026-10-27, the Olympic's way): the sample from the filtered main before
- * any dosing, the acid after the heat exchanger, the hypochlorite last,
+ * 2026-10-27, the Olympic's way): the sample (since mission 114, the
+ * Trio's, off the pump discharge main) before any dosing, the acid after the heat exchanger, the hypochlorite last,
  * after the UV unit, each through its quill, its isolating valve and its
  * non-return valve.
  */
 describe('the lounge’s injection points', () => {
   const link = (id: string) => LOUNGE_SCHEMATIC.links.find((l) => l.id === id)!;
 
-  it('samples the filtered main, before any dosing', () => {
-    const l = link('Sample line from the filtered main');
-    expect([l.sourceId, l.targetId]).toEqual(['outlet-header', 'dosing']);
+  it('samples the pump discharge main, before the filters and any dosing (mission 114)', () => {
+    const l = link('Sample tapping');
+    expect([l.sourceId, l.targetId]).toEqual([
+      'discharge-header',
+      'sample-point',
+    ]);
+    expect(link('Sample line').targetId).toBe('dosing');
     // Nothing doses the filtered main.
     expect(
       LOUNGE_SCHEMATIC.links.some(

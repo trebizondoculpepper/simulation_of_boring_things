@@ -9,6 +9,11 @@ import {
   OLYMPIC_ROOM,
   olympicChemicalExpansion,
 } from './olympic-chemical-schematic';
+import {
+  OLYMPIC_TRIO,
+  OLYMPIC_TRIO_NODES,
+  olympicTrioExpansion,
+} from './aqualis-schematic';
 
 /**
  * The valves of the rooms built from a schematic (prompt 064), derived
@@ -152,7 +157,7 @@ function roomValves(
   });
 }
 
-/** Every room's model valves, from each schematic in turn, and the Olympic's chemical lines' (prompt 085). */
+/** Every room's model valves, from each schematic in turn, and the Olympic's chemical lines' (prompt 085) and Trio's (mission 114). */
 export const MODEL_VALVES: readonly ModelValve[] = [
   ...Object.values(SCHEMATICS).flatMap((schematic) => {
     const set = schematicExpansion(schematic.room)!.fittings;
@@ -172,6 +177,16 @@ export const MODEL_VALVES: readonly ModelValve[] = [
     OLYMPIC_CHEMICAL_LINKS,
     OLYMPIC_CHEMICAL_FITTINGS.filter((f) =>
       olympicChemicalExpansion().fittings.some((x) => x.id === f.id),
+    ),
+  ),
+  // And its Dr Aqualis Trio's sample valves (mission 114).
+  ...roomValves(
+    OLYMPIC_ROOM,
+    OLYMPIC_CODE,
+    OLYMPIC_TRIO_NODES,
+    OLYMPIC_TRIO.links,
+    OLYMPIC_TRIO.fittings.filter((f) =>
+      olympicTrioExpansion().fittings.some((x) => x.id === f.id),
     ),
   ),
 ];

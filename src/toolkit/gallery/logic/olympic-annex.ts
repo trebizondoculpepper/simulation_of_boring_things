@@ -4,6 +4,10 @@ import {
   OLYMPIC_CHEMICAL_NODES,
   olympicChemicalExpansion,
 } from '../../../game/plant/olympic-chemical-schematic';
+import {
+  OLYMPIC_TRIO,
+  olympicTrioExpansion,
+} from '../../../game/plant/aqualis-schematic';
 
 /**
  * The Olympic plant room's model beyond its plumber's expansion (prompt
@@ -42,11 +46,15 @@ export const OLYMPIC_ANNEX = {
       name: 'Balance tank level transmitter',
     },
     { id: 'tankPanel', kind: 'balance-tank-panel', name: 'Balance tank panel' },
+    // Its Dr Aqualis Trio (mission 114), in the old controller's node and
+    // tag, and its sample point on the discharge manifold.
     {
       id: 'controller',
       kind: 'dosing-controller',
+      code: 'CP2',
       name: 'Dosing controller and sample cells',
     },
+    ...OLYMPIC_TRIO.nodes,
     { id: 'manifold', kind: 'header', name: 'Pump discharge manifold' },
     { id: 'inlet-header', kind: 'header', name: 'Inlet header' },
     { id: 'outlet-header', kind: 'header', name: 'Outlet header' },
@@ -107,7 +115,10 @@ export const OLYMPIC_ANNEX = {
     // Its chemical lines (prompt 085): each branch into its day tank, each
     // day tank's supply line to its dosing pump, each pump's dose line.
     ...OLYMPIC_CHEMICAL_LINKS,
-    link('sample', ['pumps', 'discharge'], ['controller', 'sample'], 'water'),
+    // The Trio's (mission 114): its sample off the common discharge
+    // manifold and back to the balance tank, its control of each dosing
+    // pump, its alarms to PL2-CP1, its supply off the busbar.
+    ...OLYMPIC_TRIO.links,
     link('ozone', ['generator', 'ozone'], ['contact', 'ozone'], 'gas'),
     // The pumps' drain to the backwash floor channel (the owner, 2026-10-25).
     link(
@@ -147,5 +158,7 @@ export const OLYMPIC_ANNEX = {
     'pumps.drain.iso',
     // Its chemical lines' valves (prompt 085).
     ...olympicChemicalExpansion().fittings.map((f) => f.id),
+    // The Trio's sample valves (mission 114).
+    ...olympicTrioExpansion().fittings.map((f) => f.id),
   ],
 };

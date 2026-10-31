@@ -295,8 +295,6 @@ const OVERHEAD = 2.6;
 const QUILL = 0.08;
 /** The open floor's cells, and how near a machine or a wall a run may still be low, metres. */
 const OPEN_FLOOR = { cell: 1, near: 1.0, wall: 0.9 } as const;
-/** The sample line's height along the south wall, over headroom, under the heating's entries. */
-const SAMPLE_Y = 2.35;
 /** The lines the router lays first: they have least room. */
 const FIRST = new Set(['battery-to-contact', 'hx-return']);
 /** A line ending at a wall ends this far inside its face, at its sleeve. */
@@ -1089,27 +1087,11 @@ export function plumbOlympic(
     });
   }
 
-  // ---- The sample line, laid by rule along the south wall ------------------
-  // From a tapping on top of pump B's discharge, before the filters and any
-  // dosing (`doc/plant-model.md`), up over headroom, south to the wall and
-  // along it to the dosing controller's cells: held by the wall all the way.
-  {
-    const b = runs.find((r) => r.name === 'Discharge B')!;
-    const across = b.points[1];
-    const tapX = round(b.points[2][0] - 0.5);
-    const sample = port('controller', 'sample');
-    const wallZ = round(hz - 0.35);
-    // Start inside the main so the drawn tube meets its surface. There is no
-    // separate sample-tapping fitting to bridge a stand-off above the pipe.
-    rule('Sample line', 'sample', 'sample', 0.012, [
-      [tapX, across[1], across[2]],
-      [tapX, SAMPLE_Y, across[2]],
-      [tapX, SAMPLE_Y, wallZ],
-      [sample.at[0], SAMPLE_Y, wallZ],
-      [sample.at[0], sample.at[1], wallZ],
-      sample.at,
-    ]);
-  }
+  // ---- The sample line ---------------------------------------------------
+  // The old controller's, off pump B's discharge, is retired with it
+  // (mission 114): the Trio's sample, off the common discharge manifold,
+  // and its return are in the model (`olympic-annex.ts`) and laid when the
+  // Trio is.
 
   // ---- The plumber: the fittings the schematic implies -------------------
   const nodes = [

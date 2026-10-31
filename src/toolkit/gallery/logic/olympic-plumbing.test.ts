@@ -116,7 +116,7 @@ describe('the Olympic plant room, plumbed and routed', () => {
       }
   });
 
-  it('doses onto the return main’s spool along the wall by quills on its top, and samples the water off the pump manifold before the filters', () => {
+  it('doses onto the return main’s spool along the wall by quills on its top', () => {
     const spool = run('Dosing spool');
     const along = spool.points.at(-1)!;
     for (const id of ['Hypochlorite dose line', 'Acid dose line']) {
@@ -124,12 +124,6 @@ describe('the Olympic plant room, plumbed and routed', () => {
       expect(quill[2]).toBeCloseTo(along[2], 6);
       expect(quill[1]).toBeGreaterThan(along[1] + spool.od / 2);
     }
-    // Off pump B's discharge, before the filters.
-    const discharge = run('Discharge B');
-    expect(run('Sample line').points[0][2]).toBeCloseTo(
-      discharge.points[1][2],
-      6,
-    );
   });
 
   it('passes every gate of the scorer', () => {
@@ -153,18 +147,6 @@ describe('the Olympic plant room, plumbed and routed', () => {
     expect(along[1]).toBe(corner[1]);
     expect(along[2]).toBeLessThan(corner[2]);
     expect(olympicRoom().reducers).toEqual(plumbed.reducers);
-  });
-
-  it('connects the drawn sample tube to pump B’s discharge without an air gap', () => {
-    const discharge = run('Discharge B');
-    const [from, to] = discharge.points.slice(1, 3);
-    const sample = olympicRoom().runs.find((r) => r.name === 'Sample line')!;
-    const tap = sample.points[0];
-    expect(tap[0]).toBeGreaterThan(Math.min(from[0], to[0]));
-    expect(tap[0]).toBeLessThan(Math.max(from[0], to[0]));
-    expect(tap[1]).toBeCloseTo(from[1], 6);
-    expect(tap[2]).toBeCloseTo(from[2], 6);
-    expect(sample.points[1][1]).toBeGreaterThan(from[1] + discharge.od / 2);
   });
 
   it('draws the pumps’ suctions short and straight through the west wall from the balance tank', () => {

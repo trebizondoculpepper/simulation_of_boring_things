@@ -1,5 +1,6 @@
 import type { PlumbEdge } from './plumbing-expansion';
 import { dayTanks } from './schematic-parts';
+import { LOUNGE_TRIO } from './aqualis-schematic';
 import type {
   RoomSchematic,
   SchematicFitting,
@@ -46,11 +47,18 @@ const nodes: SchematicNode[] = [
   machine('uv', 'uv-unit', 'Lounge pool UV unit'),
   machine('hypo-pumps', 'hypo-pumps', 'Lounge pool hypochlorite dosing pumps'),
   machine('acid-pump', 'acid-pump', 'Lounge pool acid dosing pump'),
-  machine(
-    'dosing',
-    'dosing-controller',
-    'Lounge pool dosing controller and sample cells',
-  ),
+  // Its Dr Aqualis Trio (mission 114), in the old controller's node and
+  // tag: CP2, the code its sample valves' tags are built from.
+  {
+    ...machine(
+      'dosing',
+      'dosing-controller',
+      'Lounge pool dosing controller and sample cells',
+    ),
+    code: 'CP2',
+  },
+  // Its sample point on the pump discharge main (mission 114).
+  ...LOUNGE_TRIO.nodes,
   machine('panel', 'pump-panel', 'Lounge pool local control panel'),
   // Its annunciator (the owner, 2026-10-28; `lounge-annunciator.ts`).
   machine('annunciator', 'annunciator', 'Lounge pool annunciator'),
@@ -220,8 +228,7 @@ const links: PlumbEdge[] = [
     'water',
   ),
   ...DAY_TANKS.links,
-  // Each dosing pump's discharge to its quill, the quill into its main;
-  // the controller's sample from the filtered main, before any dosing.
+  // Each dosing pump's discharge to its quill, the quill into its main.
   link(
     'Acid to its injection quill',
     ['acid-pump', 'out'],
@@ -246,12 +253,10 @@ const links: PlumbEdge[] = [
     ['return-main', 'hypochlorite'],
     'chemical',
   ),
-  link(
-    'Sample line from the filtered main',
-    ['outlet-header', 'sample'],
-    ['dosing', 'sample'],
-    'water',
-  ),
+  // The Trio's (mission 114): its sample off the pump discharge main,
+  // before the filters and any dosing, and back to the balance tank; its
+  // control of each dosing pump, its alarms to the annunciator, its supply.
+  ...LOUNGE_TRIO.links,
   link(
     'Control panel supply',
     ['switch-fuse', 'panel'],
@@ -392,6 +397,8 @@ export const LOUNGE_SCHEMATIC: RoomSchematic = {
     }),
     // Its day tanks' inlet and outlet valves (plan 085).
     ...DAY_TANKS.fittings,
+    // The Trio's sample valves and its isolator (mission 114).
+    ...LOUNGE_TRIO.fittings,
     isolator('P-201A isolator', 'P-201A power'),
     isolator('P-201B isolator', 'P-201B power'),
     isolator('Lounge UV unit isolator', 'UV unit power'),

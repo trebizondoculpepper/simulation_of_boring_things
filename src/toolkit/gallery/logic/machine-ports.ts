@@ -363,8 +363,10 @@ export function machinePorts(item: Item): MachinePort[] {
       ),
       port('power', [item.w / 2 - 0.3, item.h, 0], [0, 1, 0], 0.0269, 'power'),
     ];
-  if (kind === 'dosing-controller')
-    return [port('sample', [0, 0, item.d], [0, 0, 1], 0.012, 'sample')];
+  // The old dosing controller's one sample port is retired (mission 114):
+  // the Trio's ports (`aqualis-schematic.ts` `TRIO_PORTS`, at the
+  // cabinet's `portsOf('trio')`) come with its cabinet's placement.
+  if (kind === 'dosing-controller') return [];
   // Each dosing board where its own pipework ends (`HYPO_PORTS`,
   // `ACID_PORTS`; the owner, 2026-10-28: the pipes did not meet them): its
   // suction in at its top edge, from its day tank's line overhead; its dose

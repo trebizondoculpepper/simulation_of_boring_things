@@ -872,11 +872,7 @@ export function poolPlantPipework(room: string): {
       pheIn1,
       pheIn.at,
     ],
-    joins: [
-      phe.item.label,
-      outletHeader.name,
-      'Sample line from the filtered main',
-    ],
+    joins: [phe.item.label, outletHeader.name],
     service: 'pool water',
     label: 'TO HEAT EXCHANGER',
   });
@@ -989,41 +985,14 @@ export function poolPlantPipework(room: string): {
     label: '400 V SUPPLY',
   });
   // The dosing (prompt 089, item 4; the owner, 2026-10-27, the Olympic's
-  // way): the controller samples the filtered main before any dosing,
-  // through a saddle on its last length into the heat exchanger; the acid
-  // goes in after the heat exchanger, on the heated main's riser, and the
-  // hypochlorite last, after the UV unit, on the return main's riser: each
-  // through its injection quill, its isolating ball valve and its
-  // non-return valve, within reach. Each line from its panel up into the
-  // ceiling, and down out of it to its point.
-  const sampleAt: Vec3 = [pheIn1[0] - 0.15, pheIn1[1], pheIn1[2]];
-  {
-    const controller = by('dosing controller and sample cells');
-    const p = port(controller, 'sample');
-    const s = out(p, 0.1);
-    run({
-      name: 'Sample line from the filtered main',
-      kind: 'chemical-tube',
-      od: 0.012,
-      points: [p.at, s, [s[0], INTO_CEILING, s[2]]],
-      joins: [controller.item.label],
-      service: 'sample',
-      label: 'SAMPLE',
-    });
-    run({
-      name: 'Sample line from the filtered main, its point',
-      model: { link: 'Sample line from the filtered main' },
-      kind: 'chemical-tube',
-      od: 0.012,
-      points: [
-        [sampleAt[0], sampleAt[1] + pheIn.od / 2, sampleAt[2]],
-        [sampleAt[0], INTO_CEILING, sampleAt[2]],
-      ],
-      joins: ['Filtered main to the heat exchanger'],
-      service: 'sample',
-      label: 'SAMPLE',
-    });
-  }
+  // way): the acid goes in after the heat exchanger, on the heated main's
+  // riser, and the hypochlorite last, after the UV unit, on the return
+  // main's riser: each through its injection quill, its isolating ball
+  // valve and its non-return valve, within reach. Each line from its panel
+  // up into the ceiling, and down out of it to its point. (The old
+  // controller's sample off the filtered main is retired with it, mission
+  // 114: the Trio's sample, off the pump discharge main, is in the model
+  // and drawn when the Trio is.)
   const hypoPumps = by('hypochlorite dosing pumps');
   const acidDoser = by('acid dosing pump');
   const quills: {
