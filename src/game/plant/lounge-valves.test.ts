@@ -5,6 +5,8 @@ import {
   loungeFlowsOf,
   loungeMeterReadings,
   loungeValveFlows,
+  LOUNGE_WASTE_TAGS,
+  closeLoungeWaste,
 } from './lounge-valves';
 
 describe('lounge pool solenoid valves', () => {
@@ -114,5 +116,51 @@ describe('lounge pool solenoid valves', () => {
       w = applyAction(w, { type: 'plant/valve', id, open });
     w = stepWorld(w, 5);
     expect(loungeMeterReadings(loungeFlowsOf(w))['filter-1']).toBe(-34);
+  });
+});
+
+describe('PL1-CP1, its backwash pit interlock', () => {
+  const inhibited = (w: ReturnType<typeof newWorld>, inhibit = true) => ({
+    ...w,
+    wetHall: { ...w.wetHall, inhibit },
+  });
+
+  it('shuts every valve to waste while the pit inhibits, and keeps them shut after', () => {
+    let w = applyAction(newWorld(), {
+      type: 'plant/valve',
+      id: 'PL1-F2-BV1',
+      open: true,
+    });
+    w = applyAction(w, { type: 'plant/valve', id: 'PL1-F2-IV1', open: false });
+    expect(w.installedValves['valve-0006']).toBe(true);
+    w = stepWorld(inhibited(w), 1);
+    expect(w.installedValves['valve-0006']).toBe(false);
+    // Its inlet, not a valve to waste, is left as it was.
+    expect(w.installedValves['valve-0005']).toBe(false);
+    // Cleared, it stays shut until opened again.
+    w = stepWorld(inhibited(w, false), 1);
+    expect(w.installedValves['valve-0006']).toBe(false);
+  });
+
+  it('refuses to open a valve to waste while the pit inhibits', () => {
+    const w = inhibited(newWorld());
+    for (const tag of LOUNGE_WASTE_TAGS)
+      expect(
+        applyAction(w, { type: 'plant/valve', id: tag, open: true })
+          .installedValves,
+      ).toBe(w.installedValves);
+    // Other valves still work.
+    expect(
+      applyAction(w, { type: 'plant/valve', id: 'PL1-F1-IV1', open: false })
+        .installedValves['valve-0001'],
+    ).toBe(false);
+  });
+
+  it('leaves the commands alone when nothing is open to waste, or the pit is clear', () => {
+    const commands = { 'valve-0006': true };
+    expect(closeLoungeWaste(commands, false)).toBe(commands);
+    const shut = { 'valve-0006': false };
+    expect(closeLoungeWaste(shut, true)).toBe(shut);
+    expect(closeLoungeWaste(commands, true)).toEqual({ 'valve-0006': false });
   });
 });

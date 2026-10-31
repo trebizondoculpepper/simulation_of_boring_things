@@ -100,6 +100,8 @@ import {
   loungePumpsRunning,
   loungeValveFlows,
   newLoungeValvePositions,
+  closeLoungeWaste,
+  isLoungeWasteValve,
   stepLoungeValves,
 } from './plant/lounge-valves';
 import type {
@@ -699,6 +701,15 @@ export function applyAction(world: World, action: WorldAction): World {
       // fitting of its model, its state the pool's drain-down too.
       if (installed?.assetId === JACUZZI_VALVES.drain)
         return jacuzziDrainDown(world, action.open);
+      // PL1-CP1 refuses to open a valve to waste while the backwash pit's
+      // inhibit holds (`closeLoungeWaste`).
+      if (
+        installed &&
+        action.open &&
+        world.wetHall.inhibit &&
+        isLoungeWasteValve(installed.assetId)
+      )
+        return world;
       if (installed)
         return {
           ...world,
@@ -1343,6 +1354,14 @@ function stepPlant(world: World, delta: number): World {
     const s = slowStartAt(world.plant, world.time - world.startup);
     world = { ...world, plant: s.plant, startup: s.done ? -1 : world.startup };
   }
+  // PL1-CP1's pit interlock: its valves to waste shut while the backwash
+  // pit's inlet is.
+  const installedValves = closeLoungeWaste(
+    world.installedValves,
+    world.wetHall.inhibit,
+  );
+  if (installedValves !== world.installedValves)
+    world = { ...world, installedValves: { ...installedValves } };
   const loungeValvePositions = stepLoungeValves(
     world.loungeValvePositions,
     world.installedValves,

@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Changed
 
+- PL1-CP1's backwash pit interlock: while the pit's high-high inhibit holds its inlet shut, the lounge's valves to waste (each filter's backwash and drain, the balance tank's drain) are driven shut and refused if opened; they stay shut once it clears until opened again.
 - The engineer's software boxes redrawn as period products, designed with Codex: Macrosoft Pool Simulator 97 a floodlit, chrome-lettered mid-90s simulation; Chlorine Quest II a painted adventure with a dungareed poolman hero and its own lettering; Lido Tycoon and DEEP END bright and over-promising; the business boxes tidied.
 - The console logs every valve opening and closing, with its tag and who or what did it (you, the console, AUTO and its controller, a spring return); a slowly moving valve logs its command, its start and its arrival, not every frame. Events now come from a list of sources, ready for pumps and alarms.
 - The loading bay's fire exit sign is fixed to its door's leaf, swinging with it, instead of floating in the doorway when the door is open.

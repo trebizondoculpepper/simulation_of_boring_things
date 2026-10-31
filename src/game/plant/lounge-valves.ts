@@ -19,6 +19,43 @@ export const LOUNGE_VALVES = Object.values(INSTALLED_VALVES).filter(
 const STROKE = strokeTime(0.09);
 const VALVE_BY_TAG = new Map(LOUNGE_VALVES.map((valve) => [valve.tag, valve]));
 
+/**
+ * The lounge's valves that run to waste, and so to the backwash pit: each
+ * filter's backwash valve and drain, and the balance tank's drain.
+ */
+export const LOUNGE_WASTE_TAGS = [
+  'PL1-F1-BV1',
+  'PL1-F1-DV1',
+  'PL1-F2-BV1',
+  'PL1-F2-DV1',
+  'PL1-T1-DV1',
+] as const;
+const WASTE_IDS: readonly string[] = LOUNGE_WASTE_TAGS.map(
+  (tag) => VALVE_BY_TAG.get(tag)!.assetId,
+);
+
+/** Whether `assetId` is one of the lounge's valves to waste. */
+export const isLoungeWasteValve = (assetId: string) =>
+  WASTE_IDS.includes(assetId);
+
+/**
+ * PL1-CP1's pit interlock (the owner, 2026-10-31): while the backwash
+ * pit's high-high inhibit holds its inlet shut, the panel drives every
+ * valve to waste shut, and they stay shut once it clears until the
+ * operator opens them again; it also refuses to open one meanwhile
+ * (`world.ts`, `plant/valve`). The commands as they were if none was open
+ * (the same object, so a quiet step costs nothing).
+ */
+export function closeLoungeWaste(
+  commands: Readonly<Record<string, boolean>>,
+  inhibit: boolean,
+): Readonly<Record<string, boolean>> {
+  if (!inhibit || !WASTE_IDS.some((id) => commands[id])) return commands;
+  const next = { ...commands };
+  for (const id of WASTE_IDS) if (next[id]) next[id] = false;
+  return next;
+}
+
 export function newLoungeValvePositions(): Record<string, number> {
   return Object.fromEntries(
     LOUNGE_VALVES.map(({ assetId, normal }) => [
