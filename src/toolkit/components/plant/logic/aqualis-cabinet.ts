@@ -34,8 +34,47 @@ export const SCREEN_AREA = { w: 0.244, h: 0.183, bezel: 0.024 } as const;
 /** The screen's pixels for each metre of its active area, across. */
 export const SCREEN_PX_PER_M = SCREEN.w / SCREEN_AREA.w;
 
-/** The screen's middle, on the upper door's face. */
-export const SCREEN_AT = { x: 0, y: 1.475 } as const;
+/** The game's eye height, m (`EYE_HEIGHT_METRES` in `controls/input/first-person.ts`). */
+export const EYE = 1.8034;
+
+/** Half the pod's height, from its hinge to its middle, m. */
+export const POD_HALF = SCREEN_AREA.h / 2 + SCREEN_AREA.bezel + 0.004;
+
+/**
+ * The screen's tilting pod (the owner, 2026-10-31: a rotation, not a move):
+ * the panel and its bezel stay where they were on the door, its middle at
+ * 1.475 m, and turn about their top edge (`top`, on the door's face), the
+ * face tilting up by `screenTilt()` to look at the viewer's eye; a wedge
+ * of housing fills in beneath it.
+ */
+export const SCREEN_POD = { top: 1.475 + POD_HALF } as const;
+
+/** The screen's middle for a tilt (rad): height above the floor, and how far it stands out from the door. */
+export function screenCentre(tilt: number) {
+  return {
+    y: SCREEN_POD.top - POD_HALF * Math.cos(tilt),
+    z: POD_HALF * Math.sin(tilt),
+  };
+}
+
+/**
+ * The screen's tilt up from vertical (the owner, 2026-10-31, choosing 30°
+ * of the three offered): a clear upward rake that faces the eye of someone
+ * standing about 60 cm from the door, a comfortable touch-screen distance,
+ * and keeps within the panel's clear angle from above down to about 35 cm.
+ */
+export const SCREEN_TILT = (30 * Math.PI) / 180;
+
+export const screenTilt = () => SCREEN_TILT;
+
+/** How far from the door's face a standing eye is faced square by a tilt, m. */
+export function facingDistance(tilt: number, eye = EYE) {
+  const c = screenCentre(tilt);
+  return c.z + (eye - c.y) / Math.tan(tilt);
+}
+
+/** The screen's middle as built: on its raked pod (`x` across the door, `y` up, `z` out from the door's face). */
+export const SCREEN_AT = { x: 0, ...screenCentre(screenTilt()) } as const;
 
 /** The HAND · OFF · AUTO knob's middle, below the screen. */
 export const KNOB_AT = { x: -0.15, y: 1.18 } as const;

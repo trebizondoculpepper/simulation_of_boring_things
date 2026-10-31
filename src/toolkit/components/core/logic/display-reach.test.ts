@@ -72,9 +72,10 @@ describe('display reach', () => {
   it('washes an LCD out per pixel rather than flattening it off its normal', () => {
     expect(DISPLAY_PROFILES.lcd.wash).toBe(LCD_WASH);
     expect(DISPLAY_PROFILES.crt.wash).toBeUndefined();
-    // Well off its normal it is still drawn: its wash, not a flat colour.
-    expect(displayVisibility(false, seen(2, 70), DISPLAY_PROFILES.lcd)).toBe(1);
-    expect(displayVisibility(false, seen(2, 88), DISPLAY_PROFILES.lcd)).toBe(0);
+    // Off its normal it is still drawn, washed, until 60°; flat (and so
+    // free) past 65°, sooner than realism asks, to save its redraws.
+    expect(displayVisibility(false, seen(2, 55), DISPLAY_PROFILES.lcd)).toBe(1);
+    expect(displayVisibility(false, seen(2, 70), DISPLAY_PROFILES.lcd)).toBe(0);
   });
 
   it("always draws LCARS screens and the game's own panels in full", () => {

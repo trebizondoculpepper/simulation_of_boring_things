@@ -85,7 +85,7 @@ export const LCD_WASH: LcdWash = {
   across: 30,
   above: 18,
   below: 12,
-  spread: 1.4,
+  spread: 1.0,
   most: 0.92,
   desaturate: 0.45,
   contrast: 0.62,
@@ -160,7 +160,10 @@ const always = (maxHz: number): DisplayProfile => ({
 
 export const DISPLAY_PROFILES: Record<DisplayKind, DisplayProfile> = {
   // Its narrow angle is its wash's (`LCD_WASH`); flat only near grazing.
-  lcd: { ...seen(5, 85, 80), wash: LCD_WASH },
+  // Flat sooner than realism asks, at 60–65° (the owner, 2026-10-31): an
+  // LCD seen that far off is washed out anyway, and a flat one costs no
+  // redraws or uploads.
+  lcd: { ...seen(5, 65, 60), wash: LCD_WASH },
   crt: seen(25, 85, 80),
   plasma: seen(30, 85, 80),
   vfd: seen(10, 85, 80),

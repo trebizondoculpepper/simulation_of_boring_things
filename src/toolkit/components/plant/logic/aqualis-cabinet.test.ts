@@ -12,6 +12,9 @@ import {
   PORTS,
   SCREEN_AREA,
   SCREEN_AT,
+  facingDistance,
+  screenCentre,
+  screenTilt,
   SCREEN_PX_PER_M,
   screenPixel,
   selectorAt,
@@ -105,5 +108,16 @@ describe('Dr Aqualis’s overlay', () => {
     expect(w * h).toBeLessThan((SCREEN.w * SCREEN.h) / 4);
     // The component bench's running budget: 300k texels a second.
     expect(w * h * 10).toBeLessThan(300_000);
+  });
+
+  it('tilts its screen up 30° about its top edge, not moving it', () => {
+    expect((screenTilt() * 180) / Math.PI).toBeCloseTo(30);
+    // Its top edge stays where the upright screen's was.
+    const upright = screenCentre(0);
+    expect(upright.y).toBeCloseTo(1.475);
+    expect(upright.z).toBe(0);
+    // It faces a standing eye square at about 60 cm from the door.
+    expect(facingDistance(screenTilt())).toBeGreaterThan(0.55);
+    expect(facingDistance(screenTilt())).toBeLessThan(0.65);
   });
 });

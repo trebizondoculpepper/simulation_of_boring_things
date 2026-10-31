@@ -5,6 +5,7 @@ import {
   PlaneGeometry,
   TorusGeometry,
 } from 'three';
+import { ExtrudeGeometry, Shape } from 'three';
 import type { Object3D, Vector2 } from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { PanelKit } from '../../core/views/eighties-controls';
@@ -37,8 +38,11 @@ import {
   LEDS,
   PORTS,
   SAMPLE_VALVE_AT,
+  POD_HALF,
   SCREEN_AREA,
   SCREEN_AT,
+  SCREEN_POD,
+  screenTilt,
   screenPixel,
   selectorAt,
   selectorIndex,
@@ -574,26 +578,68 @@ export function createAqualisCabinet(
   const face = new Group();
   face.position.set(0, 0, front);
   group.add(face);
-  // The screen's bezel: a dark glossy frame, a silver rim round it.
   const S = SCREEN_AREA;
+  // The screen's tilting pod (the owner, 2026-10-31): turned about its top
+  // edge, where it always was, so its face looks up at the eye of someone
+  // standing a hand's span from the door (`screenTilt`); its
+  // children are placed about the screen's middle, `POD_HALF` below the
+  // hinge. A wedge of the cabinet's white closes it in beneath.
+  const tilt = screenTilt();
+  const hinge = new Group();
+  hinge.position.set(SCREEN_AT.x, SCREEN_POD.top, 0);
+  hinge.rotation.x = -tilt;
+  face.add(hinge);
+  const pod = new Group();
+  pod.position.set(0, -POD_HALF, 0);
+  hinge.add(pod);
+  const podW = S.w + 2 * S.bezel + 0.008;
+  const wedgeShape = new Shape();
+  const drop = 2 * POD_HALF * Math.cos(tilt);
+  const out = 2 * POD_HALF * Math.sin(tilt);
+  // Its lower front edge, under the screen's foot, rounded off (the owner,
+  // 2026-10-31: "less sharp"): the corner cut back `round` along both its
+  // faces and joined by a curve.
+  const round = 0.02;
+  const foot = { x: out, y: SCREEN_POD.top - drop };
+  const along = Math.hypot(out, drop);
+  wedgeShape.moveTo(0, SCREEN_POD.top);
+  wedgeShape.lineTo(
+    foot.x - (out / along) * round,
+    foot.y + (drop / along) * round,
+  );
+  wedgeShape.quadraticCurveTo(foot.x, foot.y, foot.x - round, foot.y);
+  wedgeShape.lineTo(0, foot.y);
+  wedgeShape.closePath();
+  const wedgeGeometry = new ExtrudeGeometry(wedgeShape, {
+    depth: podW,
+    bevelEnabled: false,
+    curveSegments: 8,
+  });
+  // The shape's x is out from the door; turned so it is, and centred across.
+  wedgeGeometry.rotateY(-Math.PI / 2);
+  wedgeGeometry.translate(SCREEN_AT.x + podW / 2, 0, -0.001);
+  const wedge = new Mesh(wedgeGeometry, whiteDoor);
+  wedge.name = 'Aqualis screen pod';
+  face.add(wedge);
+  // The screen's bezel: a dark glossy frame, a silver rim round it.
   t.box(
-    face,
+    pod,
     t.paint('#b9c0c5', 0.25, 0.6),
     S.w + 2 * S.bezel + 0.008,
     S.h + 2 * S.bezel + 0.008,
     0.008,
-    SCREEN_AT.x,
-    SCREEN_AT.y,
+    0,
+    0,
     0.004,
   );
   t.box(
-    face,
+    pod,
     t.paint('#111418', 0.15),
     S.w + 2 * S.bezel,
     S.h + 2 * S.bezel,
     0.01,
-    SCREEN_AT.x,
-    SCREEN_AT.y,
+    0,
+    0,
     0.007,
   );
   // A colour TFT of its period (the owner, 2026-10-31): a backlit `lcd`,
@@ -610,9 +656,9 @@ export function createAqualisCabinet(
   });
   kit.materials.push(material);
   const screen = new Mesh(new PlaneGeometry(S.w, S.h), material);
-  screen.position.set(SCREEN_AT.x, SCREEN_AT.y, 0.0125);
+  screen.position.set(0, 0, 0.0125);
   screen.name = 'Aqualis touch screen';
-  face.add(screen);
+  pod.add(screen);
   // Dr Aqualis's overlay: a canvas of its own just in front of the screen,
   // transparent where he is not, so his frames upload a fraction of it.
   const overSize = overlayCanvasSize(overlayScale);
@@ -646,14 +692,14 @@ export function createAqualisCabinet(
     overMaterial,
   );
   overlayMesh.position.set(
-    SCREEN_AT.x - S.w / 2 + (OVERLAY.x + OVERLAY.w / 2) * pxW,
-    SCREEN_AT.y + S.h / 2 - (OVERLAY.y + OVERLAY.h / 2) * pxH,
+    -S.w / 2 + (OVERLAY.x + OVERLAY.w / 2) * pxW,
+    S.h / 2 - (OVERLAY.y + OVERLAY.h / 2) * pxH,
     0.013,
   );
   overlayMesh.renderOrder = 3;
   overlayMesh.name = 'Aqualis touch screen (Dr Aqualis)';
   overlayMesh.visible = false;
-  face.add(overlayMesh);
+  pod.add(overlayMesh);
   over.context.clearRect(0, 0, OVERLAY.w, OVERLAY.h);
   // Its boot's live element (a memory count, the marquee, a spinner, the
   // splash's bar) on a small canvas of its own over the screen, so the
@@ -666,16 +712,9 @@ export function createAqualisCabinet(
     maxHz: 10,
   });
   screen.add(bootInset.mesh);
-  // The software's name under the screen, the maker's badge above it.
-  t.label(
-    face,
-    info.name,
-    SCREEN_AT.x + S.w / 2 + S.bezel - 0.04,
-    SCREEN_AT.y - S.h / 2 - S.bezel + 0.007,
-    0.0125,
-    0.008,
-    '#9fb4c4',
-  );
+  // The maker's badge above the screen; the bezel itself plain (the owner,
+  // 2026-10-31).
+
   const badge = createBrandBadge(kit, 'aqualis', {
     height: 0.04,
     maxWidth: 0.3,
@@ -718,11 +757,11 @@ export function createAqualisCabinet(
   face.add(knob.object);
   t.label(
     face,
-    'HAND   OFF   AUTO',
+    'HAND  OFF  AUTO',
     KNOB_AT.x,
-    KNOB_AT.y - 0.05,
+    KNOB_AT.y - 0.048,
     0.0045,
-    0.011,
+    0.0065,
     '#1b1b1b',
   );
   // The status lamps, each with its legend under it.
