@@ -577,15 +577,16 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   // title (the owner, 2026-10-31).
   turnTo(labTime, LAB_TIME.x, LAB_TIME.y, SOUTH - 0.025, Math.PI);
   labTime.userData.onWall = 'LAB TIME display';
-  t.box(labTime, t.paint('#1b2328', 0.5), 0.6, 0.22, 0.05, 0, 0, 0);
+  // Tall enough for its legend under the digits (it was cut off).
+  t.box(labTime, t.paint('#1b2328', 0.5), 0.6, 0.3, 0.05, 0, 0, 0);
   const timeDigits = createSevenSegment(kit, 5, { digitHeight: 0.1 });
-  timeDigits.group.position.set(0, 0.0, 0.027);
+  timeDigits.group.position.set(0, 0.03, 0.027);
   labTime.add(timeDigits.group);
   t.label(
     labTime,
     `LAB TIME ${shortTag('labTime')}`,
     0,
-    -0.085,
+    -0.11,
     0.027,
     0.025,
     '#f4f3ee',
@@ -606,6 +607,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     setSpeed: (s) => {
       session = { ...session, clock: setSpeed(session.clock, s as TimeSpeed) };
     },
+    ahead: () => state().seconds - sinceReset,
   });
   turnTo(timePanel.group, LAB_TIME.x, LAB_TIME.buttonsY, SOUTH, Math.PI);
   timePanel.group.userData.onWall = 'TIME panel';
@@ -617,7 +619,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     }),
   );
   timePanel.group.traverse((o) => {
-    if (/^TIME ×/.test(o.name)) exhibitOnly(o);
+    if (o.name === 'TIME selector') exhibitOnly(o);
   });
   take(timePanel.parts.uses);
   updates.push(timePanel.update);

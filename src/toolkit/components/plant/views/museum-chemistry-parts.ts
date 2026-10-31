@@ -11,6 +11,7 @@ import { tools } from '../../core/views/fitting-tools';
 import { createPartSet, pushButton, selector } from '../../core/parts/parts';
 import { panelMakerMark } from '../../core/views/panel-maker-mark';
 import {
+  createCharacterLcd,
   createPanelMeter,
   createVfd,
 } from '../../industrial-control/views/panel-instruments';
@@ -479,45 +480,101 @@ export function createDosingDesk(kit: PanelKit, b: DeskBindings) {
 }
 
 /**
- * The exhibit's TIME buttons on a small flush wall panel of their own, its
- * back at its origin, facing +z: an illuminated button for each speed, lit
- * at the speed running, under the legend TIME.
+ * The exhibit's TIME panel (the owner, 2026-10-31): a plate flush on the
+ * wall, its back at its origin, facing +z, a screw in each corner; a
+ * four-position cam selector, each position's speed engraved round it;
+ * under it a 2-line character LCD, the rate and how far the simulation
+ * has run ahead of real time since the hall was reset. The LCD redraws
+ * only when its text changes.
  */
 export function createTimePanel(
   kit: PanelKit,
-  b: { speeds: readonly number[]; speed(): number; setSpeed(s: number): void },
+  b: {
+    speeds: readonly number[];
+    speed(): number;
+    setSpeed(s: number): void;
+    /** Simulated seconds gained on real time since the reset. */
+    ahead(): number;
+  },
 ) {
   const t = tools(kit);
   const group = new Group();
   group.name = 'TIME panel';
-  const W = 0.14 + b.speeds.length * 0.12;
-  const H = 0.22;
-  t.box(group, t.paint('#d8d4c6', 0.5), W, H, 0.03, 0, 0, 0.015);
+  const W = 0.3;
+  const H = 0.3;
+  const T = 0.006;
+  const plate = t.paint('#d8d4c6', 0.5);
+  t.box(group, plate, W, H, T, 0, 0, T / 2);
+  const screw = t.paint('#9aa0a3', 0.35, 0.8);
+  for (const sx of [-1, 1])
+    for (const sy of [-1, 1])
+      t.cyl(group, screw, 0.007, 0.003, 0, 0, 0).position.set(
+        sx * (W / 2 - 0.018),
+        sy * (H / 2 - 0.018),
+        T + 0.0015,
+      );
+  // The cylinders stand along y; turn the screws' heads to face out.
+  group.children.slice(-4).forEach((o) => (o.rotation.x = Math.PI / 2));
   const parts = createPartSet();
-  const lit = b.speeds.map(() => signal(false));
-  b.speeds.forEach((s, k) => {
-    const p = pushButton(kit, {
-      colour: 'white',
-      head: 'illuminated',
-      lamp: lit[k],
-      legend: `×${s}`,
-      name: `TIME ×${s}`,
-      action: () => b.setSpeed(s),
-    });
-    p.object.position.set((k - (b.speeds.length - 1) / 2) * 0.12, -0.02, 0.031);
-    group.add(p.object);
-    parts.add(p);
+  const knob = selector(kit, {
+    positions: 4,
+    name: 'TIME selector',
+    bound: {
+      get value() {
+        return Math.max(0, b.speeds.indexOf(b.speed()));
+      },
+      set: (k: number) => b.setSpeed(b.speeds[Math.max(0, Math.min(3, k))]),
+    },
   });
-  t.label(group, 'TIME', 0, 0.075, 0.031, 0.03, '#16191b');
+  const KY = 0.015;
+  const S = 1.4;
+  knob.object.position.set(0, KY, T + 0.001);
+  knob.object.scale.setScalar(S);
+  group.add(knob.object);
+  parts.add(knob);
+  t.label(group, 'TIME', 0, H / 2 - 0.025, T + 0.001, 0.022, '#16191b');
+  // Each position engraved where its pointer points (the cam selector's
+  // handle at π/4 − kπ/4).
+  b.speeds.forEach((sp, k) => {
+    const a = Math.PI / 4 - (k * Math.PI) / 4;
+    const r = 0.068;
+    t.label(
+      group,
+      `×${sp}`,
+      -Math.sin(a) * r,
+      KY + Math.cos(a) * r,
+      T + 0.001,
+      0.014,
+      '#16191b',
+    );
+  });
+  const lcd = createCharacterLcd(kit, {
+    columns: 16,
+    rows: 2,
+    cell: 0.006,
+  });
+  lcd.group.position.set(0, -0.095, T);
+  group.add(lcd.group);
+  let shown = '';
+  let due = 0;
+  const two = (n: number) => String(n).padStart(2, ' ');
   return {
     group,
     parts,
     update(delta: number) {
-      lit.forEach((l, k) => {
-        const on = b.speed() === b.speeds[k];
-        if (l.value !== on) l.value = on;
-      });
       parts.update(delta);
+      due -= delta;
+      if (due > 0) return;
+      due = 0.1; // at most 10 Hz
+      const gain = Math.max(0, Math.floor(b.ahead()));
+      const h = Math.floor(gain / 3600);
+      const m = Math.floor(gain / 60) % 60;
+      const ahead = h > 0 ? `${h}h ${two(m)}m` : `${m}m ${two(gain % 60)}s`;
+      // The LCD's character set has no ×: an x, as such modules printed it.
+      const text = `RATE x${b.speed()}|AHEAD ${ahead}`;
+      if (text === shown) return;
+      shown = text;
+      lcd.show(text.split('|').map((l) => l.padEnd(16).slice(0, 16)));
     },
   };
 }
