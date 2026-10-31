@@ -2,6 +2,8 @@ import { currentPlant } from './live-plant';
 import { roomWorld } from '../../../save/world-store';
 import { createLocationAnnunciator } from '../../views/location-annunciator';
 import { worldAnnunciator } from '../../logic/world-annunciator';
+import { installedTagOf } from '../../../../game/plant/installed-asset-ids';
+import { SHELL_ROOMS } from '../../logic/shell-rooms';
 import type { LiveExhibit, PlantExhibit } from './exhibit';
 import {
   createBmsOutstation,
@@ -34,6 +36,12 @@ import { createMimicBoard } from '../../../components/industrial-control/views/m
 import { pressPump, pumpsShown } from './pump-panel';
 
 /** What this plant room is for, printed on its title card. */
+/**
+ * The control room's annunciator's title, as the location boards' (WH · WET
+ * HALL): its room's tag, from its own (CR-CP2), and the room's name.
+ */
+const CONTROL_ANNUNCIATOR_TITLE = `${installedTagOf('control_room', 'annunciator')!.split('-')[0]} · ${SHELL_ROOMS.control_room.title}`;
+
 export const PURPOSE =
   'Where problems show first: mimic, annunciator, recorders, readouts, POOLMON';
 
@@ -175,6 +183,7 @@ export const EXHIBITS: readonly PlantExhibit[] = [
         typeof window === 'undefined'
           ? undefined
           : worldAnnunciator(roomWorld()),
+        CONTROL_ANNUNCIATOR_TITLE,
       );
       annunciator.onEvent = (event, alarm) => {
         if (!alarm) return;

@@ -4,6 +4,7 @@ import { FEEDER_ISOLATOR, layoutRoom } from './room-equipment';
 import type { Placed, Side } from './room-equipment';
 import { deckOf, roomStructure } from './room-structure';
 import { PLANT_ROOM } from './plant-rooms';
+import { WET_HALL_LAYOUT, wetHallPartition } from './shell-rooms';
 import type { Containment } from './cable-containment';
 import type { Point3, ServiceRoute } from './room-services';
 
@@ -151,6 +152,48 @@ export function controlBus(room: string): ControlBus | null {
     facing: entryWall === 'west' || entryWall === 'east' ? 'x' : 'z',
   });
 
+  // A branch along a partition's face for the devices on it (the wet
+  // hall's annunciator on the make-up bay's partition, the owner,
+  // 2026-10-31): down the wall the partition meets from the ring to just
+  // under the partition's top, then along its face to the westernmost.
+  const partition = partitionFace(room);
+  const onPartition = (p: Placed) =>
+    !!partition &&
+    p.side === 'island' &&
+    Math.abs(p.yaw) < 1e-9 &&
+    Math.abs(p.z - p.item.d / 2 - partition.z) < 0.01 &&
+    p.x > partition.minX &&
+    p.x < partition.maxX;
+  const branchY = partition ? partition.top - BUS.width / 2 - 0.05 : 0;
+  if (partition) {
+    const west = Math.min(
+      ...devices.filter(onPartition).map((p) => p.x - p.item.w / 2),
+    );
+    if (Number.isFinite(west)) {
+      const z = partition.z + OFF;
+      const east = hw - OFF;
+      trunking.push(
+        {
+          name: 'Control bus, down to the partition',
+          kind: 'trunking',
+          width: BUS.width,
+          depth: BUS.depth,
+          from: [east, y, z],
+          to: [east, branchY, z],
+          facing: 'x',
+        },
+        {
+          name: 'Control bus, along the partition',
+          kind: 'trunking',
+          width: BUS.width,
+          depth: BUS.depth,
+          from: [east, branchY, z],
+          to: [west, branchY, z],
+        },
+      );
+    }
+  }
+
   // Each device to the nearest point of the bus.
   const stubs: ServiceRoute[] = [];
   const topOf = (p: Placed) =>
@@ -162,6 +205,22 @@ export function controlBus(room: string): ControlBus | null {
     // the owner, 2026-10-26) is wired there, straight up from it.
     const own = machinePorts(p.item).find((q) => q.service === 'control');
     const port = own ? placedPort(p, own.name).at : null;
+    if (!port && partition && onPartition(p)) {
+      // Straight up the partition's face into its branch.
+      const z = partition.z + OFF;
+      stubs.push({
+        name,
+        utility: 'power',
+        kind: 'steel-screwed',
+        od: STUB_OD,
+        points: [
+          [p.x, top, z],
+          [p.x, branchY - BUS.width / 2, z],
+        ],
+        to: p.item.key,
+      });
+      continue;
+    }
     if (!port && p.side !== 'island' && spans.has(p.side as Side)) {
       // Straight up its wall from its top into the bus.
       const side = p.side as Side;
@@ -218,6 +277,24 @@ export function controlBus(room: string): ControlBus | null {
     y,
     devices: devices.map((p) => p.item.key),
     problems,
+  };
+}
+
+/**
+ * A partition's face, facing south, that devices may hang on, and its
+ * top: the wet hall's make-up bay's, its length east of the bay's doors
+ * to the hall's east wall. Room frame.
+ */
+function partitionFace(
+  room: string,
+): { z: number; minX: number; maxX: number; top: number } | null {
+  if (room !== 'wet_hall') return null;
+  const run = wetHallPartition().at(-1)!;
+  return {
+    z: run.maxZ,
+    minX: run.minX,
+    maxX: run.maxX,
+    top: WET_HALL_LAYOUT.partition.height,
   };
 }
 

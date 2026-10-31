@@ -10,6 +10,7 @@ import {
 import { layoutRoom } from './room-equipment';
 import { roomServiceRoutes } from './room-services';
 import { roomStructure } from './room-structure';
+import { WET_HALL_LAYOUT } from './shell-rooms';
 import { ROOM_SERVICES } from '../../../game/plant/services';
 
 type P = readonly [number, number, number];
@@ -120,7 +121,7 @@ describe('a room’s control bus', () => {
     });
 
     it('rings the room clear of its door lintels, at the level its doors open from, or over a taller panel', () => {
-      expect(lengths).toHaveLength(4);
+      expect(lengths.filter((t) => t.name.endsWith(' wall'))).toHaveLength(4);
       const wallTop = Math.max(
         0,
         ...placed
@@ -132,5 +133,17 @@ describe('a room’s control bus', () => {
         6,
       );
     });
+  });
+
+  it('branches along the wet hall’s partition to the annunciator on it, under its top', () => {
+    const bus = controlBus('wet_hall')!;
+    const along = bus.trunking.find(
+      (t) => t.name === 'Control bus, along the partition',
+    )!;
+    expect(along.from[1]).toBeLessThan(WET_HALL_LAYOUT.partition.height);
+    const stub = bus.stubs.find((s) => s.to === 'annunciator:wet_hall')!;
+    expect(stub.points).toHaveLength(2);
+    expect(stub.points[0][0]).toBeCloseTo(stub.points[1][0], 9);
+    expect(stub.points[0][2]).toBeCloseTo(along.from[2], 9);
   });
 });

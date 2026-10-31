@@ -106,10 +106,21 @@ export function createAnnunciatorAssembly(
   kit: PanelKit,
   /** Its windows' logic: the world's, shared with every console, where there is one; else its own. */
   shared?: Annunciator,
+  /** Engraved across its top, as the location annunciators are (its room's tag and name). */
+  title?: string,
 ): AnnunciatorAssemblyView {
   const t = plantTools(kit);
   const group = new Group();
   t.box(group, t.paint('#3b3f42', 0.5), 0.86, 0.84, 0.12, 0, 0, 0.06);
+  if (title) {
+    // Over its windows (their top 0.29 m up), as the location boards'.
+    const label = createMicroLabel(kit, title, {
+      height: 0.03,
+      ink: '#f2f2ee',
+    });
+    label.position.set(0, 0.84 / 2 - 0.05, 0.121);
+    group.add(label);
+  }
   const labels = ANNUNCIATOR_ALARMS.map((id) => ALARM_TEXT[id].window);
   const panel = createAnnunciatorPanel(kit, labels, { columns: 6, cell: 0.12 });
   panel.group.position.set(0, 0.08, 0.12);

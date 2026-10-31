@@ -1653,8 +1653,20 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
       // recorder beside it, over the booster set.
       put(box, at('mimic-wet'), { wall: 'north', along: 6.9 }),
       put(box, at('make-up-recorder'), { wall: 'north', along: 4.2 }),
-      // Its annunciator east of the mimic (mission 099).
-      put(box, at('annunciator:wet_hall'), { wall: 'north', along: 8.95 }),
+      // Its annunciator (mission 099) on the aisle side of the bay's
+      // partition, facing south into the hall, east of the bay's doors
+      // (the owner, 2026-10-31), at its usual height.
+      {
+        ...put(box, at('annunciator:wet_hall'), {
+          x: 3.75,
+          z:
+            L.bay.maxZ +
+            L.partition.thickness +
+            at('annunciator:wet_hall').d / 2,
+          face: 'south',
+        }),
+        y: at('annunciator:wet_hall').y ?? 1.5,
+      },
       // Its middle over the opening's, its davit's 0.4 m to the east.
       put(box, at('backwash-tank'), {
         x: (L.pit.minX + L.pit.maxX) / 2 + L.pitDavitShift,
