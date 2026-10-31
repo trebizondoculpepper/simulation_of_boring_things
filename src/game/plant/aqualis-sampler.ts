@@ -11,7 +11,7 @@ import type {
  * at its tapping, through its flow cell, into every reading. The cell's
  * water follows the sample's with a first-order lag of about a minute (the
  * world's controller's `CONTROLLER.sampleLag`, `water-treatment.ts`; about
- * half a litre turned over by ~30 l/h, as `sampling.ts`'s `FLOW_CELL`).
+ * half a litre turned over by ~30 l/h, as the retired `sampling.ts`'s flow cell).
  * Below its flow switch's setting the sample is lost: the cell's water
  * stands, its free chlorine slowly consumed (hours, as the flow cell's
  * `stagnant`), everything else frozen. Pure; cheap enough to step every

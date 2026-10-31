@@ -105,7 +105,7 @@ export const TRIO_SAMPLE_VALVES: Record<TrioPool, readonly string[]> = {
   pool_02: ['PL2-SP1-IV1', 'PL2-CP2-IV1', 'PL2-CP2-IV2'],
 };
 
-/** The sample's flow through the cell with the circulation running and its valves open, l/h (the flow cell's, `sampling.ts`). */
+/** The sample's flow through the cell with the circulation running and its valves open, l/h (the old flow cell's, mission 089). */
 export const SAMPLE_FLOW_LH = 30;
 
 /** Each Trio's seed, for its boots and crashes (dev58's is 58). */

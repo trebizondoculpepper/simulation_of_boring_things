@@ -31,7 +31,7 @@ import type { PoolSignMount } from '../../../components/pool/views/pool-info-sig
  * each with a development test panel beside it. The panel is the sign's
  * data source here, and says so: its knobs set the readings by hand; no
  * chemistry simulation is behind them. In the game the sign takes the
- * sample flow cell's readings (`src/game/plant/sampling.ts`) and the
+ * sample flow cell's readings (once `sampling.ts`, now the Trios' `aqualis-sampler.ts`) and the
  * combined chlorine keyed in after the daily DPD test.
  *
  * The panel: POWER (off, on); MODE, a four-way cam switch (NORMAL; NO

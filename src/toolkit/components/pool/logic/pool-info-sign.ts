@@ -16,7 +16,7 @@
  *   point, so a dead segment shows.
  *
  * Water temperature, pH and free chlorine are measured continuously in
- * the plant's sample flow cell (`src/game/plant/sampling.ts`); combined
+ * the plant's sample flow cell (once `sampling.ts`, now the Trios' `aqualis-sampler.ts`); combined
  * chlorine is not measured there but worked out by hand from the daily
  * DPD test and keyed in, so it goes stale only after a day.
  */
