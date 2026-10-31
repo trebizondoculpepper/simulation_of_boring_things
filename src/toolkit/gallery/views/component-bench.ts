@@ -69,6 +69,10 @@ import {
   drawBootPicture,
 } from '../../components/core/views/boot-screens';
 import {
+  drawAeroBackground,
+  drawTitleBar,
+} from '../../../ui2d/aero/aero-widgets';
+import {
   BOOT_FAMILIES,
   bootFrame,
   bootScript,
@@ -544,7 +548,10 @@ async function candidates(usage: Map<string, Usage>): Promise<Candidate[]> {
       const good = document.createElement('canvas');
       good.width = SCREEN.w;
       good.height = SCREEN.h;
-      drawBootScreen(good.getContext('2d')!, 0.7);
+      // A stand-in last good page: an Aero ground and a title strip.
+      const g = good.getContext('2d')!;
+      drawAeroBackground(g, { x: 0, y: 0, w: SCREEN.w, h: SCREEN.h }, 114);
+      drawTitleBar(g, { x: 0, y: 0, w: SCREEN.w, h: 48 }, 'Dr Aqualis Trio');
       const seed = 114;
       let t = 2.05;
       let drawn = '';
