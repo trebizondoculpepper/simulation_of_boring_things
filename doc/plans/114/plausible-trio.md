@@ -30,8 +30,11 @@ The owner, 2026-10-31, after hearing what real machines did (plant-room controll
 - **The test kits:** when the hand-dosing game brings test kits as items, the player tests the water with one (a DPD comparator, a titration kit, a photometer) and types the results in. Until then, dev58 can offer a "test kit" stand-in that reads the rig's water (with a small reading error) for the player to enter.
 - **The Post-it:** this Trio has less to apologise for; the developer's note could move to the science-fiction version, or say something else.
 
+## The owner's ruling (2026-10-31)
+
+The plausible version will replace the science-fiction analyser, but not yet: once the game has what it needs, water testing with test kits and the player carrying equipment (the hand-dosing game's inventory). Until then the Trio keeps measuring everything itself, as built.
+
 ## Questions for the owner, one at a time
 
-1. Does the plausible version replace the science-fiction analyser, or sit beside it (a setting, a model in the series, or a scenario choice)? Recommended: it becomes the Trio, and the science-fiction analyser is kept only as a setting for play before test kits exist.
-2. The test intervals (daily, weekly, monthly as proposed, after PWTAG's routine).
-3. Whether the Trio should refuse to recommend a hand dose from a stale reading, or recommend it with a warning.
+1. The test intervals (daily, weekly, monthly as proposed, after PWTAG's routine).
+2. Whether the Trio should refuse to recommend a hand dose from a stale reading, or recommend it with a warning.
