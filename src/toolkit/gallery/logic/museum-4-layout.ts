@@ -123,14 +123,15 @@ export const PRINTER_FOOT = { hw: 0.33, minZ: -0.06, maxZ: 0.5 } as const;
 export const POOL = { x: 5.6, z: -4.3, w: 3.4, d: 2.4, h: 1.3 } as const;
 /**
  * Its balancing tank, the model's pool's 30 m³ (drawn as an ideal vessel,
- * bound to the pool), behind the pool's back-left corner; the pump beyond
- * it in the far right corner, the injection tee between the pump and the
- * pool, and the dosing pot at the east end of the manifold strip: the
- * loop pool → tank → pump → tee → pool, and the header to the pot, short.
+ * bound to the pool), before the pool's front right corner on the room
+ * side (the owner, 2026-10-31), seen from the desk and the room, right of
+ * the desk's sight line to the pool's display; the pump in the far right
+ * corner, the injection tee behind the pool, and the dosing pot at the
+ * east end of the manifold strip.
  */
 export const BALANCE_TANK = {
-  x: 4.5,
-  z: -6.2,
+  x: 6.7,
+  z: -2.4,
   w: 1.0,
   d: 0.8,
   h: 1.2,
