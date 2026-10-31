@@ -180,6 +180,23 @@ describe('a detented selector', () => {
     expect(value.value).toBeCloseTo(0.55);
   });
 
+  it('says, silently, whether a turn would move it', () => {
+    const k = createSelector({ positions: 3 });
+    const events = heard(k);
+    expect([k.canTurn(-1), k.canTurn(1)]).toEqual([false, true]);
+    k.turn(1);
+    expect([k.canTurn(-1), k.canTurn(1)]).toEqual([true, true]);
+    k.turn(1);
+    expect([k.canTurn(-1), k.canTurn(1)]).toEqual([true, false]);
+    expect(events).toEqual(['detent', 'detent']);
+    const latched = createSelector({
+      positions: 3,
+      initial: 1,
+      latch: signal(true),
+    });
+    expect([latched.canTurn(-1), latched.canTurn(1)]).toEqual([false, false]);
+  });
+
   it('will not turn while latched', () => {
     const k = createSelector({ positions: 3, latch: signal(true) });
     const events = heard(k);

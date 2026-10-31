@@ -6,7 +6,8 @@ import {
   stepInspection,
 } from '../logic/inspection';
 import type { InspectionState, InspectionTarget } from '../logic/inspection';
-import { Box3 as SceneBounds } from 'three';
+import { Box3 as SceneBounds, Raycaster, Vector2, Vector3 } from 'three';
+import type { Mesh } from 'three';
 import { noclip, flyCamera, flightHelp, rollCamera } from '../logic/noclip';
 import type { FlightBounds } from '../logic/noclip';
 import { createObjectHandling } from './object-handling';
@@ -31,7 +32,14 @@ import {
 } from '../logic/hud-policy';
 import type { InputState } from '../logic/hud-policy';
 import { claimMenuHint } from './menu-hint';
-import { turningKnobs } from './knob-turning';
+import {
+  turnableOf,
+  turnablesIn,
+  turningKnobs,
+  visibleAll,
+} from './knob-turning';
+import { turnCue, turnCueKey } from '../logic/turn-cue';
+import type { TurnCue } from '../logic/turn-cue';
 import { usingHold } from './use-holding';
 import { TOUCH_HOLD_DELAY, createUseHolds } from '../logic/use-hold';
 import type { HoldSource } from '../logic/use-hold';
@@ -278,6 +286,42 @@ if (
 )
   torch.on = true;
 
+/**
+ * How far the knob-turn cue looks, metres: with the crosshair at the centre
+ * the room's own `aimed()` decides as well; a free cursor has no such check,
+ * so it reaches only as far as the shortest-reaching rooms (3 m).
+ */
+const CENTRE_TURN_REACH = 4;
+const CURSOR_TURN_REACH = 3;
+const CUE_GO = '#44df70';
+const CUE_STOP = '#f04b43';
+const CUE_EDGE = '#182327';
+
+/** One curved arrow, clockwise or (mirrored) anticlockwise, and its label. */
+function turnArrow(direction: -1 | 1, possible: boolean, label?: string) {
+  const colour = possible ? CUE_GO : CUE_STOP;
+  const arc = 'M4 13 A9.5 9.5 0 0 1 20 9';
+  const head = '18,4.5 24.5,8.5 18.5,13.5';
+  const flip = direction < 0 ? ' transform="translate(28 0) scale(-1 1)"' : '';
+  const text = label
+    ? `<text x="14" y="25" text-anchor="middle" font-size="9" font-weight="bold" font-family="sans-serif" fill="#f5f1df" stroke="${CUE_EDGE}" stroke-width="2.5" paint-order="stroke">${label}</text>`
+    : '';
+  return (
+    `<svg width="28" height="${label ? 27 : 17}" viewBox="0 0 28 ${label ? 27 : 17}">` +
+    `<g${flip}><path d="${arc}" fill="none" stroke="${CUE_EDGE}" stroke-width="5" stroke-linecap="round"/>` +
+    `<polygon points="${head}" fill="${colour}" stroke="${CUE_EDGE}" stroke-width="1.6" stroke-linejoin="round"/>` +
+    `<path d="${arc}" fill="none" stroke="${colour}" stroke-width="2.5" stroke-linecap="round"/></g>` +
+    `${text}</svg>`
+  );
+}
+
+/** The cue's markup: one arrow for a pointer, LB's and RB's for a gamepad. */
+function turnCueMarkup(cue: TurnCue) {
+  return cue.kind === 'pad'
+    ? turnArrow(-1, cue.down, 'LB') + turnArrow(1, cue.up, 'RB')
+    : turnArrow(cue.direction, cue.possible);
+}
+
 /** How often the aim is looked at to name what is there, ms. */
 const INSPECT_EVERY_MS = 100;
 
@@ -460,6 +504,49 @@ export function createFirstPerson(options: FirstPersonOptions) {
     pointerEvents: 'none',
   });
   canvas.parentElement?.appendChild(crosshair);
+
+  // The knob-turn cue (prompt 115): a curved arrow above the ring, the way
+  // a use will turn the knob aimed at, green if it can, red if not.
+  const turnCueBox = document.createElement('div');
+  turnCueBox.setAttribute('aria-hidden', 'true');
+  turnCueBox.hidden = true;
+  Object.assign(turnCueBox.style, {
+    position: 'absolute',
+    display: 'flex',
+    gap: '6px',
+    transform: 'translate(-50%, -100%) scale(var(--overlay-scale, 1))',
+    transformOrigin: '50% 100%',
+    pointerEvents: 'none',
+  });
+  canvas.parentElement?.appendChild(turnCueBox);
+  let turnCueShown: TurnCue | null = null;
+  let turnCueDrawn = '';
+  let turnCueAt = -Infinity;
+  const turnRay = new Raycaster();
+  const turnPointer = new Vector2();
+  const turnCentre = new Vector3();
+  /** The knob at a normalised screen point, if a use there would turn it. */
+  const turnableAt = (x: number, y: number, reach: number) => {
+    const scene = options.scene;
+    if (!scene) return null;
+    const knobs = turnablesIn(scene);
+    if (!knobs.length) return null;
+    turnRay.setFromCamera(turnPointer.set(x, y), camera);
+    turnRay.far = reach * metre;
+    const hit = turnRay
+      .intersectObjects(knobs, true)
+      .find((h) => visibleAll(h.object));
+    const found = hit && turnableOf(hit.object);
+    if (!hit || !found) return null;
+    // Nothing in front of it: the first visible mesh is the knob's own.
+    turnRay.far = hit.distance + 0.002 * metre;
+    const first = turnRay
+      .intersectObject(scene, true)
+      .find((h) => (h.object as Mesh).isMesh && visibleAll(h.object));
+    if (first && turnableOf(first.object)?.shaft !== found.shaft) return null;
+    const centre = found.shaft.getWorldPosition(turnCentre).project(camera).x;
+    return { knob: found.turnable, point: x, centre };
+  };
 
   // On-screen controls, for anyone without a keyboard (`.hud-button`, in
   // Half-Life's style): at the bottom left, the steps as a pad, a turn
@@ -1234,7 +1321,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
         sticks?.setVisible(false);
         // Another room's eye: no walking, no looking, no crosshair.
         const eye = following();
-        crosshair.hidden = true;
+        crosshair.hidden = turnCueBox.hidden = true;
         // The torch is the room in front's, where the player is.
         torchLight.light.intensity = 0;
         if (!eye) return;
@@ -1618,6 +1705,50 @@ export function createFirstPerson(options: FirstPersonOptions) {
           textAlign: 'center',
         });
       }
+      // The knob-turn cue, a few times a second, where a use would land:
+      // the centre (with the room agreeing something is aimed at there), or
+      // the free cursor over the canvas. Never while carrying.
+      const cueAtCentre = !crosshair.hidden && !handling?.holding();
+      const cueAtCursor =
+        cursorAim && hoverInside && crosshair.hidden && !handling?.holding();
+      if (
+        !controlsActive ||
+        flying ||
+        attachedLadder ||
+        canvas.parentElement?.hidden ||
+        !(cueAtCentre || cueAtCursor)
+      )
+        turnCueShown = null;
+      else if (now - turnCueAt >= INSPECT_EVERY_MS) {
+        turnCueAt = now;
+        turnCueShown = turnCue(
+          cueAtCursor
+            ? turnableAt(hoverPoint[0], hoverPoint[1], CURSOR_TURN_REACH)
+            : options.aimed?.()
+              ? turnableAt(0, 0, CENTRE_TURN_REACH)
+              : null,
+          input === 'gamepad',
+        );
+      }
+      const cueKey = turnCueKey(turnCueShown);
+      if (cueKey !== turnCueDrawn) {
+        turnCueDrawn = cueKey;
+        turnCueBox.innerHTML = turnCueShown ? turnCueMarkup(turnCueShown) : '';
+      }
+      turnCueBox.hidden = !turnCueShown;
+      if (turnCueShown) {
+        // The cursor's place is the canvas's; the cue's box is its parent's.
+        const box = canvas.parentElement?.getBoundingClientRect();
+        const at = canvas.getBoundingClientRect();
+        const dx = box ? at.left - box.left : 0;
+        const dy = box ? at.top - box.top : 0;
+        const left = cueAtCursor ? `${hoverPosition[0] + dx}px` : '50%';
+        const top = cueAtCursor
+          ? `${hoverPosition[1] + dy - 10}px`
+          : 'calc(50% - 10px)';
+        if (turnCueBox.style.left !== left) turnCueBox.style.left = left;
+        if (turnCueBox.style.top !== top) turnCueBox.style.top = top;
+      }
     },
     dispose() {
       altitude.remove();
@@ -1647,6 +1778,7 @@ export function createFirstPerson(options: FirstPersonOptions) {
       if (locked()) document.exitPointerLock();
       controllers.delete(canvas);
       crosshair.remove();
+      turnCueBox.remove();
       movement.remove();
       crouchButton.remove();
       tools.remove();

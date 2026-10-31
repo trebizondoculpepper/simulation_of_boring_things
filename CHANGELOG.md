@@ -150,6 +150,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 - A released build's title screen links its release notes, its GitHub release, beside the source code link in the bottom right corner; other builds show none (the Release workflow names the tag in `VITE_RELEASE_TAG`).
 - A pair of the museum's gallery benches in the middle of Hall 7, facing the title wall and plinths 5 to 7, to sit and take in the wonder of grout, clear of the walk from the way in to the way out.
+- The crosshair shows which way a knob will turn (mission 115; the owner, 2026-10-31): hovering one of the part kit's knobs or rotary selectors (the changeover handle included), a curved arrow stands above the ring, clockwise over the knob's right half and anticlockwise over its left, green if a use would turn it and red at its end stop or while it is latched; with a gamepad, both arrows, labelled LB and RB. It follows the free cursor too. Other knobs follow later.
 
 ### Changed
 

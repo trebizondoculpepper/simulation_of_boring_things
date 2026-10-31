@@ -337,6 +337,15 @@ export function createSelector(options: SelectorInputs) {
     share: computed(() => toShare(position.value)) as ReadonlySignal<number>,
     powered: powered as ReadonlySignal<boolean>,
     latched: latched as ReadonlySignal<boolean>,
+    /**
+     * Whether a turn `direction` would move it now: not while latched, nor
+     * against its end stop. It sounds nothing, for the crosshair's cue.
+     */
+    canTurn(direction: number): boolean {
+      if (latched.peek()) return false;
+      const from = position.peek();
+      return Math.max(0, Math.min(last, from + Math.sign(direction))) !== from;
+    },
     /** Turn it one detent. Returns whether it moved. */
     turn(direction = 1): boolean {
       if (latched.peek()) {

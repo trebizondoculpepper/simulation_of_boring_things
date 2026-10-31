@@ -2,6 +2,7 @@ import { markComponent } from '../views/component-identity';
 import type { PartDescription } from '../../../../game/plant/part-inspection';
 import { createElectrolyticCapacitorView } from '../../industrial-control/views/electrolytic-capacitor';
 import type { Attachment } from '../../../controls/logic/drop-profile';
+import { markTurnable } from '../../../controls/input/knob-turning';
 import { computed, effect, signal } from '@preact/signals-core';
 import type { ReadonlySignal } from '@preact/signals-core';
 import { BoxGeometry, CylinderGeometry, Group, Mesh } from 'three';
@@ -696,6 +697,7 @@ export function selector(
     refused: LOCKED,
   });
   a.uses.set(view.knob, (direction = 1) => part.turn(direction));
+  a.disposers.push(markTurnable(view.knob, part));
   a.updates.push((delta) => {
     if (props.bound) fresh.value++;
     view.set(part.position.value);
@@ -750,6 +752,7 @@ export function potentiometer(
   a.voice(part, { detent: KNOB });
   // Include its visible mounting ring, so edge clicks still turn the knob.
   a.uses.set(view.group, (direction = 1) => part.turn(direction));
+  a.disposers.push(markTurnable(view.group, part));
   a.updates.push((delta) => {
     view.set(part.share.value);
     view.update(delta);

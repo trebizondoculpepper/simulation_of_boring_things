@@ -60,4 +60,4 @@ Out for now, recorded in `TODO.md` as follow-ups:
 
 ## Status
 
-Not started.
+Done, 2026-10-31: `canTurn` on `createSelector`; `src/toolkit/controls/logic/turn-cue.ts`; the registry (`markTurnable`, `turnablesIn`, `turnableOf`, `visibleAll` in `knob-turning.ts`) marked by the kit's `selector` and `potentiometer`; the probe and the SVG cue in `first-person.ts`. No room changed. Tried in dev0 (`?room=dev0&view=controls`) with a free cursor: green clockwise on the SPEED knob's right, green anticlockwise on its left, red against the four-position selector's end stop. The follow-ups are in `TODO.md`.
