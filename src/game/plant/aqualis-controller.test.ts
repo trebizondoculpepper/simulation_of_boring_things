@@ -3,6 +3,7 @@ import {
   CO2_PER_HCL,
   NOT_DELIVERING_AFTER,
   SAMPLE_LOSS_DELAY,
+  INTEGRAL_REACH,
   newController,
   stepController,
   type ControllerInputs,
@@ -95,8 +96,9 @@ function run(inp: ControllerInputs, n: number, dt = 10, deliver = true) {
 
 describe('AUTO', () => {
   it('doses hypochlorite when chlorine is low, more the lower it is', () => {
-    const a = step(inputs({}, { freeChlorine: 1.0 })).out.demands.hypochlorite;
-    const b = step(inputs({}, { freeChlorine: 0.6 })).out.demands.hypochlorite;
+    const big = { ports: { ...PORTS, hypochlorite: pump(10) } };
+    const a = step(inputs(big, { freeChlorine: 1.1 })).out.demands.hypochlorite;
+    const b = step(inputs(big, { freeChlorine: 0.9 })).out.demands.hypochlorite;
     expect(a).toBeGreaterThan(0);
     expect(b).toBeGreaterThan(a);
     expect(step(inputs({}, { freeChlorine: 2 })).out.demands.hypochlorite).toBe(
@@ -104,8 +106,8 @@ describe('AUTO', () => {
     );
   });
 
-  it('sizes the chlorine dose: u = 1 lifts the volume one band in an hour', () => {
-    // 1.3 − 0.8 = 0.5, less the dead band (0.075): u = 0.85 → 0.85 × 250 g/h.
+  it('sizes the chlorine dose: u = 1 lifts the volume one band in a quarter hour', () => {
+    // 1.3 − 0.8 = 0.5, less the dead band (0.075): u = 0.85 → 0.85 × 1000 g/h.
     const d = step(
       inputs(
         { ports: { ...PORTS, hypochlorite: pump(10) } },
@@ -113,7 +115,7 @@ describe('AUTO', () => {
       ),
     ).out;
     expect(d.channels.hypochlorite.demandRate).toBeCloseTo(
-      (0.85 * 250) / 140,
+      (0.85 * 1000) / 140,
       3,
     );
   });
@@ -240,7 +242,7 @@ describe('anti-windup', () => {
     expect(state.integral).toBe(0);
   });
 
-  it('bounds the integral by the band', () => {
+  it('bounds the integral at its reach of bands', () => {
     const { state } = run(
       inputs(
         { ports: { ...PORTS, hypochlorite: pump(1000) } },
@@ -249,7 +251,7 @@ describe('anti-windup', () => {
       20000,
       60,
     );
-    expect(state.integral).toBeCloseTo(0.5, 6);
+    expect(state.integral).toBeCloseTo(0.5 * INTEGRAL_REACH, 6);
   });
 
   it('holds the integral outside AUTO', () => {

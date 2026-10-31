@@ -30,12 +30,12 @@ import { CONTROLLER } from './water-treatment';
  *   at a three-hour turnover, locked out with pH more than 0.4 from its set
  *   point (DEPOLOX's switch-off range). Its output u (the bench's
  *   `(error + integral) / band`) is a dose rate: u = 1 is the rate that
- *   would lift the entered volume by one band in `CORRECTION_HOURS`, so a
+ *   would lift the entered volume by one band in `CHLORINE_CORRECTION_HOURS`, so a
  *   bigger pool doses proportionally more, and a wrongly entered volume
  *   mis-doses. The entered turnover (volume ÷ filtration rate) is the loop's
  *   dead time, so the integral time is stretched with it (a slow loop is
- *   integrated slowly, or it overshoots). The integral is bounded by the
- *   band, held outside AUTO, while inhibited, locked out, with chlorine's
+ *   integrated slowly, or it overshoots). The integral is bounded (`INTEGRAL_REACH`),
+ *   held outside AUTO, while inhibited, locked out, with chlorine's
  *   channel offline or unconnected, inside the dead band, and while the
  *   demand is pinned at 1 (anti-windup).
  * - **pH**: P, downward only (acid and CO₂ both only lower it), full scale
@@ -62,6 +62,21 @@ import { CONTROLLER } from './water-treatment';
  * readings yet, AUTO doses nothing. Demands are capped at 1.
  */
 
+/**
+ * How far the integral may climb, in bands: far enough for the steady dose
+ * it learns to reach several times the full-scale rate, since a busy pool's
+ * demand (the rig's busy session: about 1.25 g/m³ an hour) is well above
+ * the one-band-an-hour correction. Its winding up is still stopped by the
+ * pump's own limit (`pinned`).
+ */
+export const INTEGRAL_REACH = 6;
+/**
+ * Chlorine's correction time, h: u = 1 lifts the entered volume one band in
+ * a quarter of an hour, so a 0.5 mg/l shortfall runs a pump sized for its
+ * pool (the rig's 2 l/h for 150 m³, about 280 g/h) near flat out. At an
+ * hour the proportional part was too timid to hold a busy session.
+ */
+export const CHLORINE_CORRECTION_HOURS = 0.25;
 /** The correction time behind the full-scale rates, h. */
 export const CORRECTION_HOURS = 1;
 /** The turnover the bench's integral time was tuned at, h. */
@@ -80,7 +95,7 @@ export const NOT_DELIVERING_DEMAND = 0.1;
 export const NOT_DELIVERING_AFTER = 180;
 
 export interface ControllerState {
-  /** Chlorine's integral, mg/l, bounded by its band. */
+  /** Chlorine's integral, mg/l, bounded below by its band and above by `INTEGRAL_REACH` bands. */
   integral: number;
   /** Each channel's demand sent last step, 0 to 1. */
   demands: Record<ChannelId, number>;
@@ -216,7 +231,7 @@ export function stepController(
     lockout = Math.abs(r.ph - phT.set) > CONTROLLER.pHLockout;
     const error = deadBandError(r.freeChlorine, settings.targets.freeChlorine);
     const u = (error + s.integral) / band;
-    const fullCl = (volume * band) / CORRECTION_HOURS;
+    const fullCl = (volume * band) / CHLORINE_CORRECTION_HOURS;
     const hypoDemand = lockout
       ? 0
       : toDemand('hypochlorite', u * fullCl, ports.hypochlorite);
@@ -227,7 +242,7 @@ export function stepController(
       integral = clamp(
         s.integral + (error * dt) / 3600 / integralHours,
         -band,
-        band,
+        band * INTEGRAL_REACH,
       );
     }
 

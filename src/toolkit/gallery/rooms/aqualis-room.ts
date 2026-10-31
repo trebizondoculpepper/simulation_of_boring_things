@@ -16,21 +16,63 @@ import type {
   Rig,
   RigScenarioId,
 } from '../../../game/plant/aqualis-rig';
+import { DEFAULT_TARGETS } from '../../../game/plant/aqualis-types';
 import type {
+  Advice,
+  Alarm,
+  AqualisReadings,
+  AqualisSettings,
   ChannelFeedback,
   ChannelId,
+  SampleStatus,
   Selector,
 } from '../../../game/plant/aqualis-types';
+import { newSampler, stepSampler } from '../../../game/plant/aqualis-sampler';
+import type { SamplerState } from '../../../game/plant/aqualis-sampler';
+import {
+  newController,
+  stepController,
+} from '../../../game/plant/aqualis-controller';
+import type {
+  ControllerOutput,
+  ControllerState,
+} from '../../../game/plant/aqualis-controller';
+import { advise, alarms } from '../../../game/plant/aqualis-advisor';
 import type { LedState } from '../../components/plant/logic/aqualis-cabinet';
-import { drawBootScreen } from '../../components/plant/views/aqualis-cabinet';
+import {
+  DOCTOR,
+  displayModel,
+  hitDisplay,
+  newDisplay,
+  pressDisplay,
+  tickDisplay,
+} from '../../components/plant/logic/aqualis-display';
+import type {
+  DisplayInputs,
+  DisplayState,
+} from '../../components/plant/logic/aqualis-display';
+import { drAqualisPose } from '../../components/plant/logic/dr-aqualis';
+import type { DrAqualisFrame } from '../../components/plant/logic/dr-aqualis';
+import { drawAqualisScreen } from '../../components/plant/views/aqualis-screens';
+import {
+  drawDrAqualis,
+  drawSpeechBubble,
+} from '../../components/plant/views/dr-aqualis';
 
 /**
  * Dev58's host (mission 114): everything the room shows and works, behind
  * one object, so the room is only layout and touches. It runs the test rig
- * (`aqualis-rig.ts`) for real; the places marked STUB are where the
- * controller (`aqualis-controller.ts`), the sampler and the display model
- * (`aqualis-display.ts`, `views/aqualis-screens.ts`) plug in.
+ * (`aqualis-rig.ts`) and the Dr Aqualis Trio on it: the sampler reads the
+ * rig's water, the controller drives the rig's devices through their ports
+ * on the chemistry's 10 s tick, the advisor gives Dr Aqualis his advice and
+ * the cabinet its alarms, and the display model draws the screen, redrawn
+ * only when its page's key (or, on his page, his pose) changes.
  */
+
+/** The world step the sampler and controller take, s (the rig's tick). */
+const TICK = 10;
+/** The most ticks a frame may take (1000× at a slow frame). */
+const MOST_TICKS = 400;
 
 /** The time-speed knob's settings: world seconds per real second. */
 export const SPEEDS = [1, 10, 100, 1000] as const;
@@ -83,14 +125,54 @@ export function createAqualisRoomHost(
   let speed = 1;
   let sel: Selector = 'auto';
   let valveOpen = true;
-  let drawn = false;
+  let drawn = '';
+  let settings: AqualisSettings = {
+    dynamics: { volumeM3: RIG_POOL.volumeM3, flowM3h: RIG_POOL.flowM3h },
+    targets: DEFAULT_TARGETS,
+  };
+  let hand: Record<ChannelId, number> = { hypochlorite: 0, acid: 0, co2: 0 };
+  let sampler: SamplerState = newSampler(rigSample(rig));
+  let control: ControllerState = newController();
+  let readings: AqualisReadings | null = null;
+  let sample: SampleStatus = { flowing: true, flowLh: 0, lostFor: 0 };
+  let out: ControllerOutput | null = null;
+  let advice: Advice[] = [];
+  let alarmsOn: Alarm[] = [];
+  let display: DisplayState = newDisplay();
+  let doctor: DrAqualisFrame | null = null;
+  let owed = 0;
+  let clock = 0;
 
-  /**
-   * STUB: the controller's demand on each port, 0..1. The lead replaces this
-   * with `aqualis-controller.ts` fed by the sampler's readings, the knob and
-   * the settings; until then nothing is asked (OFF in effect).
-   */
-  const demands = (): Partial<Record<ChannelId, number>> => ({});
+  /** One chemistry tick of the cabinet: sample, control, advise. */
+  const tick = () => {
+    const s = stepSampler(sampler, rigSample(rig), TICK);
+    sampler = s.state;
+    readings = s.readings;
+    sample = s.status;
+    const c = stepController(
+      control,
+      { readings, sample, selector: sel, ports: rigPorts(rig), settings, hand },
+      TICK,
+    );
+    control = c.state;
+    out = c.out;
+    advice = advise(readings, settings, out.channels, rig.water);
+    alarmsOn = alarms(readings, sample, out.channels, settings, sel);
+    rig = stepRig(rig, out.demands, TICK);
+  };
+  tick();
+
+  const inputs = (): DisplayInputs => ({
+    readings,
+    sample,
+    selector: sel,
+    channels: out!.channels,
+    inhibit: out!.inhibit,
+    advice,
+    alarms: alarmsOn,
+    settings,
+    hand,
+  });
 
   return {
     get rig() {
@@ -128,21 +210,52 @@ export function createAqualisRoomHost(
     leds: () => ({
       power: true,
       dosing: Object.values(rig.devices).some((d) => d.delivering > 0),
-      // STUB: the advisor's alarms light it; for now, lost sample flow.
-      alarm: !valveOpen,
+      alarm: alarmsOn.length > 0 || !valveOpen,
     }),
     step(realDt) {
-      rig = stepRig(rig, demands(), realDt * SPEEDS[speed]);
+      owed += realDt * SPEEDS[speed];
+      let n = 0;
+      while (owed >= TICK && n++ < MOST_TICKS) {
+        owed -= TICK;
+        tick();
+      }
+      if (n >= MOST_TICKS) owed = 0;
+      // The screen runs on real time: its cycle and Dr Aqualis.
+      clock += realDt;
+      display = tickDisplay(display, realDt);
     },
     drawScreen(c) {
-      // STUB: the display model draws here, keyed so it redraws only on change.
-      if (drawn) return false;
-      drawBootScreen(c);
-      drawn = true;
+      const m = displayModel(display, inputs());
+      let key = m.key;
+      if (m.page === 'doctor') {
+        const a = m.doctor.advice;
+        doctor = drAqualisPose(a?.mood ?? 'idle', clock, doctor, {
+          box: DOCTOR.him,
+          target: { x: DOCTOR.bubble.x + 40, y: DOCTOR.bubble.y + 60 },
+        });
+        key += doctor.key;
+      }
+      if (key === drawn) return false;
+      drawn = key;
+      drawAqualisScreen(c, m, {
+        doctor: (ctx, box) => doctor && drawDrAqualis(ctx, doctor.pose, box),
+        bubble: (ctx, text, box, tail) =>
+          drawSpeechBubble(ctx, text.split('\n'), box, tail, {
+            title: 'Dr Aqualis says',
+            fontPx: 19,
+          }),
+      });
       return true;
     },
-    screenTouch() {
-      // STUB: the display model takes touches here.
+    screenTouch(x, y) {
+      const ins = inputs();
+      const id = hitDisplay(display, ins, x, y);
+      if (!id) return;
+      const r = pressDisplay(display, ins, id);
+      display = r.state;
+      if (r.effect?.kind === 'settings') settings = r.effect.settings;
+      if (r.effect?.kind === 'hand')
+        hand = { ...hand, [r.effect.channel]: r.effect.demand };
     },
   };
 }
