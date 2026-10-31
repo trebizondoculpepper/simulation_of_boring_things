@@ -38,6 +38,7 @@ import {
 import type { Hall4Game } from '../../../game/plant/museum-4-challenge';
 import { DEMO_STATES, demoView } from '../logic/dosing-console';
 import type { DemoState } from '../logic/dosing-console';
+import { createConsoleSounds } from '../views/console-sounds';
 import { createDosingConsole, CONSOLE } from '../views/dosing-console';
 
 /** The room inside, metres. */
@@ -113,7 +114,10 @@ export function startDosingConsoleRoom(canvas: HTMLCanvasElement) {
   } | null = null;
   let seenSeq = 0;
   let captionLeft = 0;
+  // The console's Aero sounds, from the console (`logic/console-sounds`).
+  const sounds = createConsoleSounds(() => desk.group);
   const desk = createDosingConsole(kit, {
+    sound: sounds.play,
     titles: CHALLENGES.map((c) => c.title),
     scenario: () => (demo ? demoView(demoState()) : scenarioView(game)),
     caption: () => (demo ? null : caption),
@@ -232,6 +236,7 @@ export function startDosingConsoleRoom(canvas: HTMLCanvasElement) {
     clock += delta;
     if (!demo) {
       game = stepGame(game, delta);
+      sounds.watch(game);
       const n = game.narration;
       if (n && n.seq !== seenSeq && game.card) {
         seenSeq = n.seq;

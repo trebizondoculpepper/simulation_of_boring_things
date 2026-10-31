@@ -4,6 +4,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- Hall 4's dosing console plays its Frutiger Aero sounds (2026-10-31), in Hall 4 and dev57: a touch (one of three at random), a tick for the dose size's arrows and the chemical list's (the owner's choice), a refusal for anything greyed out or an arrow at the end of its run, the level switch on (POOL PRO) and off (JOURNEYMAN), START, a water drop for DOSE taken and an error for DOSE refused, RESET's question, a confirmation for yes, CONTINUE and RETRY and a close for no, and from the challenge engine a glassy ping (rising, in order) when the hold begins, a bong when a reading drifts out, and won and lost, each once per transition. The mapping is pure and tested (`logic/console-sounds.ts`); the Ogg files are bundled as they are.
 - Hall 4's challenge cards have a briefing for each level (2026-10-31): a Journeyman's tells them to fix the major fault, a Pool Pro's to fix it and restore every other reading, naming what else is out. Each level's briefing has its own clip slot and its own line in the narration script.
 - Hall 4's console: DOSE shows once a chemical is picked, the dose size left at its default Medium counting as chosen (2026-10-31).
 - Frutiger Aero interface sounds for Hall 4's dosing console in `resources/sound/effects/frutiger-aero/`: 37 from Kenney's Interface Sounds (CC0), named after the console's buttons and moments, credited in `CREDITS.md`, with notes on how each could be used. Not yet played by the game.

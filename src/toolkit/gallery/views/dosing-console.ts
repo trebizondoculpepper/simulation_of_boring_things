@@ -39,6 +39,8 @@ import {
   drawDoseScreen,
   drawScenarioScreen,
 } from './dosing-console-screens';
+import { pressSound } from '../logic/console-sounds';
+import type { ConsoleSound } from '../logic/console-sounds';
 
 /**
  * Hall 4's dosing console (mission 113, `doc/plans/113/b-console-physical.md`):
@@ -65,8 +67,8 @@ export interface ConsoleHost {
   effect(e: ConsoleEffect): void;
   /** DOSE: whether it was taken. */
   dose(tank: TankId, size: SizeIndex): boolean;
-  /** A sound for a touch: taken, refused. */
-  sound?(kind: 'touch' | 'dose' | 'deny'): void;
+  /** A sound for a press, DOSE taken or refused (`logic/console-sounds`). */
+  sound?(kind: ConsoleSound): void;
 }
 
 export const CONSOLE = {
@@ -212,18 +214,19 @@ export function createDosingConsole(kit: PanelKit, host: ConsoleHost) {
     if (host.dose(chosenTank(state), state.size)) {
       host.sound?.('dose');
       state = afterDose(state);
-    } else host.sound?.('deny');
+    } else host.sound?.('dose-refused');
   };
 
   /** A press on region `id`, from a touch or a script. */
   const pressRegion = (id: string) => {
+    const before = state;
     const r = pressConsole(state, id, host.titles.length);
     state = r.state;
     glow = PRESS_GLOW;
     if (r.effect?.type === 'dose') pressDose();
     else {
       if (r.effect) host.effect(r.effect);
-      host.sound?.('touch');
+      host.sound?.(pressSound(id, before, r.state, r.effect));
     }
     draw();
   };

@@ -58,6 +58,7 @@ import type {
   NarrationKind,
 } from '../../../../game/plant/museum-4-challenge';
 import { touchPoint } from '../../../controls/input/touch-point';
+import { createConsoleSounds } from '../../views/console-sounds';
 import { createDosingConsole } from '../../views/dosing-console';
 import {
   BALANCE_TANK,
@@ -513,7 +514,10 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   // ---- The dosing console and the mimic ----
   // Mission 113: three Aero touch screens and DOSE, in place of the old
   // desk, front and centre before the tanks (the owner, 2026-10-31).
+  // The console's Aero sounds, from the console (`logic/console-sounds`).
+  const sounds = createConsoleSounds(() => desk.group);
   const desk = createDosingConsole(kit, {
+    sound: sounds.play,
     titles: CHALLENGES.map((c) => c.title),
     scenario: () => scenarioView(game),
     caption: () => caption,
@@ -838,6 +842,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     reset,
     update(delta) {
       game = stepGame(game, delta);
+      sounds.watch(game);
       // A narration fired: its clip, and its words on the scenario screen.
       const n = game.narration;
       if (n && n.seq !== seenSeq && game.card) {
