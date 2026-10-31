@@ -1048,6 +1048,9 @@ const importStarter = async (
       await import('./toolkit/gallery/rooms/lift-rooms');
     return (surface) => startLiftTrialFloor(surface, room.slice(6));
   }
+  if (room === 'dev58')
+    return (await import('./toolkit/gallery/rooms/aqualis-controller-room'))
+      .startAqualisControllerRoom;
   if (room === 'dev57')
     return (await import('./toolkit/gallery/rooms/dosing-console-room'))
       .startDosingConsoleRoom;

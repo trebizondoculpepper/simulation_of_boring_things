@@ -78,6 +78,7 @@ export type GalleryRoomId =
   | 'dev55'
   | 'dev56'
   | 'dev57'
+  | 'dev58'
   | 'retired0'
   | 'retired1'
   | 'dev_corridor';
@@ -297,6 +298,8 @@ export const ROOMS: readonly RoomId[] = [
   'dev56',
   // By its URL only: Hall 4's dosing console (mission 113).
   'dev57',
+  // By its URL only: the Aqualis dosing controller (mission 114).
+  'dev58',
   // By its URL only: the Olympic plant room, frozen as a reference.
   'retired0',
   'retired1',
@@ -485,6 +488,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev55: 'DEV55 · THE CO₂ CAGE',
   dev56: 'DEV56 · BAKED AMBIENT OCCLUSION',
   dev57: 'DEV57 · THE DOSING CONSOLE',
+  dev58: 'DEV58 · DOSING: THE AQUALIS CONTROLLER',
   retired0: 'RETIRED0 · OLYMPIC PLANT ROOM, 2026-10-23',
   retired1: 'RETIRED1 · JACUZZI PLANT ROOM, 2026-10-25',
   dev_corridor: 'DEV CORRIDOR',
@@ -621,6 +625,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   dev55: '#1f5f8b',
   dev56: '#5f6f4b',
   dev57: '#2b9ad6',
+  dev58: '#1f7fd6',
   retired0: '#6d7a6f',
   retired1: '#6d7a6f',
   dev_corridor: '#2d9ca0',

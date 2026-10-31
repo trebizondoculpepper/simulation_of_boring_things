@@ -59,6 +59,10 @@ import type { LiveExhibit, PlantExhibit } from '../rooms/plant/exhibit';
 import type { TestFitting } from '../rooms/test-boards';
 import { createCircularChartRecorder } from '../../components/industrial-control/views/period-instruments';
 import { createChartRecorder } from '../../components/industrial-control/views/cabinet-fittings';
+import {
+  createAqualisCabinet,
+  drawBootScreen,
+} from '../../components/plant/views/aqualis-cabinet';
 import { createWashOTron } from '../../components/plant/views/wash-o-tron';
 import { filterValves } from '../../../game/plant/wash-o-tron-world';
 import { WET_HALL_PLANT } from '../../../game/plant/wet-hall';
@@ -348,6 +352,38 @@ async function candidates(usage: Map<string, Usage>): Promise<Candidate[]> {
           texture.dispose();
           material.dispose();
           geometry.dispose();
+        },
+      };
+    },
+  });
+  // The Aqualis cabinet (mission 114): its screen redrawn every two seconds
+  // (a screen of its cycle changing), its lamps and sample meter worked.
+  usage.set('part:aqualis-cabinet', { count: 1, busy: 0, rooms: ['dev58'] });
+  list.push({
+    id: 'part:aqualis-cabinet',
+    label: 'Aqualis cabinet (7-inch touch screen, HAND · OFF · AUTO)',
+    source: 'part',
+    room: 'dev58',
+    build: (kit) => {
+      const cab = createAqualisCabinet(kit, { screenTouch: () => {} });
+      let t = 0;
+      let second = -1;
+      return {
+        object: cab.group,
+        update: (d) => {
+          if (!clockStopped.value) t += d;
+          if (Math.floor(t / 2) !== second) {
+            second = Math.floor(t / 2);
+            drawBootScreen(cab.context, (second % 10) / 10);
+            cab.screenChanged();
+            cab.setLeds({
+              power: true,
+              dosing: second % 2 === 0,
+              alarm: false,
+            });
+            cab.setSampleFlow(20 + (second % 5) * 4);
+          }
+          cab.update(d);
         },
       };
     },
