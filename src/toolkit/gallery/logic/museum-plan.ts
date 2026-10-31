@@ -298,7 +298,7 @@ export const HALL_BRIEFS: Record<MuseumHallId, HallBrief> = {
       'Nothing we take for granted more than a swimming pool: its user interface is the simplest there could be. Dive in, and the water is simply there, clean, clear and warm. Behind the tiles lives a world of pumps, filters, boilers and chemistry, working all day and all night so that it stays that simple.',
     tryIt: [
       'Look for the water in this room. (There is none: it is paint.)',
-      'Follow the arrows north through the doorway and find out what is behind the tiles.',
+      'Follow the arrows west through the archway and find out what is behind the tiles.',
     ],
   },
   museum1: {
@@ -1031,9 +1031,11 @@ export function comingSoonPanel(id: MuseumHallId) {
   if (EXHIBIT_HALLS.has(id)) return null;
   const { width, along } = hallAxes(id);
   if (id === 'museum0') {
-    // The welcome panel, by the doorway, facing back into the room.
-    const p = hallPoint(id, hallAxes(id).length / 2 - 2.2, width / 2 - 3.2);
-    return { ...p, yaw: Math.atan2(-along[0], -along[1]) };
+    // The welcome panel, where the owner put it (2026-10-31): before the
+    // west wall, south of the archway into Hall 1, between the wall and the
+    // painted pool, facing east into the hall; clear of the defibrillator
+    // and the first-aid kit on the north wall.
+    return { x: -6.0, z: 1.1, yaw: Math.PI / 2 };
   }
   const p = hallPoint(id, -3, width / 4);
   // Its face (+z of its group) towards the way the visitor comes.

@@ -454,21 +454,26 @@ export function hall0TrimGeometry(): {
 }
 
 /**
- * A glossy sticker of a lifebuoy on Hall 0's east wall (the owner,
+ * A glossy sticker of a lifebuoy on Hall 0's west wall (the owner,
  * 2026-10-28; moved from the west wall for the lift, 2026-10-30), south
- * of the doorway from Hall 9: set decoration, not a real lifebuoy, 0.75 m across, red and
+ * of the archway into Hall 1 (moved there, 2026-10-31): set decoration, not a real lifebuoy, 0.75 m across, red and
  * white quarters and its grab line, 1 mm proud of the tiles and drawn after
  * them (renderOrder, polygon offset) so it never z-fights. In the museum's
  * coordinates; its texture is made by `lifebuoyStickerTexture`.
  */
-export const LIFEBUOY_STICKER = { size: 0.75, y: 1.95, along: 2.5 } as const;
+/**
+ * Hall 0's lifebuoy sticker, on the west wall south of the archway into
+ * Hall 1, where the owner put it (2026-10-31): its size, height and place
+ * along the wall from the wall's middle (z in the hall's frame).
+ */
+export const LIFEBUOY_STICKER = { size: 0.75, y: 1.95, along: 4.8 } as const;
 export function lifebuoyStickerGeometry() {
-  const east = hallWalls('museum0').find((w) => w.side === 'east')!;
-  const u = (east.from + east.to) / 2 + LIFEBUOY_STICKER.along;
+  const west = hallWalls('museum0').find((w) => w.side === 'west')!;
+  const u = (west.from + west.to) / 2 + LIFEBUOY_STICKER.along;
   const g = new PlaneGeometry(LIFEBUOY_STICKER.size, LIFEBUOY_STICKER.size);
-  // Facing west, into the hall.
-  g.rotateY(-Math.PI / 2);
-  g.translate(east.line - MUSEUM_WALL / 2 - 0.001, LIFEBUOY_STICKER.y, u);
+  // Facing east, into the hall.
+  g.rotateY(Math.PI / 2);
+  g.translate(west.line + MUSEUM_WALL / 2 + 0.001, LIFEBUOY_STICKER.y, u);
   return g;
 }
 export function lifebuoyStickerTexture() {
@@ -1421,7 +1426,7 @@ function paintWelcome(c: CanvasRenderingContext2D, w: number, h: number) {
   c.fillStyle = BRAND.colours.ink;
   c.font = font(h * 0.022, 700);
   c.fillText(
-    'THE ROUTE: FIVE HALLS ROUND THE COURTYARD, AND BACK HERE',
+    'THE ROUTE: NINE HALLS ROUND THE COURTYARD, AND BACK HERE',
     pad,
     h * 0.8,
   );
