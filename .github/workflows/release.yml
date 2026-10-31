@@ -91,26 +91,20 @@ jobs:
           name: dist
           path: dist
           retention-days: 7
-      # The release's notes are its changelog section; a pre-release
-      # version (with a hyphen) is marked as one.
+      # The release's notes are its changelog section's headlines, sorted
+      # into Major features and Minor fixes (scripts/release-notes.ts),
+      # with a link to the full section; a pre-release version (with a
+      # hyphen) is marked as one. itch.io has no way to take notes with a
+      # build, so the same notes go on the run's summary, ready to paste
+      # into a devlog.
       - name: Publish the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           version="${TAG#v}"
-          awk -v v="$version" '
-            $0 ~ "^## \\[" v "\\]" { on = 1; next }
-            on && /^## \[/ { exit }
-            on { print }
-          ' CHANGELOG.md > notes.md
-          # GitHub takes at most 125000 characters of notes: a longer
-          # section is cut at a line and points to the changelog itself.
-          if [ "$(wc -c < notes.md)" -gt 120000 ]; then
-            head -c 120000 notes.md | sed '$d' > notes.cut
-            printf '\n…\n\nThe full notes are in [CHANGELOG.md](%s/%s/blob/%s/CHANGELOG.md).\n' \
-              "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$TAG" >> notes.cut
-            mv notes.cut notes.md
-          fi
+          node scripts/release-notes.ts --version "$version" --out notes.md \
+            --url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${TAG}/CHANGELOG.md"
+          { echo "# Pool Plant ${TAG}"; echo; cat notes.md; } >> "$GITHUB_STEP_SUMMARY"
           flags=()
           case "$version" in *-*) flags+=(--prerelease) ;; esac
           if gh release view "$TAG" > /dev/null 2>&1; then
