@@ -707,6 +707,8 @@ const ALARM_TEXT: Record<AlarmId, string> = {
   'balance-scaling': 'WATER SCALING',
   'sample-flow-low': 'SAMPLE FLOW LOW',
   'dosing-offline': 'DOSING OFFLINE',
+  // Raised by the watchdog, not the advisor (`aqualis-os.ts`).
+  'controller-fault': 'CONTROLLER FAULT',
 };
 
 /**

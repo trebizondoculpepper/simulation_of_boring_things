@@ -44,6 +44,7 @@ import {
   DEVICE_MODES,
   SPEED_LEGEND,
   TRIO_BOOT_DRAW,
+  WATCHDOG_LEGEND,
   createAqualisRoomHost,
 } from './aqualis-room';
 import { createBootDisplay } from '../../components/core/views/boot-screens';
@@ -65,6 +66,8 @@ const LINE_Y = 0.35;
 const LINE_Z = -ROOM.d / 2 + 0.25;
 /** The injection point, on the return line. */
 const INJECT_X = -1.2;
+/** Each dosing unit's output bargraph. */
+const BAR_SEGMENTS = 10;
 
 /**
  * Dev58, the Aqualis controller (mission 114, `doc/plans/114/`): the
@@ -79,7 +82,12 @@ const INJECT_X = -1.2;
  * starts it running, `&boot=20` 20 s into its boot), when its supply (the switch beside the time-speed
  * knob) comes back, and at Restart on its Settings › Pool dynamics tab; a
  * board on the right wall shows the game's other boot families, each with
- * its own Restart.
+ * its own Restart. The crash board, left of the scenario board, crashes the
+ * computer (BLUE SCREEN, GLITCH; `&crash=stop|glitch` crashes it two
+ * seconds after it starts running), its watchdog as its WORKS · FAILS
+ * switch is set (`&watchdog=works|fails`), with a CRASHED lamp and a
+ * CONTROLLER FAULT window; `?view=crash` frames it. Each dosing unit's
+ * bargraph shows what it delivers, so a held or lurching output shows.
  */
 export function startAqualisControllerRoom(canvas: HTMLCanvasElement) {
   const m = METRE;
@@ -105,6 +113,11 @@ export function startAqualisControllerRoom(canvas: HTMLCanvasElement) {
     {
       boot: params.get('boot') !== 'skip',
       bootAt: Number(params.get('boot')) || 0,
+      crash:
+        params.get('crash') === 'stop' || params.get('crash') === 'glitch'
+          ? (params.get('crash') as 'stop' | 'glitch')
+          : undefined,
+      watchdog: params.get('watchdog') !== 'fails',
     },
   );
   const parts = createPartSet();
@@ -405,6 +418,18 @@ export function startAqualisControllerRoom(canvas: HTMLCanvasElement) {
     const fault = t.led(unit, '#ff3b2f', 0.012, 0.22, 1.42, 0.03);
     t.label(unit, 'RUN', 0.12, 1.39, 0.025, 0.018, '#30383e');
     t.label(unit, 'FAULT', 0.22, 1.39, 0.025, 0.018, '#30383e');
+    // Its output: a ten-segment bargraph, 10 % a segment, of its most.
+    const bar = Array.from({ length: BAR_SEGMENTS }, (_, i) =>
+      t.led(
+        unit,
+        i >= BAR_SEGMENTS - 2 ? '#ffb000' : '#3ddc5a',
+        0.011,
+        -0.2 + i * 0.045,
+        1.23,
+        0.03,
+      ),
+    );
+    t.label(unit, 'OUTPUT  0 — 100 %', 0, 1.19, 0.025, 0.016, '#30383e');
     t.label(
       unit,
       `PORT: AQUALIS ${id === 'co2' ? 'CO₂' : id === 'acid' ? 'HCl' : 'NaOCl'}`,
@@ -465,7 +490,7 @@ export function startAqualisControllerRoom(canvas: HTMLCanvasElement) {
     pipe(x, 1.7, lineZ, x, lineY, lineZ, 0.008, tube);
     pipe(x, lineY, lineZ, INJECT_X, lineY, lineZ, 0.008, tube);
     pipe(INJECT_X, lineY, lineZ, INJECT_X, LINE_Y + 0.14, lineZ, 0.008, tube);
-    return { id, pump, valve, run, fault };
+    return { id, pump, valve, run, fault, bar };
   });
   // The control cables: a tray from the cabinet's glands across to the units.
   t.box(
@@ -602,6 +627,101 @@ export function startAqualisControllerRoom(canvas: HTMLCanvasElement) {
   t.label(wallBoard, 'CABINET SUPPLY', -0.4, 1.06, 0.032, 0.026, '#ffffff');
   t.label(wallBoard, 'OFF    ON', -0.4, 0.8, 0.032, 0.026, '#ffffff');
 
+  // ---- The crash board: force the computer to crash, its watchdog as switched ------
+  const crashBoard = new Group();
+  crashBoard.position.set(w / 2, 0, -2.05);
+  crashBoard.rotation.y = -Math.PI / 2;
+  room.add(crashBoard);
+  t.box(crashBoard, t.paint('#3a2f30', 0.5), 0.78, 0.72, 0.03, 0, 1.4, 0.015);
+  t.label(crashBoard, 'CRASH BOARD', 0, 1.7, 0.032, 0.036, '#ffffff');
+  t.label(
+    crashBoard,
+    'FORCES THE TRIO’S COMPUTER TO CRASH',
+    0,
+    1.65,
+    0.032,
+    0.018,
+    '#d8c9c9',
+  );
+  const crashButton = (kind: 'stop' | 'glitch', x: number) => {
+    const b = parts.add(
+      pushButton(kit, {
+        colour: kind === 'stop' ? 'blue' : 'yellow',
+        name: kind === 'stop' ? 'Crash: blue screen' : 'Crash: glitch',
+        action: () => host.crash(kind),
+      }),
+    );
+    b.object.scale.setScalar(0.8);
+    b.object.position.set(x, 1.5, 0.03);
+    crashBoard.add(b.object);
+    t.label(
+      crashBoard,
+      kind === 'stop' ? 'BLUE SCREEN' : 'GLITCH',
+      x,
+      1.42,
+      0.032,
+      0.022,
+      '#ffffff',
+    );
+  };
+  crashButton('stop', -0.25);
+  crashButton('glitch', -0.03);
+  const watchdogSwitch = parts.add(
+    selector(kit, {
+      positions: 2,
+      initial: host.watchdog() ? 0 : 1,
+      bound: {
+        get value() {
+          return host.watchdog() ? 0 : 1;
+        },
+        set: (k: number) => host.setWatchdog(k === 0),
+      },
+      legend: WATCHDOG_LEGEND,
+      name: `Watchdog ${WATCHDOG_LEGEND} switch`,
+    }),
+  );
+  watchdogSwitch.object.position.set(0.22, 1.5, 0.03);
+  crashBoard.add(watchdogSwitch.object);
+  t.label(crashBoard, 'WATCHDOG', 0.22, 1.59, 0.032, 0.022, '#ffffff');
+  t.label(crashBoard, 'WORKS  FAILS', 0.22, 1.42, 0.032, 0.02, '#ffffff');
+  const crashedLamp = t.led(crashBoard, '#ff3b2f', 0.018, -0.25, 1.24, 0.03);
+  t.label(crashBoard, 'CRASHED', -0.25, 1.19, 0.032, 0.022, '#ffffff');
+  // CONTROLLER FAULT: a small window standing in for an annunciator's.
+  const faultWindow = t.printed(0.3, 0.1, () => {}, 256, true);
+  faultWindow.mesh.position.set(0.12, 1.22, 0.032);
+  crashBoard.add(faultWindow.mesh);
+  let faultShown: boolean | null = null;
+  const drawFaultWindow = () => {
+    const lit = host.controllerFault();
+    if (lit === faultShown) return;
+    faultShown = lit;
+    const c = faultWindow.context;
+    const cw = c.canvas.width;
+    const ch = c.canvas.height;
+    c.fillStyle = lit ? '#ffb000' : '#3b3326';
+    c.fillRect(0, 0, cw, ch);
+    c.strokeStyle = '#111111';
+    c.lineWidth = 6;
+    c.strokeRect(3, 3, cw - 6, ch - 6);
+    c.fillStyle = lit ? '#1b1200' : '#6d604a';
+    c.font = `bold ${Math.round(ch * 0.3)}px ${SANS}`;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText('CONTROLLER', cw / 2, ch * 0.33);
+    c.fillText('FAULT', cw / 2, ch * 0.7);
+    faultWindow.texture.needsUpdate = true;
+  };
+  drawFaultWindow();
+  t.label(
+    crashBoard,
+    'RECOVER: CABINET SUPPLY OFF, THEN ON',
+    0,
+    1.09,
+    0.032,
+    0.018,
+    '#d8c9c9',
+  );
+
   // ---- The other boot families, on a board of their own ---------------------------
   const bootBoard = new Group();
   bootBoard.position.set(w / 2, 0, 1.4);
@@ -726,6 +846,7 @@ export function startAqualisControllerRoom(canvas: HTMLCanvasElement) {
     units: { x: 2.1 * m, z: -1.5 * m, yaw: 0, pitch: -0.2 },
     board: { x: 3.0 * m, z: -0.6 * m, yaw: Math.PI / 2, pitch: -0.15 },
     boots: { x: 2.7 * m, z: 1.4 * m, yaw: Math.PI / 2, pitch: -0.15 },
+    crash: { x: 3.2 * m, z: -2.05 * m, yaw: Math.PI / 2, pitch: -0.3 },
   };
   const half = (s: number) => (s / 2) * m;
   const walk = createFirstPerson({
@@ -803,10 +924,14 @@ export function startAqualisControllerRoom(canvas: HTMLCanvasElement) {
       const fb = host.feedback(u.id);
       u.run.set(Boolean(fb?.running));
       u.fault.set(Boolean(fb?.fault));
+      const level = fb && fb.most > 0 ? fb.delivering / fb.most : 0;
+      u.bar.forEach((seg, i) => seg.set(level > (i + 0.5) / BAR_SEGMENTS));
       u.pump?.update(delta, Boolean(fb?.running));
       u.valve?.setOpen(Boolean(fb?.running));
     }
     pumpLamp.set(host.pumpRunning());
+    crashedLamp.set(host.crashed());
+    drawFaultWindow();
     drawPlate();
     parts.update(delta);
     walk.update(delta);

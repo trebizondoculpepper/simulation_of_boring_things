@@ -282,7 +282,9 @@ export type AlarmId =
   | 'balance-aggressive'
   | 'balance-scaling'
   | 'sample-flow-low'
-  | 'dosing-offline';
+  | 'dosing-offline'
+  /** The watchdog's: the computer stopped answering (`aqualis-os.ts`). */
+  | 'controller-fault';
 
 export interface Alarm {
   id: AlarmId;
