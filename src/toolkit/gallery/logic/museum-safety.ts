@@ -16,7 +16,12 @@ import {
   ringDistance,
   wallWindows,
 } from './museum-plan';
-import type { HallWall, MuseumArch, MuseumHallId } from './museum-plan';
+import type {
+  HallWall,
+  Heading,
+  MuseumArch,
+  MuseumHallId,
+} from './museum-plan';
 
 /**
  * The museum's safety and services layer (mission 107; the owner,
@@ -330,6 +335,16 @@ export const FIRE_POINT_HALLS: readonly MuseumHallId[] = [];
 /** A fire point's board, on its feet against the wall: its footprint out from the wall. */
 export const FIRE_POINT_BOARD = { w: 0.7, depth: 0.45 };
 
+/**
+ * Walls an exhibit runs the length of, so a socket there would be hidden
+ * behind it (and one above it would stand over Approved Document M's
+ * 1,000 mm): they get none. Hall 6's reservoir trough, 1.05 m tall,
+ * stands along its west wall; its east wall keeps its sockets.
+ */
+export const WALL_RUNS: Partial<Record<MuseumHallId, readonly Heading[]>> = {
+  museum6: ['west'],
+};
+
 /** Everything in a room's safety and services layer. */
 /** An exit box's middle over its archway's crown, m. */
 export const EXIT_OVER_ARCH = 0.3;
@@ -470,6 +485,7 @@ export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
     for (const wall of walls) {
       const len = wall.to - wall.from;
       if (len < ax.length - 1) continue;
+      if (WALL_RUNS[id]?.includes(wall.side)) continue;
       for (let k = 1; k * 6 < len; k++) {
         const u = free(wall, wall.from + k * 6, 0.08, 0.35, 0.55);
         put('socket', wall, u, HEIGHTS.socket);

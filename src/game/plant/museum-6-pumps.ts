@@ -209,7 +209,7 @@ export const LINK_DN: Record<string, number> = Object.fromEntries([
   ...PUMPS.map((p) => [`suction${p.no}`, p.dn === 6 ? 6 : p.dn]),
   ...PUMPS.map((p) => [`delivery${p.no}`, p.dn]),
   ['fill', 150],
-  ['overflow', 150],
+  ['overflow', 50],
   ['drainLine', 150],
 ]);
 

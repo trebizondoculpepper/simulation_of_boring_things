@@ -213,22 +213,23 @@ export function createSplitCasePump(
   t.cyl(group, t.paint('#25292b', 0.6), 0.3, 0.3, 0, axis, 2.75, 'z');
   t.box(group, livery.paint.main, 0.3, 0.2, 0.3, 0.33, axis + 0.2, 1.7);
   t.box(group, shade, 0.7, axis - 0.55, 1.2, 0, 0.27 + (axis - 0.55) / 2, 1.95);
-  // Its plate and badge.
+  // Its badge and rating plate on the motor's foot, the visitors' (−x)
+  // side under the motor: the holder turns their faces to −x, so its
+  // local x runs along the pump's +z (toward the motor).
+  const foot = { face: -0.356, mid: 0.27 + (axis - 0.55) / 2 };
   const badge = createBrandBadge(kit, 'grundflow', { height: 0.1 });
-  badge.position.set(0, axis + 0.15, 1.95);
-  badge.rotation.y = 0;
   const badgeHolder = new Group();
-  badgeHolder.position.set(-0.35, 0, 0);
+  badgeHolder.position.set(foot.face, 0, 0);
   badgeHolder.rotation.y = -Math.PI / 2;
   group.add(badgeHolder);
-  badge.position.set(-1.95, axis + 0.12, 0.0);
+  badge.position.set(1.95, foot.mid + 0.07, 0);
   badgeHolder.add(badge);
   const plateText = createMicroLabel(kit, `${label}  625 m3/h  20 m  45 kW`, {
     height: 0.03,
     ink: '#16191b',
     plate: '#e8e4d6',
   });
-  plateText.position.set(-1.95, axis - 0.08, 0.0);
+  plateText.position.set(1.95, foot.mid - 0.06, 0);
   badgeHolder.add(plateText);
   // Suction and discharge gauges on the casing.
   const gauge = (x: number, legend: string) => {
@@ -282,8 +283,11 @@ export function createMagDrivePump(kit: PanelKit) {
     'x',
   ) as Mesh;
   fan.userData.live = true;
+  // Its badge on the motor foot's −x end, under the fan cowl: its suction
+  // faces the trough, so its fan end is its front, toward the visitors.
   const badge = createBrandBadge(kit, 'grundflow', { height: 0.03 });
-  badge.position.set(-0.08, 0.25, 0.112);
+  badge.position.set(-0.205, 0.08, 0);
+  badge.rotation.y = -Math.PI / 2;
   group.add(badge);
   return {
     group,

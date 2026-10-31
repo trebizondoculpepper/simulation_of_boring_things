@@ -106,21 +106,25 @@ import type { HallExhibit } from './exhibits';
 
 /**
  * Hall 6, "Grundflow's Amazing World of Pumps" (107j): two pumps
- * found nowhere else in the game, the small mag-drive pump to the north and
- * the split-case showpiece to the south, in a
- * row along the street (east) wall in front of the ideal reservoir's
+ * found nowhere else in the game, the small mag-drive pump to the south
+ * and the split-case showpiece to the north by the way in, in a row
+ * along the courtyard (west) wall in front of the ideal reservoir's
  * trough, each filling the 1,000-litre test tank in the hall's middle
  * through the overhead inlet header; each with its RUN stand, plaque and
- * flow readout. The mimic, the clock, the entrance panel, RESET and the
- * two-families panel on the courtyard (west) wall. The model, layout,
- * mimic and words are pure (`museum-6-pumps.ts`, `museum-6-*.ts`); this
- * draws them and keeps the hall's session. Real time only. In the hall's
- * frame, metres.
+ * flow readout facing into the hall. The mimic, the clock, the entrance
+ * panel, RESET and the two-families panel on the street (east) wall,
+ * between the archways. Everything is laid out in the layout's frame
+ * (trough at +x, panels at −x) and the whole exhibit turned half round
+ * (`STANDS`, layout C). The model, layout, mimic and words are pure
+ * (`museum-6-pumps.ts`, `museum-6-*.ts`); this draws them and keeps the
+ * hall's session. Real time only. In the hall's frame, metres.
  */
 
 const WEST = INTERIOR.minX + 0.04;
 const FACE_EAST = Math.PI / 2;
 const FACE_WEST = -Math.PI / 2;
+/** The clock's middle: its 0.75 m face's top under 2.5 m, below the hall's title band (2.6 to 4.6 m). */
+const CLOCK = { y: 2.1 } as const;
 
 const turnTo = (o: Object3D, x: number, y: number, z: number, yaw: number) => {
   o.position.set(x, y, z);
@@ -636,7 +640,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     updates.push((delta) => meter.show(readings.flow[no], delta));
   }
 
-  // ---- The west wall: the entrance, the mimic, the clock, RESET, the two families ----
+  // ---- The panel wall (the street, east, wall once turned): the entrance, the mimic, the clock, RESET, the two families ----
   const entrance = createWallPanel(
     kit,
     'Entrance panel',
@@ -669,7 +673,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   take(board.parts);
 
   const clock = createPoolClock(kit, { dia: 0.75 });
-  turnTo(clock.group, WEST, 2.6, 0.6, FACE_EAST);
+  turnTo(clock.group, WEST, CLOCK.y, 0.6, FACE_EAST);
   object.add(
     markComponent(clock.group, {
       name: 'Grundflow wall clock, showing the visitor’s local time',
@@ -695,7 +699,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       c.fillText('GRUNDFLOW · REAL TIME', w * 0.05, h * 0.7, w * 0.9);
     },
   );
-  turnTo(clockBadge, WEST, 2.05, 0.6, FACE_EAST);
+  turnTo(clockBadge, WEST, CLOCK.y - 0.48, 0.6, FACE_EAST);
   object.add(still(clockBadge));
 
   const resetSign = createWallPanel(

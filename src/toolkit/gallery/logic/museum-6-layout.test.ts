@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
+  HEADER,
   INTERIOR,
   PLAQUE,
   READER,
@@ -82,5 +83,39 @@ describe('Hall 6’s plaques, seen from the visitors’ walkway', () => {
         }
     }
     expect(blocked).toEqual([]);
+  });
+
+  it('falls the overflow and the drain all the way to the tundish, never level or rising', () => {
+    for (const edge of ['overflow', 'drainLine']) {
+      const points = room.lines.find((l) => l.edge === edge)!.points;
+      for (let k = 1; k < points.length; k++)
+        expect(points[k][1], `${edge} length ${k}`).toBeLessThan(
+          points[k - 1][1],
+        );
+    }
+  });
+
+  it('runs no fill line above the header, so none traps air', () => {
+    for (const p of PUMPS) {
+      const points = room.lines.find(
+        (l) => l.edge === `delivery${p.no}`,
+      )!.points;
+      for (const q of points)
+        expect(q[1], `delivery${p.no}`).toBeLessThanOrEqual(HEADER.y + 1e-9);
+      for (let k = 1; k < points.length; k++)
+        expect(
+          points[k][1],
+          `delivery${p.no} length ${k}`,
+        ).toBeGreaterThanOrEqual(points[k - 1][1] - 1e-9);
+    }
+    const fill = room.lines.find((l) => l.edge === 'fill')!.points;
+    for (const q of fill) expect(q[1]).toBeLessThanOrEqual(HEADER.y + 1e-9);
+  });
+
+  it('sizes the overflow and drain for an IBC, not a main', () => {
+    for (const edge of ['overflow', 'drainLine'])
+      expect(room.lines.find((l) => l.edge === edge)!.dn).toBeLessThanOrEqual(
+        edge === 'overflow' ? 80 : 150,
+      );
   });
 });
