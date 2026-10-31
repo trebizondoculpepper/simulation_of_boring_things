@@ -6,6 +6,7 @@ import {
 } from '../../toolkit/components/plant/logic/metering-pump';
 import type {
   KeyedDiaphragmState,
+  MeteringInputs,
   MeteringKind,
   MeteringPump,
   PeristalticState,
@@ -100,7 +101,7 @@ export function pumpModel(id: PoolId, c: Chemical): MeteringPump<PumpState> {
 /** The most a pool's pump can give, l/h. */
 export const pumpMost = (id: PoolId, c: Chemical) => pumpModel(id, c).maxLh;
 
-const newPump = (id: PoolId, c: Chemical): DosingPump => ({
+export const newPump = (id: PoolId, c: Chemical): DosingPump => ({
   kind: POOL_PUMP_KINDS[id][c],
   state: pumpModel(id, c).initial(),
   running: false,
@@ -126,49 +127,69 @@ export interface PumpDemand {
   acid: number;
 }
 
+/** A pool's pump `dt` seconds on, given its inputs: the pump after, and what it delivered as l/h over the step. */
+export function stepPump(
+  pump: DosingPump,
+  model: MeteringPump<PumpState>,
+  inputs: MeteringInputs,
+  dt: number,
+): { pump: DosingPump; lh: number } {
+  const mean = dt > 0 ? 1 - Math.exp(-dt / MEAN_SECONDS) : 0;
+  const r = model.step(pump.state, inputs, dt);
+  const lh = dt > 0 ? (r.deliveredL / dt) * 3600 : 0;
+  return {
+    lh,
+    pump: {
+      kind: pump.kind,
+      state: r.state,
+      running: r.running,
+      setLh: r.setLh,
+      fault: r.fault,
+      meanLh: pump.meanLh + (lh - pump.meanLh) * mean,
+      deliveredL: pump.deliveredL + r.deliveredL,
+    },
+  };
+}
+
+/**
+ * What a pool's pumps are given instead, where its Dr Aqualis Trio drives
+ * them (mission 114, `aqualis-ports.ts`): each pump's inputs whole.
+ */
+export type PumpInputsByPool = Partial<
+  Record<PoolId, Record<Chemical, MeteringInputs>>
+>;
+
 /**
  * Every pool's pumps `dt` seconds on: each asked its controller's output
  * while its pool may be dosed with its chemical (`allowed`: `dosedByPool`'s
- * volume for it), what each delivered as l/h over the step (`rates`, the
- * day tanks' draw and the water's dose).
+ * volume for it), or given its inputs whole where a Trio drives it
+ * (`driven`); what each delivered as l/h over the step (`rates`, the day
+ * tanks' draw and the water's dose).
  */
 export function stepDosingPumps(
   pumps: DosingPumps,
   demand: Record<PoolId, PumpDemand>,
   allowed: Partial<Record<PoolId, Record<Chemical, number>>>,
   dt: number,
+  driven: PumpInputsByPool = {},
 ): { pumps: DosingPumps; rates: Record<PoolId, Record<Chemical, number>> } {
   const next = {} as DosingPumps;
   const rates = {} as Record<PoolId, Record<Chemical, number>>;
-  const mean = dt > 0 ? 1 - Math.exp(-dt / MEAN_SECONDS) : 0;
   for (const id of POOL_IDS) {
     next[id] = { ...pumps[id] };
     rates[id] = { hypochlorite: 0, acid: 0 };
     for (const c of ['hypochlorite', 'acid'] as const) {
       const pump = pumps[id]?.[c] ?? newPump(id, c);
-      const model = pumpModel(id, c);
-      const r = model.step(
-        pump.state,
-        {
-          powered: true,
-          release: (allowed[id]?.[c] ?? 0) > 0,
-          demand: Math.max(0, Math.min(1, demand[id]?.[c] ?? 0)),
-          level: 'ok',
-          dischargeBar: INJECTION_BAR,
-        },
-        dt,
-      );
-      const lh = dt > 0 ? (r.deliveredL / dt) * 3600 : 0;
-      rates[id][c] = lh;
-      next[id][c] = {
-        kind: pump.kind,
-        state: r.state,
-        running: r.running,
-        setLh: r.setLh,
-        fault: r.fault,
-        meanLh: pump.meanLh + (lh - pump.meanLh) * mean,
-        deliveredL: pump.deliveredL + r.deliveredL,
+      const inputs: MeteringInputs = driven[id]?.[c] ?? {
+        powered: true,
+        release: (allowed[id]?.[c] ?? 0) > 0,
+        demand: Math.max(0, Math.min(1, demand[id]?.[c] ?? 0)),
+        level: 'ok',
+        dischargeBar: INJECTION_BAR,
       };
+      const r = stepPump(pump, pumpModel(id, c), inputs, dt);
+      rates[id][c] = r.lh;
+      next[id][c] = r.pump;
     }
   }
   return { pumps: next, rates };
