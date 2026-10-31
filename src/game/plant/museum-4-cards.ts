@@ -244,4 +244,43 @@ export const CHALLENGES: readonly ChallengeCard[] = [
       'The ideal answer was Huge sodium bicarbonate, Large calcium chloride and Huge fresh water. The calcium chloride raises the hardness, the bicarbonate rebuilds the alkalinity, and together they bring the balance index into range; the fresh water evens out the pH and the rest.',
     relaxed: null,
   },
+  {
+    id: 'formed-stool',
+    title: 'Faecal incident: The Floater',
+    swimmers: 0,
+    problem:
+      'A formed stool in the shallow end. The pool is cleared and the stool netted out, but the chlorine is low and the pH high.',
+    goal: 'Bring free chlorine to 1.0 to 2.0 mg/l and the pH to 7.2 to 7.6.',
+    water: () =>
+      waterFrom({
+        ...RESET_WATER,
+        ph: 7.8,
+        alkalinity: 70,
+        freeChlorine: 0.5,
+        temperature: TEMPERATURE,
+      }),
+    targets: ['fc', 'ph'],
+    pars: { journeyman: 3, pro: 4 },
+    solutions: {
+      journeyman: [
+        { tank: 'hypo', size: 2 },
+        { tank: 'hcl', size: 2 },
+      ],
+      pro: [
+        { tank: 'hypo', size: 2 },
+        { tank: 'co2', size: 2 },
+        { tank: 'bicarbonate', size: 3 },
+      ],
+    },
+    briefing: {
+      journeyman:
+        'A floater in the shallow end. The pool has been cleared and the offending article netted out by a lifeguard who did not sign up for this. A formed stool needs no superchlorination, but the free chlorine is only 0.5 mg/l and the pH 7.8, so what chlorine there is works poorly. As a Journeyman, fix the fault: bring the free chlorine up to 1.0 to 2.0 mg/l and the pH to 7.2 to 7.6, and let it circulate before the pool reopens.',
+      pro: 'A floater in the shallow end. The pool has been cleared and the offending article netted out by a lifeguard who did not sign up for this. A formed stool needs no superchlorination, but the free chlorine is only 0.5 mg/l and the pH 7.8, so what chlorine there is works poorly. As a Pool Pro, bring the free chlorine up to 1.0 to 2.0 mg/l and the pH to 7.2 to 7.6, and restore every other reading too: the alkalinity is a little low.',
+    },
+    clue: 'Chlorine kills as hypochlorous acid, and the higher the pH, the less of it there is. More chlorine alone is not enough: bring the pH down too. But most acids eat the buffer, and the buffer here is already thin.',
+    concept: 'hypochlorous acid',
+    explanation:
+      'The ideal answer was Medium sodium hypochlorite, Medium carbon dioxide and Large sodium bicarbonate. The hypochlorite lifts the free chlorine towards the top of its range, as the guidance asks after a formed stool; the carbon dioxide brings the pH down, so more of that chlorine is the strong hypochlorous acid, without eating the alkalinity; the bicarbonate rebuilds the buffer. No superchlorination: that is for the runny kind.',
+    relaxed: null,
+  },
 ];

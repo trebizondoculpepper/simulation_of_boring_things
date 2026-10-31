@@ -9,9 +9,9 @@ import { fuzzCases } from './museum-4-solver';
 const LEVELS: readonly Level[] = ['journeyman', 'pro'];
 
 describe("Hall 4's first set of challenge cards", () => {
-  it('are seven, each id its own, ordered by their pars', () => {
-    expect(CHALLENGES).toHaveLength(7);
-    expect(new Set(CHALLENGES.map((c) => c.id)).size).toBe(7);
+  it('are eight, each id its own, ordered by their pars', () => {
+    expect(CHALLENGES).toHaveLength(8);
+    expect(new Set(CHALLENGES.map((c) => c.id)).size).toBe(8);
     const key = CHALLENGES.map((c) => c.pars.pro * 10 + c.pars.journeyman);
     expect(key).toEqual([...key].sort((a, b) => a - b));
   });

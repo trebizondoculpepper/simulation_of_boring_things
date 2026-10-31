@@ -53,7 +53,7 @@ const CAPTION_SECONDS = 20;
  * Dev57, the dosing console (mission 113; the owner, 2026-10-31): Hall 4's
  * new console alone in a plain room, its three Aero touch screens on their
  * stand (DOSE a glossy button on the dose screen), driven by the real challenge engine (free play and the
- * first seven cards, the lab at 1,000×). `?console=free|challenge|holding|won|out`
+ * first eight cards, the lab at 1,000×). `?console=free|challenge|holding|won|out`
  * shows the scenario screen in that state instead, `?console=celebrate|commiserate`
  * plays the won or lost celebration over all three screens every few seconds, `?console=cycle` cycles
  * them every four seconds; `?view=screens|scenario|chemical|dose` frames it.

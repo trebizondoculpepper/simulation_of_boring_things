@@ -90,6 +90,13 @@ HALL 4: THE CHALLENGE CARDS
 
 7h4. Eating the grout, explanation: The ideal answer was Huge sodium bicarbonate, Large calcium chloride and Huge fresh water. The calcium chloride raises the hardness, the bicarbonate rebuilds the alkalinity, and together they bring the balance index into range; the fresh water evens out the pH and the rest.
 
+7i1. Faecal incident: The Floater, briefing (Journeyman): A floater in the shallow end. The pool has been cleared and the offending article netted out by a lifeguard who did not sign up for this. A formed stool needs no superchlorination, but the free chlorine is only 0.5 mg/l and the pH 7.8, so what chlorine there is works poorly. As a Journeyman, fix the fault: bring the free chlorine up to 1.0 to 2.0 mg/l and the pH to 7.2 to 7.6, and let it circulate before the pool reopens.
+
+7i2. Faecal incident: The Floater, briefing (Pool Pro): A floater in the shallow end. The pool has been cleared and the offending article netted out by a lifeguard who did not sign up for this. A formed stool needs no superchlorination, but the free chlorine is only 0.5 mg/l and the pH 7.8, so what chlorine there is works poorly. As a Pool Pro, bring the free chlorine up to 1.0 to 2.0 mg/l and the pH to 7.2 to 7.6, and restore every other reading too: the alkalinity is a little low.
+
+7i3. Faecal incident: The Floater, clue: Chlorine kills as hypochlorous acid, and the higher the pH, the less of it there is. More chlorine alone is not enough: bring the pH down too. But most acids eat the buffer, and the buffer here is already thin.
+
+7i4. Faecal incident: The Floater, explanation: The ideal answer was Medium sodium hypochlorite, Medium carbon dioxide and Large sodium bicarbonate. The hypochlorite lifts the free chlorine towards the top of its range, as the guidance asks after a formed stool; the carbon dioxide brings the pH down, so more of that chlorine is the strong hypochlorous acid, without eating the alkalinity; the bicarbonate rebuilds the buffer. No superchlorination: that is for the runny kind.
 
 HALL 5: A DAY IN THE LIFE
 
