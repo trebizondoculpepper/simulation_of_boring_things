@@ -2,7 +2,7 @@
 title: 'A bridge, a museum, and chemistry you can play'
 date: '2026-10-31'
 update_number: 3
-status: draft
+status: published
 previous_post: '2026_10_26_002_filters_fault_lights_and_a_plant_you_can_read.md'
 coverage_start: '2026-10-26'
 coverage_end: '2026-10-31'
@@ -11,8 +11,8 @@ to_commit_inclusive: 'b883df97'
 build_version: '0.8.0'
 deployment_verified: true
 deployment_note: 'Release v0.8.0 (tag v0.8.0, commit b883df97) published on GitHub Releases on 2026-10-31 at 17:00 UTC. The Release workflow (run 41222182601) checked the tag, published the GitHub release and pushed the web build to itch.io (salimfadhley/the-pool, channel html5, userversion 0.8.0); the itch.io page shows an update at 31 October 2026 17:00 UTC. Both desktop build jobs (ubuntu-latest and macos-latest) failed at "Package the desktop app", so the GitHub release has no installers attached. Releases v0.2.0 to v0.7.0 were cut in this period too; this post covers them all.'
-published_at: null
-itch_url: null
+published_at: '2026-10-31'
+itch_url: 'https://salimfadhley.itch.io/the-pool/devlog/1742801/a-bridge-a-museum-and-chemistry-you-can-play'
 ---
 
 # A bridge, a museum, and chemistry you can play

@@ -43,8 +43,12 @@ Itch.io does support devlog posts on project pages, including build and image at
 
 | 002 | 2026-10-26 | Filters, fault lights, and a plant you can read | [Local record](2026_10_26_002_filters_fault_lights_and_a_plant_you_can_read.md) | [Published post](https://salimfadhley.itch.io/the-pool/devlog/1730093/filters-fault-lights-and-a-plant-you-can-read) |
 
+| 003 | 2026-10-31 | A bridge, a museum, and chemistry you can play | [Local record](2026_10_31_003_a_bridge_a_museum_and_chemistry_you_can_play.md) | [Published post](https://salimfadhley.itch.io/the-pool/devlog/1742801/a-bridge-a-museum-and-chemistry-you-can-play) |
+
 Update 001 is published within the project, which remains in Draft access mode as of publication. The post is verified while signed in; anonymous requests return HTTP 404.
 
 Update 002 is published and verified with attached build 0.1.356. The project still has Draft access as of 2026-10-26; anonymous requests to the post return HTTP 404.
 
 Update 002 is published and verified with attached build 0.1.356. The project still has Draft access as of 2026-10-26; anonymous requests to the post return HTTP 404.
+
+Update 003 is published and verified (2026-10-31) as a General Update with the v0.8.0 HTML5 build and six screenshots attached; it covers 26–31 October, through release v0.8.0.
