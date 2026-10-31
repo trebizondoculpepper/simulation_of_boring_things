@@ -201,9 +201,9 @@ import {
 import { loungeFlowsOf } from '../../../game/plant/lounge-valves';
 import {
   createAcidBoard,
-  createControllerPanel,
   createHypochloriteBoard,
 } from '../../components/plant/views/dosing-equipment';
+import { createRoomTrio } from './aqualis-room-cabinet';
 import type {
   DosingBoard,
   DosingPumpState,
@@ -241,7 +241,6 @@ export const MODELS: Record<string, PlantExhibit> = {
   'jacuzzi-pack': JACUZZI_PACK_IN_SERVICE,
   'spa-pack': SPA_PACK_IN_SERVICE,
   'ozone-generator': byTitle(OZONE, 'Ozone generator'),
-  'dosing-controller': byTitle(DOSING, 'Controller and sample cells'),
   'hypo-pumps': byTitle(DOSING, 'Hypochlorite dosing pumps'),
   'acid-pump': byTitle(DOSING, 'Acid dosing pump'),
   'level-instruments': byTitle(BALANCE, 'Level instruments'),
@@ -376,8 +375,24 @@ function modelFor(
       const lh = doseRates(world(), pool)[chemical] * 3600;
       return { running: lh > 1e-6, rate: lh };
     };
-    if (kind === 'dosing-controller')
-      return live(createControllerPanel(kit), () => world().pools[pool]);
+    // Its dosing controller, a Dr Aqualis Trio (mission 114), bound to its
+    // Trio in the world.
+    if (
+      kind === 'dosing-controller' &&
+      (pool === 'pool_01' || pool === 'pool_02')
+    ) {
+      const store = typeof window === 'undefined' ? null : roomWorld();
+      return createRoomTrio(
+        kit,
+        pool,
+        store
+          ? {
+              world: () => store.world.value,
+              dispatch: (a) => store.dispatch(a),
+            }
+          : null,
+      );
+    }
     // Its dosing pumps (prompt 089, item 2): asked to dose as its pool is
     // dosed, on its room's power; their keys work.
     const board = (b: DosingBoard, read: () => DosingPumpState): LiveExhibit =>

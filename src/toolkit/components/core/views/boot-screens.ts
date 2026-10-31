@@ -671,7 +671,9 @@ export function createBootInset(o: {
     toneMapped: false,
     color: o.level ?? 0xffffff,
   });
-  const mesh = new Mesh(new PlaneGeometry(1, 1), material);
+  // Hidden until a live element shows: the screen's own size till then, so
+  // it never stands out of its screen's bounds.
+  const mesh = new Mesh(new PlaneGeometry(o.size.w, o.size.h), material);
   mesh.position.z = 0.0004;
   mesh.renderOrder = 3;
   mesh.visible = false;

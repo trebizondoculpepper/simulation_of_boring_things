@@ -16,12 +16,7 @@ import type {
   Rig,
   RigScenarioId,
 } from '../../../game/plant/aqualis-rig';
-import { DEFAULT_TARGETS, SCREEN } from '../../../game/plant/aqualis-types';
-import {
-  defectsAt,
-  defectsKey,
-} from '../../components/plant/logic/lcd-defects';
-import { drawDefects } from '../../components/plant/views/lcd-defects';
+import { DEFAULT_TARGETS } from '../../../game/plant/aqualis-types';
 import type {
   Advice,
   Alarm,
@@ -60,7 +55,6 @@ import type {
 } from '../../../game/plant/aqualis-first-aid';
 import type { LedState } from '../../components/plant/logic/aqualis-cabinet';
 import {
-  DOCTOR,
   TRIO_BOOT_APP,
   displayModel,
   hitDisplay,
@@ -72,12 +66,6 @@ import type {
   DisplayInputs,
   DisplayState,
 } from '../../components/plant/logic/aqualis-display';
-import { drAqualisPose } from '../../components/plant/logic/dr-aqualis';
-import type { DrAqualisFrame } from '../../components/plant/logic/dr-aqualis';
-import {
-  drawAqualisScreen,
-  drawTrioMark,
-} from '../../components/plant/views/aqualis-screens';
 import {
   bootFrame,
   bootScript,
@@ -87,13 +75,7 @@ import type {
   BootFrame,
   BootScript,
 } from '../../components/core/logic/boot-sequence';
-import { drawBootPicture } from '../../components/core/views/boot-screens';
 import type { PiezoOneShot } from '../../components/sound/logic/piezo-beeps';
-import type { BootDrawOptions } from '../../components/core/views/boot-screens';
-import {
-  drawDrAqualis,
-  drawSpeechBubble,
-} from '../../components/plant/views/dr-aqualis';
 import {
   crashOs,
   newOs,
@@ -112,22 +94,11 @@ import type {
   OsState,
   Outputs,
 } from '../../../game/plant/aqualis-os';
+import type { StopOutcome } from '../../components/core/logic/stop-screen';
 import {
-  stopKey,
-  stopMoment,
-  stopScreen,
-} from '../../components/core/logic/stop-screen';
-import type {
-  StopOutcome,
-  StopScreen,
-} from '../../components/core/logic/stop-screen';
-import { drawStopScreen } from '../../components/core/views/stop-screen';
-import {
-  glitchMoment,
-  glitchPlan,
-} from '../../components/core/logic/lcd-glitch';
-import { drawLcdGlitch } from '../../components/core/views/lcd-glitch';
-import { OVERLAY } from '../../components/plant/logic/aqualis-cabinet';
+  TRIO_BOOT_DRAW,
+  createTrioPainter,
+} from '../../components/plant/views/aqualis-painter';
 
 /**
  * Dev58's host (mission 114): everything the room shows and works, behind
@@ -178,8 +149,8 @@ const TICK = 10;
 /** The most ticks a frame may take (1000× at a slow frame). */
 const MOST_TICKS = 400;
 
-/** How the Trio's boot screens draw its mark. */
-export const TRIO_BOOT_DRAW: BootDrawOptions = { appMark: drawTrioMark };
+/** How the Trio's boot screens draw its mark (`aqualis-painter.ts`). */
+export { TRIO_BOOT_DRAW };
 
 /** The time-speed knob's settings: world seconds per real second. */
 export const SPEEDS = [1, 10, 100, 1000] as const;
@@ -295,23 +266,6 @@ export interface AqualisHostOptions {
   consent?: boolean;
 }
 
-/** A canvas to keep the last good frame in, where there is a DOM. */
-function frameCopy(w: number, h: number) {
-  if (typeof OffscreenCanvas !== 'undefined') {
-    const canvas = new OffscreenCanvas(w, h);
-    const ctx = canvas.getContext('2d');
-    return ctx
-      ? { canvas, ctx: ctx as unknown as CanvasRenderingContext2D }
-      : null;
-  }
-  if (typeof document === 'undefined') return null;
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext('2d');
-  return ctx ? { canvas, ctx } : null;
-}
-
 export function createAqualisRoomHost(
   scenario: RigScenarioId = 'good',
   options: AqualisHostOptions = {},
@@ -320,7 +274,6 @@ export function createAqualisRoomHost(
   let speed = 1;
   let sel: Selector = 'auto';
   let valveOpen = true;
-  let drawn = '';
   let settings: AqualisSettings = {
     dynamics: { volumeM3: RIG_POOL.volumeM3, flowM3h: RIG_POOL.flowM3h },
     targets: DEFAULT_TARGETS,
@@ -337,8 +290,6 @@ export function createAqualisRoomHost(
   let ended: { e: FirstAidEnded; at: number } | null = null;
   let incident: Incident | null = RIG_SCENARIOS[scenario].incident ?? null;
   let display: DisplayState = newDisplay();
-  let doctor: DrAqualisFrame | null = null;
-  let doctorDrawn = '';
   let owed = 0;
   let clock = 0;
   /** The cabinet's computer: its supply, its boot, its crashes. Running for its first view of the plant. */
@@ -376,12 +327,8 @@ export function createAqualisRoomHost(
   let pendingCrash: { kind: CrashKind; after: number } | null = options.crash
     ? { kind: options.crash, after: Math.max(0, options.crashAfter ?? 2) }
     : null;
-  let stopShown: StopScreen | null = null;
-  let wreck: ReturnType<typeof frameCopy> = null;
-  /** Whether the screen's canvas holds a good frame of its software's. */
-  let goodOnScreen = false;
-  let doctorAtCrash = false;
-  let doctorCanvas: CanvasImageSource | null = null;
+  /** Its screen, painted from its computer and its software's page. */
+  const painter = createTrioPainter();
 
   /** The settings worked to: First Aid's while a programme runs. */
   const working = () => firstAidSettings(firstAid, settings);
@@ -457,11 +404,7 @@ export function createAqualisRoomHost(
 
   /** Its software starts afresh on each boot: a new controller and display, nothing yet to say. */
   const freshSoftware = () => {
-    drawn = '';
-    doctorDrawn = '';
-    goodOnScreen = false;
-    stopShown = null;
-    wreck = null;
+    painter.reset();
     alarmsOn = [];
     advice = [];
     firstAid = null;
@@ -471,7 +414,7 @@ export function createAqualisRoomHost(
   };
   /** Its software running: its first view of the plant, then its first page. */
   const booted = () => {
-    drawn = '';
+    painter.reset();
     lookNow();
     display = newDisplay();
   };
@@ -505,31 +448,8 @@ export function createAqualisRoomHost(
     hand,
     firstAid,
   });
-  /** What its software would draw (as it crashed, for a glitch's wreckage). */
-  const drawGood = (
-    c: CanvasRenderingContext2D,
-    m = displayModel(display, inputs()),
-  ) => {
-    // Dr Aqualis himself is on his overlay (`drawDoctor`), so his frames
-    // upload a small canvas, not the whole screen.
-    drawAqualisScreen(c, m, {
-      bubble: (ctx, text, box, tail) =>
-        drawSpeechBubble(ctx, text.split('\n'), box, tail, {
-          title: 'Dr Aqualis says',
-          fontPx: 19,
-        }),
-    });
-  };
-
   const crashNow = (kind: CrashKind) => {
     if (os.phase !== 'running' && os.phase !== 'booting') return;
-    doctorAtCrash =
-      running() && displayModel(display, inputs()).page === 'doctor';
-    if (!goodOnScreen && running() && out) {
-      // Nothing good drawn yet: what it would have shown is the wreck's source.
-      wreck = frameCopy(SCREEN.w, SCREEN.h);
-      if (wreck) drawGood(wreck.ctx);
-    } else wreck = null;
     os = crashOs(os, {
       kind,
       seed: seed * 31 + ++crashes * 104729,
@@ -537,43 +457,7 @@ export function createAqualisRoomHost(
       demands: running() && out ? out.demands : NO_DEMAND,
       outcome: options.stopOutcome ?? 'hang',
     });
-    drawn = '';
-    stopShown = null;
     pendingCrash = null;
-  };
-
-  /** The glitch's wreckage over the last good frame, with Dr Aqualis in it. */
-  const drawGlitch = (
-    c: CanvasRenderingContext2D,
-    crashSeed: number,
-    t: number,
-  ) => {
-    const g = glitchMoment(crashSeed, t);
-    const key = `glitch:${crashSeed}:${g.key}`;
-    if (key === drawn) return false;
-    if (!drawn.startsWith('glitch:')) {
-      // The crash's first frame: keep the screen as it was, Dr Aqualis drawn in.
-      if (!wreck) {
-        wreck = frameCopy(SCREEN.w, SCREEN.h);
-        if (wreck) wreck.ctx.drawImage(c.canvas, 0, 0);
-      }
-      if (wreck && doctorAtCrash && doctorCanvas)
-        wreck.ctx.drawImage(
-          doctorCanvas,
-          OVERLAY.x,
-          OVERLAY.y,
-          OVERLAY.w,
-          OVERLAY.h,
-        );
-    }
-    drawn = key;
-    goodOnScreen = false;
-    drawLcdGlitch(
-      c,
-      wreck?.canvas ?? c.canvas,
-      glitchPlan(crashSeed, g.burst, g.frame, SCREEN),
-    );
-    return true;
   };
 
   return {
@@ -661,56 +545,18 @@ export function createAqualisRoomHost(
       }
     },
     drawScreen(c) {
-      // Off, its backlight is out (the cabinet's `setPower`): nothing to draw.
-      if (!os.powered) return false;
-      if (os.boot) {
-        const f = bootFrame(bootNow(), os.boot.t);
-        const key = `boot:${f.pictureKey}`;
-        if (key === drawn) return false;
-        drawn = key;
-        goodOnScreen = false;
-        drawBootPicture(c, f, SCREEN.w, SCREEN.h, TRIO_BOOT_DRAW);
-        return true;
-      }
-      const crash = os.crash;
-      if (crash?.kind === 'stop') {
-        stopShown ??= stopScreen(crash.seed, {
-          outcome: crash.outcome ?? 'hang',
-        });
-        const key = `stop:${stopKey(stopShown, crash.t)}`;
-        if (key === drawn) return false;
-        drawn = key;
-        goodOnScreen = false;
-        drawStopScreen(c, stopMoment(stopShown, crash.t));
-        return true;
-      }
-      if (crash?.kind === 'glitch') return drawGlitch(c, crash.seed, crash.t);
-      const m = displayModel(display, inputs());
-      const faults = defectsAt(clock, SCREEN.w, SCREEN.h);
-      const key = m.key + defectsKey(faults);
-      if (key === drawn) return false;
-      drawn = key;
-      drawGood(c, m);
-      drawDefects(c, faults);
-      goodOnScreen = true;
-      return true;
+      return painter.draw(c, {
+        os,
+        boot: os.boot ? bootNow() : null,
+        model: () => (out ? displayModel(display, inputs()) : null),
+        clock,
+        stopOutcome: options.stopOutcome,
+      });
     },
     doctorShown: () =>
       running() && displayModel(display, inputs()).page === 'doctor',
-    drawDoctor(c, w, h) {
-      doctorCanvas = c.canvas;
-      const a = displayModel(display, inputs()).doctor.advice;
-      const box = DOCTOR.him;
-      doctor = drAqualisPose(a?.mood ?? 'idle', clock, doctor, {
-        box,
-        target: { x: DOCTOR.bubble.x + 40, y: DOCTOR.bubble.y + 60 },
-      });
-      if (doctor.key === doctorDrawn) return false;
-      doctorDrawn = doctor.key;
-      c.clearRect(0, 0, w, h);
-      drawDrAqualis(c, doctor.pose, { x: 0, y: 0, w: box.w, h: box.h });
-      return true;
-    },
+    drawDoctor: (c, w, h) =>
+      painter.drawDoctor(c, w, h, displayModel(display, inputs()), clock),
     screenTouch(x, y) {
       // Off, booting or crashed, its software takes no touches.
       if (!running()) return;

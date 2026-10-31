@@ -47,6 +47,7 @@ import {
   powerOs,
   restartOs,
   stepOs,
+  touchOs,
   watchdogTripped,
 } from './aqualis-os';
 import type { CrashKind, OsState, Outputs } from './aqualis-os';
@@ -313,15 +314,19 @@ function tick(t: TrioState, plant: TrioPlant, dt: number): TrioState {
   return next;
 }
 
-/** The boot script's length for the boot under way (deterministic by its seed). */
-function bootLength(id: TrioPool, os: OsState): number {
-  if (!os.boot) return 0;
+/** The boot under way's script (deterministic by its seed): what its screen shows, and how long. */
+export function trioBootScript(id: TrioPool, os: OsState) {
+  if (!os.boot) return null;
   return bootScript('gui', {
     seed: SEED[id] + os.boot.n * 7919,
     app: TRIO_BOOT_APP,
     unclean: os.boot.unclean,
-  }).total;
+  });
 }
+
+/** The boot script's length for the boot under way. */
+const bootLength = (id: TrioPool, os: OsState): number =>
+  trioBootScript(id, os)?.total ?? 0;
 
 /**
  * A Trio `dt` seconds on: its supply switched through its isolator and its
@@ -365,6 +370,8 @@ export type TrioAction =
   | { act: 'settings'; settings: AqualisSettings }
   | { act: 'firstAid'; programme: FirstAidId | null }
   | { act: 'restart' }
+  /** Its touch screen touched: an apology on it has been read. */
+  | { act: 'touch' }
   | { act: 'watchdog'; works: boolean }
   | { act: 'crash'; kind: CrashKind; seed?: number };
 
@@ -394,6 +401,10 @@ export function actOnTrio(t: TrioState, a: TrioAction): TrioState {
     case 'restart': {
       const os = restartOs(t.os);
       return os === t.os ? t : freshSoftware({ ...t, os });
+    }
+    case 'touch': {
+      const os = touchOs(t.os);
+      return os === t.os ? t : { ...t, os };
     }
     case 'watchdog':
       return { ...t, watchdog: a.works };

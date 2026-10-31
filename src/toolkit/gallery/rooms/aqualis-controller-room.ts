@@ -33,6 +33,7 @@ import { createFirstPerson } from '../../controls/input/first-person';
 import { knobDirection } from '../../controls/input/knob-turning';
 import { createBrandBadge } from '../../components/core/views/brand-badge';
 import { createAqualisCabinet } from '../../components/plant/views/aqualis-cabinet';
+import { driveCabinet } from '../../components/plant/views/aqualis-painter';
 import { CABINET, PORTS } from '../../components/plant/logic/aqualis-cabinet';
 import { createPeristalticPump } from '../../components/plant/views/peristaltic-pump';
 import { createGasCylinder } from '../../components/plant/views/gas-cylinder';
@@ -43,7 +44,6 @@ import {
   DEVICE_LEGEND,
   DEVICE_MODES,
   SPEED_LEGEND,
-  TRIO_BOOT_DRAW,
   WATCHDOG_LEGEND,
   createAqualisRoomHost,
 } from './aqualis-room';
@@ -941,42 +941,9 @@ export function startAqualisControllerRoom(canvas: HTMLCanvasElement) {
     const delta = last ? Math.min(0.1, (time - last) / 1000) : 0;
     last = time;
     host.step(delta);
-    // Its boot's beeps: one as POST begins, its jingle as the application comes up.
-    for (const b of host.takeBeeps()) cabinet.beep(b);
-    cabinet.setSelector(host.selector());
-    cabinet.setLeds(host.leds());
-    // Its sample pump runs once its computer is up (the owner, 2026-10-31):
-    // not while it is off or booting.
-    cabinet.setSampleFlow(
-      host.powered() && !host.booting() ? host.sampleLh() : 0,
-    );
-    cabinet.setPower(host.powered());
-    // Its piezo (the owner, 2026-10-31): a blue screen gives one failure
-    // beep and falls silent; a glitch beeps like a PC/XT's keyboard buffer
-    // full, on and on, until its power goes.
-    const crash = host.crashed() ? host.os().crash : null;
-    if (crash !== beeperCrash) {
-      beeperCrash = crash;
-      if (crash?.kind === 'stop') cabinet.beep('deny');
-    }
-    cabinet.beepLoop(
-      crash?.kind === 'glitch' && host.powered() ? 'buffer-full' : null,
-    );
-    if (host.drawScreen(cabinet.context)) cabinet.screenChanged();
-    // Its boot's live element, on its own small canvas over the screen.
-    cabinet.showBoot(host.bootFrame(), TRIO_BOOT_DRAW);
+    // The cabinet, driven as a plant room's Trio is (`aqualis-painter.ts`).
+    beeperCrash = driveCabinet(cabinet, host, beeperCrash);
     for (const b of bootScreens) b.update(delta);
-    const shown = host.doctorShown();
-    cabinet.overlay.visible(shown);
-    if (
-      shown &&
-      host.drawDoctor(
-        cabinet.overlay.context,
-        cabinet.overlay.box.w,
-        cabinet.overlay.box.h,
-      )
-    )
-      cabinet.overlay.changed();
     for (const u of units) {
       const fb = host.feedback(u.id);
       u.run.set(Boolean(fb?.running));
