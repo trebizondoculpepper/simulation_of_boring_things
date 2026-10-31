@@ -6,31 +6,35 @@ import { PLACES, PLINTHS } from '../logic/museum-7-grout';
 describe('Hall 7 grout specimens', () => {
   const materials = {
     tile: new MeshBasicMaterial(),
-    grout: new MeshBasicMaterial(),
-    avocado: new MeshBasicMaterial(),
     stone: new MeshBasicMaterial(),
+    grout: {
+      grey: new MeshBasicMaterial(),
+      avocado: new MeshBasicMaterial(),
+      black: new MeshBasicMaterial(),
+    },
   };
   const built = createGroutSpecimens(
     PLINTHS.map((p) => ({
       matrix: new Matrix4().makeTranslation(PLACES[p.n].x, 1.15, PLACES[p.n].z),
-      coloured: p.grout === 'avocado',
+      grout: p.grout,
     })),
     materials,
   );
 
-  it('draws ten from one geometry: nine grey, one avocado', () => {
-    expect(built.grey.count).toBe(9);
-    expect(built.avocado.count).toBe(1);
-    expect(built.grey.geometry).toBe(built.avocado.geometry);
+  it('draws ten from one geometry: eight grey, one avocado, one black', () => {
+    expect(built.meshes.grey.count).toBe(8);
+    expect(built.meshes.avocado.count).toBe(1);
+    expect(built.meshes.black.count).toBe(1);
+    expect(built.meshes.grey.geometry).toBe(built.meshes.black.geometry);
   });
 
   it('differs only in the grout', () => {
-    const g = built.grey.material as unknown[];
-    const a = built.avocado.material as unknown[];
-    expect(g[0]).toBe(a[0]);
-    expect(g[2]).toBe(a[2]);
-    expect(g[1]).toBe(materials.grout);
-    expect(a[1]).toBe(materials.avocado);
+    const g = built.meshes.grey.material as unknown[];
+    const b = built.meshes.black.material as unknown[];
+    expect(g[0]).toBe(b[0]);
+    expect(g[2]).toBe(b[2]);
+    expect(g[1]).toBe(materials.grout.grey);
+    expect(b[1]).toBe(materials.grout.black);
   });
 
   it('has three groups: tiles, grout, base', () => {

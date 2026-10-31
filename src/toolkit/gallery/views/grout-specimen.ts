@@ -44,38 +44,29 @@ export function groutSpecimenGeometry(): BufferGeometry {
 }
 
 /**
- * The specimens, instanced: those with the grey grout share one
- * `InstancedMesh`, the 1970s' avocado another, the same geometry and the
- * same tile and base materials, only the grout's differs.
+ * The specimens, instanced: one `InstancedMesh` for each grout colour in
+ * use (grey for most, the 1970s' avocado, the furan's black), the same
+ * geometry and the same tile and base materials, only the grout's differs.
  */
-export function createGroutSpecimens(
-  placements: readonly { matrix: Matrix4; coloured: boolean }[],
-  materials: {
-    tile: Material;
-    grout: Material;
-    avocado: Material;
-    stone: Material;
-  },
+export function createGroutSpecimens<C extends string>(
+  placements: readonly { matrix: Matrix4; grout: C }[],
+  materials: { tile: Material; stone: Material; grout: Record<C, Material> },
 ) {
   const geometry = groutSpecimenGeometry();
-  const make = (coloured: boolean) => {
-    const at = placements.filter((p) => p.coloured === coloured);
+  const meshes = {} as Record<C, InstancedMesh>;
+  for (const colour of Object.keys(materials.grout) as C[]) {
+    const at = placements.filter((p) => p.grout === colour);
+    if (!at.length) continue;
     const mesh = new InstancedMesh(
       geometry,
-      [
-        materials.tile,
-        coloured ? materials.avocado : materials.grout,
-        materials.stone,
-      ],
+      [materials.tile, materials.grout[colour], materials.stone],
       at.length,
     );
     at.forEach((p, k) => mesh.setMatrixAt(k, p.matrix));
     mesh.instanceMatrix.needsUpdate = true;
     mesh.computeBoundingSphere();
-    mesh.name = coloured
-      ? 'Grout specimens: the 1970s, avocado'
-      : 'Grout specimens: grey';
-    return mesh;
-  };
-  return { geometry, grey: make(false), avocado: make(true) };
+    mesh.name = `Grout specimens: ${colour}`;
+    meshes[colour] = mesh;
+  }
+  return { geometry, meshes };
 }

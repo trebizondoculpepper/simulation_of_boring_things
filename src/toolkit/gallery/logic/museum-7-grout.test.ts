@@ -42,9 +42,12 @@ describe('Hall 7, grout', () => {
     expect(PROJECTOR.z).toBeLessThan(PLACES[5].z);
   });
 
-  it('colours exactly one specimen, the 1970s', () => {
+  it('colours two specimens: the 1970s avocado, the furan black', () => {
     const coloured = PLINTHS.filter((p) => p.grout !== 'grey');
-    expect(coloured.map((p) => p.name)).toEqual(['Coloured cement grout']);
+    expect(coloured.map((p) => [p.name, p.grout])).toEqual([
+      ['Coloured cement grout', 'avocado'],
+      ['Furan resin grout', 'black'],
+    ]);
     expect(coloured[0].years).toContain('1970s');
   });
 
@@ -53,7 +56,7 @@ describe('Hall 7, grout', () => {
     expect(all).not.toMatch(/thick joint/i);
     expect(PLINTHS[1].what).toContain('1840s');
     expect(PLINTHS[7].years).toMatch(/1940s.*1960s/);
-    expect(PLINTHS[6].reverence).toContain('regrets that its specimen is not');
+    expect(PLINTHS[6].reverence).toContain('So is this one');
     expect(all).not.toMatch(/Mapei|ARDEX|Laticrete|Sika|Weber|BAL\b/);
   });
 

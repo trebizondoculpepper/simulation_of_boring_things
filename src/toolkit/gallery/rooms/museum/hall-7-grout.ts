@@ -8,7 +8,7 @@ import {
   SpotLight,
   Vector3,
 } from 'three';
-import type { Camera } from 'three';
+import type { Camera, InstancedMesh } from 'three';
 import type { PanelKit } from '../../../components/core/views/eighties-controls';
 import { tools } from '../../../components/core/views/fitting-tools';
 import { mergeTree } from '../../../components/core/views/merge-static';
@@ -218,26 +218,34 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
         matrix: new Matrix4()
           .makeTranslation(place.x, ph, place.z)
           .multiply(new Matrix4().makeRotationY(yawOf(p.n))),
-        coloured: p.grout === 'avocado',
+        grout: p.grout,
       };
     }),
     {
       tile: t.paint('#f3f3ee', 0.15),
-      grout: t.paint('#9a9c98', 0.9),
-      avocado: t.paint('#6f7d2c', 0.9),
       stone: t.paint('#565b5e', 0.8),
+      grout: {
+        grey: t.paint('#9a9c98', 0.9),
+        avocado: t.paint('#6f7d2c', 0.9),
+        black: t.paint('#141414', 0.9),
+      },
     },
   );
-  object.add(
-    markComponent(specimens.grey, {
-      name: 'Grout specimen: white 150 mm tiles, 3 mm grey joints',
-      decorative: true,
-    }),
-    markComponent(specimens.avocado, {
-      name: 'Grout specimen: white 150 mm tiles, 3 mm avocado joints (the 1970s)',
-      decorative: true,
-    }),
-  );
+  const JOINTS = {
+    grey: 'grey joints',
+    avocado: 'avocado joints (the 1970s)',
+    black: 'black joints (furan resin)',
+  } as const;
+  for (const [colour, mesh] of Object.entries(specimens.meshes) as [
+    keyof typeof JOINTS,
+    InstancedMesh,
+  ][])
+    object.add(
+      markComponent(mesh, {
+        name: `Grout specimen: white 150 mm tiles, 3 mm ${JOINTS[colour]}`,
+        decorative: true,
+      }),
+    );
 
   // ---- The 1970s' oil-wheel projector, high before its plinth ----
   // (the owner, 2026-10-28: "high in the ceiling, focusing down on the

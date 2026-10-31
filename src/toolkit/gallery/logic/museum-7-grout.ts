@@ -28,9 +28,12 @@ export interface GroutPlinth {
   readonly drawbacks: readonly [string, string];
   /** One grave sentence. */
   readonly reverence: string;
-  /** Its specimen's grout: every one grey but the 1970s'. */
-  readonly grout: 'grey' | 'avocado';
+  /** Its specimen's grout: grey, but the 1970s' avocado and the furan's black (the owner, 2026-10-30). */
+  readonly grout: GroutColour;
 }
+
+/** A specimen's grout colour. */
+export type GroutColour = 'grey' | 'avocado' | 'black';
 
 export const PLINTHS: readonly GroutPlinth[] = [
   {
@@ -119,9 +122,8 @@ export const PLINTHS: readonly GroutPlinth[] = [
     what: 'A reaction-resin grout of great chemical resistance, laid in dairies, chemical plants and some pools.',
     benefits: ['Resists acids and solvents.', 'Hard-wearing.'],
     drawbacks: ['Difficult to apply.', 'Generally black.'],
-    reverence:
-      'Furan grouts are generally black. The museum regrets that its specimen is not.',
-    grout: 'grey',
+    reverence: 'Furan grouts are generally black. So is this one.',
+    grout: 'black',
   },
   {
     n: 8,
