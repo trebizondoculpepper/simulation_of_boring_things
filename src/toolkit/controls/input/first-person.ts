@@ -1688,14 +1688,20 @@ export function createFirstPerson(options: FirstPersonOptions) {
           height: target ? '18px' : '10px',
           borderRadius: target === 'reject' ? '0' : '50%',
           boxShadow: target === 'reject' ? 'none' : '0 0 0 2px #182327',
+          // Over a knob, the ring says whether the turn its cue shows can
+          // be made: green if so, red at an end stop (the owner, 2026-10-31).
           borderColor:
             target === 'accept'
               ? '#44df70'
               : target === 'reject'
                 ? 'transparent'
-                : handling?.aimed() || options.aimed?.()
-                  ? '#ffb43a'
-                  : '#f5f1df',
+                : turnCueShown?.kind === 'pointer'
+                  ? turnCueShown.possible
+                    ? '#44df70'
+                    : '#f04b43'
+                  : handling?.aimed() || options.aimed?.()
+                    ? '#ffb43a'
+                    : '#f5f1df',
           color: '#f04b43',
           textShadow:
             '1px 0 #182327, -1px 0 #182327, 0 1px #182327, 0 -1px #182327',
@@ -1724,7 +1730,9 @@ export function createFirstPerson(options: FirstPersonOptions) {
         turnCueShown = turnCue(
           cueAtCursor
             ? turnableAt(hoverPoint[0], hoverPoint[1], CURSOR_TURN_REACH)
-            : options.aimed?.()
+            : // A room that says what is aimed at must agree; one that
+              // does not leaves it to the knob's own reach.
+              (options.aimed ? options.aimed() : true)
               ? turnableAt(0, 0, CENTRE_TURN_REACH)
               : null,
           input === 'gamepad',
