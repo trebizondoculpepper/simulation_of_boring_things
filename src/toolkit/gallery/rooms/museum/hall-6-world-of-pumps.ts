@@ -12,6 +12,39 @@ import { playPiezo } from '../../../components/sound/audio/piezo-recordings';
 import { pumpSound } from '../../../components/plant/views/pump-sound';
 import { CIRCULATION_PUMP } from '../../../components/plant/logic/pump-sound';
 import {
+  MOTOR_DIAPHRAGM_PUMP,
+  PERISTALTIC_PUMP,
+  SOLENOID_PUMP,
+  STEPPER_PUMP,
+} from '../../../components/plant/audio/dosing-pump-sounds';
+import type { LoopRecipe } from '../../../components/core/audio/part-audio';
+
+/** Each dosing pump's sound and how much it is raised here, dB. */
+const DOSING_SOUNDS: Record<1 | 2 | 3 | 4, readonly [LoopRecipe, number]> = {
+  1: [SOLENOID_PUMP, 12],
+  2: [STEPPER_PUMP, 10],
+  3: [MOTOR_DIAPHRAGM_PUMP, 3],
+  4: [PERISTALTIC_PUMP, 6],
+};
+
+/** A held sound made `dB` louder. */
+const louder =
+  (recipe: LoopRecipe, dB: number): LoopRecipe =>
+  (context, out) => {
+    const gain = context.createGain();
+    gain.gain.value = 10 ** (dB / 20);
+    gain.connect(out);
+    return recipe(context, gain);
+  };
+import { createEndSuctionPump } from '../../../components/plant/views/pumps-plant';
+import { createDiaphragmPump } from '../../../components/plant/views/diaphragm-pump';
+import { createMotorDosingPump } from '../../../components/plant/views/motor-dosing-pump';
+import {
+  DMH,
+  newMotorPumpState,
+} from '../../../components/plant/logic/motor-dosing-pump';
+import { createPeristalticPump } from '../../../components/plant/views/peristaltic-pump';
+import {
   createInlineFitting,
   placeFitting,
 } from '../../../components/plant/views/inline-fittings';
@@ -26,9 +59,7 @@ import { createMimicBoard } from '../../../components/industrial-control/views/m
 import { createPoolClock } from '../../../components/architectural/views/pool-clock';
 import {
   createLitresDisplay,
-  createMagDrivePump,
   createRunStand,
-  createSplitCasePump,
   createTankInstruments,
 } from '../../../components/plant/views/museum-pump-parts';
 import { createIbc } from '../../../components/plant/views/chemicals-storage';
@@ -68,14 +99,13 @@ import {
   INTERIOR,
   PLACES,
   PORTS,
-  SPLIT,
   TANK_AT,
   TROUGH,
   odOf,
   plumbHall6,
   standOf,
-  STANDS,
-  turnedHalfRound,
+  TROUGHS,
+  troughBoxes,
 } from '../../logic/museum-6-layout';
 import type { PlacedItem } from '../../logic/museum-6-layout';
 import {
@@ -120,8 +150,8 @@ import type { HallExhibit } from './exhibits';
  * hall's session. Real time only. In the hall's frame, metres.
  */
 
-const WEST = INTERIOR.minX + 0.04;
-const FACE_EAST = Math.PI / 2;
+/** The panel wall: the street (east) wall's face. */
+const WALL = INTERIOR.maxX - 0.04;
 const FACE_WEST = -Math.PI / 2;
 /** The clock's middle: its 0.75 m face's top under 2.5 m, below the hall's title band (2.6 to 4.6 m). */
 const CLOCK = { y: 2.1 } as const;
@@ -235,29 +265,44 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     }
   });
 
-  // ---- The reservoir's trough ----
-  const troughLength = BOXES_LENGTH();
-  function BOXES_LENGTH() {
-    return INTERIOR.maxZ - INTERIOR.minZ - 0.8;
-  }
-  const trough = createIdealVessel(kit, {
-    w: TROUGH.d,
-    d: troughLength,
-    h: TROUGH.h,
-    water: TROUGH.h - 0.12,
-    name: 'Ideal clean-water reservoir',
-    ports: Object.entries(PORTS.source).map(([k, p]) => ({
-      ...p,
-      od: odOf(PUMPS[Number(k.slice(4)) - 1].dn),
-    })),
+  // ---- The reservoir: one ideal source, a trough at the foot of each plant wall ----
+  const boxes = troughBoxes();
+  TROUGHS.forEach((tr, k) => {
+    const box = boxes[k];
+    const local = (v: readonly number[], c: readonly number[] = [0, 0, 0]) => {
+      const x = v[0] - c[0];
+      const z = v[2] - c[2];
+      const cy = Math.cos(-tr.yaw);
+      const sy = Math.sin(-tr.yaw);
+      return [x * cy + z * sy, v[1] - c[1], -x * sy + z * cy] as const;
+    };
+    const trough = createIdealVessel(kit, {
+      w: TROUGH.d,
+      d: tr.length,
+      h: TROUGH.h,
+      water: TROUGH.h - 0.12,
+      name: 'Ideal clean-water reservoir',
+      ports: Object.entries(PORTS.source)
+        .filter(([, p]) =>
+          [0, 2].every(
+            (i) => p.at[i] >= box.min[i] - 0.06 && p.at[i] <= box.max[i] + 0.06,
+          ),
+        )
+        .map(([key, p]) => ({
+          at: local(p.at, [tr.x, 0, tr.z]),
+          out: local(p.out),
+          od: odOf(PUMPS[Number(key.slice(4)) - 1].dn),
+        })),
+    });
+    trough.show(['CLEAN WATER  IDEAL', 'ATMOSPHERIC  CW1']);
+    turnTo(trough.group, tr.x, 0, tr.z, tr.yaw);
+    object.add(
+      markComponent(still(trough.group), {
+        name: `${TAGS['source']} ${nodeName('source')}`,
+        model: { node: 'source' },
+      }),
+    );
   });
-  trough.show(['CLEAN WATER  IDEAL', 'ATMOSPHERIC  CW1']);
-  object.add(
-    markComponent(still(atMachine(trough.group, 'source')), {
-      name: `${TAGS['source']} ${nodeName('source')}`,
-      model: { node: 'source' },
-    }),
-  );
 
   // ---- The pumps ----
   const describePump = (o: Object3D, no: PumpNo) =>
@@ -267,28 +312,90 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       status: () =>
         isRunning(state(), no) ? 'running, its RUN lamp lit' : 'stopped',
     });
+  const dosingStand = (no: PumpNo, child: Object3D) => {
+    const g = new Group();
+    t.box(g, t.paint('#a9afaf', 0.4, 0.7), 0.5, 0.04, 0.44, 0, 0.88, 0);
+    for (const [x, z] of [
+      [0.22, 0.19],
+      [-0.22, 0.19],
+      [0.22, -0.19],
+      [-0.22, -0.19],
+    ])
+      t.box(g, t.paint('#a9afaf', 0.4, 0.7), 0.04, 0.88, 0.04, x, 0.44, z);
+    child.position.y = 0.9;
+    // Its front (its display, its own +z) turned to the layout's −x, away
+    // from its suction: with the stand's turn, into the hall (the facing rule).
+    child.rotation.y = FACE_WEST;
+    g.add(child);
+    return atMachine(g, pumpId(no));
+  };
   for (const p of PUMPS) {
     const no = p.no;
     const on = () => isRunning(state(), no);
-    if (no === 1) {
-      const pump = createMagDrivePump(kit);
-      object.add(describePump(still(atMachine(pump.group, pumpId(no))), no));
+    if (no === 1 || no === 2) {
+      const pump = createDiaphragmPump(
+        kit,
+        `P${no}`,
+        no === 1 ? 'solenoid' : 'stepper',
+      );
+      object.add(describePump(dosingStand(no, pump.object), no));
+      updates.push((delta) =>
+        pump.update(delta, {
+          running: on(),
+          rate: p.family === 'displacement' ? p.ratedLh : 0,
+        }),
+      );
+    } else if (no === 3) {
+      // The DMH at full stroke, its own rate (MAN), started by RUN; its strokes counted here.
+      const base = {
+        ...newMotorPumpState(),
+        mode: 'manual' as const,
+        manual: 1,
+        strokeLength: 1,
+      };
+      const pump = createMotorDosingPump(kit, 'P3', {
+        state: () => ({ ...base, on: on() }),
+        change: () => {},
+        inputs: () => ({
+          powered: true,
+          release: true,
+          signalMa: 4,
+          level: 'ok',
+          dischargeBar: 0.17,
+        }),
+      });
+      object.add(describePump(dosingStand(no, pump.object), no));
+      let phase = 0;
+      updates.push((delta) => {
+        phase += on() ? (delta * DMH.maxSpm) / 60 : 0;
+        const began = Math.floor(phase);
+        phase -= began;
+        pump.show(delta, { began, delivering: began });
+      });
+    } else if (no === 4) {
+      const pump = createPeristalticPump(kit, 'P4');
+      object.add(describePump(dosingStand(no, pump.object), no));
       updates.push((delta) => pump.update(delta, on()));
     } else {
-      const pump = createSplitCasePump(kit, {
-        axis: SPLIT.axis,
-        label: PUMPS[1].model.replace('Grundflow ', ''),
-      });
-      // Lit: a plinth lamp's glow on its base.
-      object.add(describePump(still(atMachine(pump.group, pumpId(no))), no));
-      updates.push((delta) => {
-        const r = readings.gauges[no];
-        pump.gauges.suction.set(r.suctionBar);
-        pump.gauges.discharge.set(r.dischargeBar);
-        pump.gauges.suction.update(delta);
-        pump.gauges.discharge.update(delta);
-        pump.update(delta, on());
-      });
+      // The two NKC end-suction pumps.
+      const pump = createEndSuctionPump(kit);
+      object.add(describePump(still(atMachine(pump, pumpId(no))), no));
+      const g = (
+        pump as unknown as {
+          gauges?: {
+            suction: { set(v: number): void; update(d: number): void };
+            discharge: { set(v: number): void; update(d: number): void };
+          };
+        }
+      ).gauges;
+      if (g)
+        updates.push((delta) => {
+          const r = readings.gauges[no];
+          g.suction.set(r.suctionBar);
+          g.discharge.set(r.dischargeBar);
+          g.suction.update(delta);
+          g.discharge.update(delta);
+        });
     }
     // The centrifugal pumps' sound: each its motor's, the showpiece loudest and lowest.
     if (p.family === 'centrifugal') {
@@ -311,6 +418,26 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
         }
       });
     }
+    // The dosing pumps' sound, here louder than in a plant room (the owner,
+    // 2026-10-29: P1 seemed silent; a solenoid pump's tick is about 18 dB
+    // under the smallest circulator's hum): each its own sound, raised to
+    // about the level of the circulators beside it, over the quiet one its
+    // view already holds.
+    if (p.family === 'displacement') {
+      const from = new Group();
+      atMachine(from, pumpId(no));
+      from.position.y = 1;
+      object.add(from);
+      const [recipe, dB] = DOSING_SOUNDS[no as 1 | 2 | 3 | 4];
+      const sound = louder(recipe, dB);
+      let heard = false;
+      updates.push(() => {
+        if (on() !== heard) {
+          heard = on();
+          partAudio.hold(from, heard ? sound : null, from);
+        }
+      });
+    }
     // Its RUN stand, plaque and flow readout.
     const at = standOf(no);
     const stand = createRunStand(kit, {
@@ -320,7 +447,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       press: () => act({ type: 'run', no }),
       running: on,
     });
-    turnTo(stand.group, at.x, 0, at.z, FACE_WEST);
+    turnTo(stand.group, at.x, 0, at.z, at.yaw);
     object.add(
       markComponent(stand.group, {
         name: `${shortTag(pumpId(no))} RUN stand and flow readout ${TAGS[`${pumpId(no)}.fi`]}`,
@@ -340,8 +467,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     'pvc-pressure',
     HEADER.od,
     [
-      [HEADER.x, HEADER.y, HEADER_SPAN.minZ],
-      [HEADER.x, HEADER.y, HEADER_SPAN.maxZ],
+      [HEADER_SPAN.minX, HEADER.y, HEADER.z],
+      [HEADER_SPAN.maxX, HEADER.y, HEADER.z],
     ],
     { colour: '#4d5a63' },
   );
@@ -439,7 +566,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   );
   strap.position.set(ix, 0, iz);
   object.add(still(strap));
-  const outflow = createOutflow(fill.od * 0.9, deliveryAlone(2));
+  const outflow = createOutflow(fill.od * 0.9, deliveryAlone(6));
   outflow.group.position.set(ix, MOUTH_Y, iz);
   object.add(outflow.group);
   updates.push((delta) => {
@@ -463,7 +590,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   );
   litres.group.position.set(0, 2.3, 0);
   litresPost.add(litres.group);
-  turnTo(litresPost, TANK_AT.x, 0, TANK_AT.z - 1.0, FACE_EAST);
+  turnTo(litresPost, TANK_AT.x, 0, TANK_AT.z + 1.0, FACE_WEST);
   object.add(
     markComponent(litresPost, {
       name: `${TAGS['tank.lt']} tank level display`,
@@ -471,7 +598,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     }),
   );
   updates.push(() => litres.show(state().litres));
-  footprint(TANK_AT.x, TANK_AT.z - 1.0, 0.15);
+  footprint(TANK_AT.x, TANK_AT.z + 1.0, 0.15);
   // DR1: a tundish let into the floor under a grille, the drain and overflow falling into it.
   const tundish = createTundish();
   object.add(
@@ -651,7 +778,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       'Hall 6 · Grundflow’s Amazing World of Pumps',
     ),
   );
-  turnTo(entrance, WEST, 1.65, INTERIOR.minZ + 2.4, FACE_EAST);
+  turnTo(entrance, WALL, 1.65, INTERIOR.minZ + 2.4, FACE_WEST);
   object.add(still(entrance));
 
   const board = createMimicBoard(kit, HALL6_MIMIC, {
@@ -668,12 +795,12 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       }),
     },
   });
-  turnTo(board.group, WEST, 1.5, -2.6, FACE_EAST);
+  turnTo(board.group, WALL, 1.5, 2.6, FACE_WEST);
   object.add(board.group);
   take(board.parts);
 
   const clock = createPoolClock(kit, { dia: 0.75 });
-  turnTo(clock.group, WEST, CLOCK.y, 0.6, FACE_EAST);
+  turnTo(clock.group, WALL, CLOCK.y, -0.6, FACE_WEST);
   object.add(
     markComponent(clock.group, {
       name: 'Grundflow wall clock, showing the visitor’s local time',
@@ -699,7 +826,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       c.fillText('GRUNDFLOW · REAL TIME', w * 0.05, h * 0.7, w * 0.9);
     },
   );
-  turnTo(clockBadge, WEST, CLOCK.y - 0.48, 0.6, FACE_EAST);
+  turnTo(clockBadge, WALL, CLOCK.y - 0.48, -0.6, FACE_WEST);
   object.add(still(clockBadge));
 
   const resetSign = createWallPanel(
@@ -709,17 +836,17 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     0.56,
     paintResetSign(RESET_SIGN),
   );
-  turnTo(resetSign, WEST, 1.75, 2.6, FACE_EAST);
+  turnTo(resetSign, WALL, 1.75, -2.6, FACE_WEST);
   object.add(still(resetSign));
   const resetButton = createResetPedestal(kit, {
     reset: () => act({ type: 'reset' }),
     lit: () => state().sinceReset < 2.5 || state().draining,
   });
-  turnTo(resetButton.group, WEST + 0.45, 0, 2.6, FACE_EAST);
+  turnTo(resetButton.group, WALL - 0.45, 0, -2.6, FACE_WEST);
   object.add(resetButton.group);
   take(resetButton.parts);
   updates.push(resetButton.update);
-  footprint(WEST + 0.45, 2.6, 0.25);
+  footprint(WALL - 0.45, -2.6, 0.25);
 
   const families = createWallPanel(
     kit,
@@ -766,12 +893,10 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       }
     },
   );
-  turnTo(families, WEST, 1.6, 6.0, FACE_EAST);
+  turnTo(families, WALL, 1.6, 6.5, FACE_WEST);
   object.add(still(families));
 
-  // Turned half round, along the west wall (layout C, `STANDS`).
-  object.rotation.y = STANDS.turn;
-  const placed = solids.map(turnedHalfRound);
+  const placed = [...solids];
   return {
     object,
     parts,

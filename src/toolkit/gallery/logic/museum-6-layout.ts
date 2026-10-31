@@ -6,7 +6,6 @@ import {
   PUMPS,
   TANK,
   hall6Expansion,
-  hasSuction,
   pumpId,
 } from '../../../game/plant/museum-6-pumps';
 import type {
@@ -18,50 +17,34 @@ import type {
 } from '../../../game/plant/museum-6-pumps';
 import type { Expansion } from '../../../game/plant/plumbing-expansion';
 import { routeVoxelLines } from '../../components/core/logic/voxel-router';
-import type {
-  RouterLine,
-  RouterRegion,
-} from '../../components/core/logic/voxel-router';
+import type { RouterLine } from '../../components/core/logic/voxel-router';
 import { pipeClashes } from '../../components/core/logic/pipe-route';
 import type { PipeJoint, Vec3 } from '../../components/core/logic/pipe-route';
 import { pointAlong } from './source-sink-plumbing';
 import { hallColumns, hallInterior, hallOrigin } from './museum-plan';
 
 /**
- * Hall 6's plant, laid out (107j). This module lays it out in its own
- * frame, with the ideal reservoir CW1's long trough against the +x wall,
- * and the exhibit turns the whole half round (`STANDS`, layout C), so in
- * the hall the trough stands against the courtyard (west) wall and the
- * panels on the street (east) wall. The pumps stand in a row in front of
- * the trough, the mag-drive pump at layout −z (the hall's south) and the
- * split-case showpiece at layout +z (the hall's north, by the way in),
- * each drawing straight from the trough; each fill line rises from its
- * pump to the level of the overhead inlet header HD1 and runs level into
- * it, never above it; the header feeds the test tank TK1 in the hall's
- * middle; the tank's drain and overflow fall all the way (`FALL`) to the
- * ideal drain DR1, a tundish at its foot. Each pump's RUN stand and
- * plaque stand in front of it, facing into the hall. Sized from
- * `hallInterior('museum6')`, so it follows the hall's size. Pure; metres,
- * the layout's frame (middle at the origin, y up, −z the hall's south
- * once turned).
+ * Hall 6's plant, laid out (107j; the owner's redesign, 2026-10-31). Six
+ * of the game's pumps stand round the hall, smallest to largest along the
+ * visitors' route from the way in (the north archway, from Hall 5) to the
+ * way out (the south archway, to Hall 7): two on the north wall, two on
+ * the west (window) wall, two on the south wall, each clear of the
+ * archways and their approaches; the east (street) wall keeps the mimic
+ * and the panels. Each pump stands with its suction to the wall, drawing
+ * from the ideal reservoir CW1, a trough along the foot of each of the
+ * three walls (one ideal source, drawn in three lengths), and faces into
+ * the hall, its RUN stand and plaque in front of it. Each fill line rises
+ * from its pump, runs overhead (at its own level, below the header, where
+ * it must cross another) and rises at its last corner to run level into
+ * the inlet header HD1, overhead in the hall's middle, never above it;
+ * the header feeds the test tank TK1; the tank's drain and overflow fall
+ * all the way (`FALL`) to the ideal drain DR1, a tundish at its foot.
+ * Sized from `hallInterior('museum6')`. Pure; metres, the hall's own
+ * frame (middle at the origin, y up, north −z).
  */
 
-/**
- * Layout C (112, the owner, 2026-10-30: "in hall 6, we just need to swap
- * things around so they're on the opposite wall"): both archways are now
- * at the east end, so the whole plant stands turned half round about the
- * hall's middle: the trough against the west wall, the showpiece by the
- * way in at the north, the walk down the east side between the archways.
- * Everything here is as laid out; the exhibit turns it.
- */
-export const STANDS = { turn: Math.PI } as const;
-
-/** Footprints as the plant stands, turned half round (`STANDS`). */
-export function turnedHalfRound<
-  F extends { minX: number; maxX: number; minZ: number; maxZ: number },
->(f: F): F {
-  return { ...f, minX: -f.maxX, maxX: -f.minX, minZ: -f.maxZ, maxZ: -f.minZ };
-}
+/** No turn: the layout is in the hall's own frame (it was turned half round before 2026-10-31). */
+export const STANDS = { turn: 0 } as const;
 
 const interior = (() => {
   const i = hallInterior('museum6');
@@ -81,19 +64,19 @@ export const ROOM = {
   height: 5.2,
 } as const;
 
-/** The trough: its depth from its (+x, the hall's west) wall and its height. */
+/** The reservoir's troughs: their depth from the wall and their height. */
 export const TROUGH = { d: 0.6, h: 1.05, gap: 0.05 } as const;
-const TROUGH_FACE = interior.maxX - TROUGH.gap - TROUGH.d;
-/** Where each pump's suction port stands: room for its valve in front of the trough. */
-const SUCTION_X = TROUGH_FACE - 0.85;
-/** The header: overhead, between the pumps and the column line; the fill lines run level into it at its height. */
-export const HEADER = { x: 2.7, y: 3.7, od: 0.32 } as const;
-/** The tank's place, on the visitors' floor's far (−x) side from the pumps. */
-export const TANK_AT = { x: -1.6, z: 0 } as const;
+/** How far in front of a trough each pump's suction port stands: room for its valve. */
+const SUCTION_OFF = 0.85;
+/** The header: overhead in the hall's middle, along x, at z = `z`; the fill lines run level into it at its height. */
+export const HEADER = { y: 3.7, z: 0, od: 0.32 } as const;
+export const HEADER_SPAN = { minX: -3.2, maxX: 1.2 } as const;
+/** The tank's place, in the hall's middle, east of the header's end. */
+export const TANK_AT = { x: 1.6, z: 0 } as const;
 /** The IBC's top (its cage), m. */
 export const TANK_TOP = 1.16;
-/** The drain gully, at the tank's foot. */
-export const GULLY_AT = { x: -1.6, z: 1.7 } as const;
+/** The drain's tundish, at the tank's foot (its outlet faces −z). */
+export const GULLY_AT = { x: 1.6, z: -1.7 } as const;
 
 export interface MachinePlace {
   x: number;
@@ -105,13 +88,90 @@ export interface Port {
   out: Vec3;
 }
 
+/** A wall the plant stands against. */
+type Side = 'north' | 'west' | 'south';
+/** Toward the wall, in (x, z). */
+const TOWARD: Record<Side, [number, number]> = {
+  north: [0, -1],
+  west: [-1, 0],
+  south: [0, 1],
+};
+/** The yaw that turns a frame's +x toward the wall. */
+const WALL_YAW: Record<Side, number> = {
+  north: Math.PI / 2,
+  west: Math.PI,
+  south: -Math.PI / 2,
+};
+/**
+ * Where each pump stands: its wall, its place along it (x on the north and
+ * south walls, z on the west), and the fill line's way to the header: the
+ * level it runs at, the corners it turns (x, z), and its inlet's x on the
+ * header's north (−z) or south (+z) side. Smallest to largest along the
+ * route: in by the north archway (x 3.7 to 7.3), west along the north
+ * wall, south down the west wall, east along the south wall to the south
+ * archway; each pump clear of the columns (x ±3.85; z −6, 0, 6).
+ */
+const STATIONS: Record<
+  PumpNo,
+  {
+    side: Side;
+    u: number;
+    level: number;
+    corners: [number, number][];
+    inlet: { x: number; side: -1 | 1 };
+  }
+> = {
+  1: {
+    side: 'north',
+    u: 0.9,
+    level: HEADER.y,
+    corners: [],
+    inlet: { x: 0.9, side: -1 },
+  },
+  2: {
+    side: 'north',
+    u: -2.2,
+    level: HEADER.y,
+    corners: [],
+    inlet: { x: -2.2, side: -1 },
+  },
+  3: {
+    side: 'west',
+    u: -2.5,
+    level: 3.2,
+    corners: [[-2.9, -2.5]],
+    inlet: { x: -2.9, side: -1 },
+  },
+  4: {
+    side: 'west',
+    u: 2.5,
+    level: 3.0,
+    corners: [[-2.9, 2.5]],
+    inlet: { x: -2.9, side: 1 },
+  },
+  5: {
+    side: 'south',
+    u: -5.4,
+    level: 3.3,
+    corners: [
+      [-5.28, 1.0],
+      [-2.0, 1.0],
+    ],
+    inlet: { x: -2.0, side: 1 },
+  },
+  6: {
+    side: 'south',
+    u: 0.4,
+    level: HEADER.y,
+    corners: [],
+    inlet: { x: 0.52, side: 1 },
+  },
+};
+
 /** Each pump's shape in its own frame: suction toward +x (yaw 0), except the end-suction views (toward −x, turned round). */
 interface PumpShape {
-  /** Its width along the row (z), and how far it reaches along it beyond its place (the showpiece's motor). */
-  w: number;
-  ahead: number;
   yaw: number;
-  suction?: Port;
+  suction: Port;
   discharge: Port;
   box: { min: Vec3; max: Vec3 };
 }
@@ -119,128 +179,81 @@ interface PumpShape {
 /** A dosing pump's stand: its top. */
 export const DOSING_STAND = 0.9;
 
-const shapeOf = (p: HallPump): PumpShape => {
-  if (p.family === 'displacement')
-    return {
-      w: 0.55,
-      ahead: 0,
-      yaw: 0,
-      suction: { at: [0.25, DOSING_STAND + 0.05, 0], out: [1, 0, 0] },
-      discharge: { at: [-0.05, DOSING_STAND + 0.35, 0], out: [0, 1, 0] },
-      box: { min: [-0.25, 0, -0.22], max: [0.25, DOSING_STAND + 0.3, 0.22] },
-    };
-  switch (p.node) {
-    case 'mag-drive-pump':
-      return {
-        w: 0.6,
-        ahead: 0,
+const shapeOf = (p: HallPump): PumpShape =>
+  p.family === 'displacement'
+    ? {
         yaw: 0,
-        suction: { at: [0.3, 0.25, 0], out: [1, 0, 0] },
-        discharge: { at: [0.12, 0.5, 0], out: [0, 1, 0] },
-        box: { min: [-0.4, 0, -0.18], max: [0.28, 0.42, 0.18] },
-      };
-    case 'submersible-pump':
-      return {
-        w: 0.6,
-        ahead: 0,
-        yaw: 0,
-        discharge: { at: [0, TROUGH.h + 0.25, 0], out: [0, 1, 0] },
-        box: { min: [0, 0, 0], max: [0, 0, 0] },
-      };
-    case 'spa-pump':
-      return {
-        w: 0.55,
-        ahead: 0,
-        yaw: 0,
-        suction: { at: [0.3, 0.22, 0], out: [1, 0, 0] },
-        discharge: { at: [-0.02, 0.5, 0], out: [0, 1, 0] },
-        box: { min: [-0.3, 0, -0.16], max: [0.28, 0.42, 0.16] },
-      };
-    case 'twin-head-pump':
-      return {
-        w: 0.7,
-        ahead: 0,
-        yaw: 0,
-        suction: { at: [0.75, 0.75, 0], out: [1, 0, 0] },
-        discharge: { at: [-0.75, 0.75, 0], out: [-1, 0, 0] },
-        box: { min: [-0.68, 0, -0.3], max: [0.68, 1.0, 0.3] },
-      };
-    case 'end-suction-pump':
-      return {
-        w: 0.85,
-        ahead: 0,
+        suction: { at: [0.25, DOSING_STAND + 0.05, 0], out: [1, 0, 0] },
+        discharge: { at: [-0.05, DOSING_STAND + 0.35, 0], out: [0, 1, 0] },
+        box: { min: [-0.25, 0, -0.22], max: [0.25, DOSING_STAND + 0.3, 0.22] },
+      }
+    : {
         yaw: Math.PI,
         suction: { at: [-1.0, 0.68, 0], out: [-1, 0, 0] },
         discharge: { at: [-0.57, 1.26, 0.12], out: [0, 1, 0] },
         box: { min: [-0.95, 0, -0.4], max: [0.95, 1.2, 0.4] },
       };
-    default:
-      // The split case: its shaft along the row, its motor ahead (south).
-      return {
-        w: 1.2,
-        ahead: 2.4,
-        yaw: 0,
-        suction: { at: [0.62, SPLIT.axis, 0], out: [1, 0, 0] },
-        discharge: { at: [-0.62, SPLIT.axis, 0], out: [-1, 0, 0] },
-        box: { min: [-0.62, 0, -0.6], max: [0.62, 1.5, 2.95] },
-      };
-  }
-};
-
-/** The showpiece's shaft height. */
-export const SPLIT = { axis: 0.85 } as const;
 
 export const SHAPES: Record<PumpNo, PumpShape> = Object.fromEntries(
   PUMPS.map((p) => [p.no, shapeOf(p)]),
 ) as Record<PumpNo, PumpShape>;
 
-/** The place along the row of each pump, its x so its suction port meets the line before the trough. */
+const round = (v: number) => Math.round(v * 1e4) / 1e4;
+const turn = ([x, y, z]: Vec3, yaw: number): Vec3 => [
+  x * Math.cos(yaw) + z * Math.sin(yaw),
+  y,
+  -x * Math.sin(yaw) + z * Math.cos(yaw),
+];
+
+/** A point on a wall: `u` along it, `off` in from its face. */
+function onWall(side: Side, u: number, off: number): [number, number] {
+  if (side === 'west') return [interior.minX + off, u];
+  return [u, side === 'north' ? interior.minZ + off : interior.maxZ - off];
+}
+
+/** Each pump's place: its suction port `SUCTION_OFF` in front of its trough, opposite its place along the wall. */
 function placePumps(): Record<PumpNo, MachinePlace> {
-  const start = interior.minZ + 1.0;
-  const end = interior.maxZ - 0.8;
-  const widths = PUMPS.map((p) => SHAPES[p.no].w + SHAPES[p.no].ahead);
-  const used = widths.reduce((a, b) => a + b, 0);
-  // Spread evenly, the ends' margins the same as the gaps between (two
-  // pumps since 2026-10-30, so each has its own stretch of the hall).
-  const gap = Math.max(0.2, (end - start - used) / (PUMPS.length + 1));
   const out = {} as Record<PumpNo, MachinePlace>;
-  // Each fill line clear of the columns' row, where it crosses it.
-  const columnZ = hallColumns('museum6').map((c) => c.z);
-  let z = start + gap;
   for (const p of PUMPS) {
     const s = SHAPES[p.no];
-    let zc = z + s.w / 2;
-    for (const cz of columnZ) if (Math.abs(zc - cz) < 0.5) zc = cz + 0.5;
-    z = zc - s.w / 2 + s.w + s.ahead + gap;
-    if (p.family === 'centrifugal' && p.submersible) {
-      out[p.no] = { x: TROUGH_FACE + TROUGH.d / 2, z: zc, yaw: 0 };
-      continue;
-    }
-    // The suction port's x in the hall, from its frame and yaw.
-    const sx = s.suction!.at[0] * Math.cos(s.yaw);
-    out[p.no] = { x: SUCTION_X - sx, z: zc, yaw: s.yaw };
+    const st = STATIONS[p.no];
+    const yaw = s.yaw + WALL_YAW[st.side];
+    const [px, pz] = onWall(st.side, st.u, TROUGH.gap + TROUGH.d + SUCTION_OFF);
+    const a = turn(s.suction.at, yaw);
+    out[p.no] = { x: round(px - a[0]), z: round(pz - a[2]), yaw };
   }
   return out;
 }
 
 const PUMP_PLACES = placePumps();
 
+/** The reservoir's three lengths: middle, yaw (its +x toward its wall) and length. */
+export const TROUGHS: readonly {
+  side: Side;
+  x: number;
+  z: number;
+  yaw: number;
+  length: number;
+}[] = (['north', 'west', 'south'] as Side[]).map((side) => {
+  const us = PUMPS.filter((p) => STATIONS[p.no].side === side).map(
+    (p) => STATIONS[p.no].u,
+  );
+  const lo = Math.min(...us) - 1.2;
+  const hi = Math.max(...us) + 1.2;
+  const [x, z] = onWall(side, (lo + hi) / 2, TROUGH.gap + TROUGH.d / 2);
+  return { side, x, z, yaw: WALL_YAW[side], length: hi - lo };
+});
+
 export const PLACES: Record<MachineId, MachinePlace> = {
   ...(Object.fromEntries(
     PUMPS.map((p) => [pumpId(p.no), PUMP_PLACES[p.no]]),
   ) as Record<`p${PumpNo}`, MachinePlace>),
-  source: { x: TROUGH_FACE + TROUGH.d / 2, z: 0, yaw: 0 },
-  header: { x: HEADER.x, z: 0, yaw: 0 },
-  // Turned so its bottom outlet faces +z, toward the gully.
-  tank: { x: TANK_AT.x, z: TANK_AT.z, yaw: -Math.PI / 2 },
+  // The reservoir's ports are given in the hall's frame (`TROUGHS`).
+  source: { x: 0, z: 0, yaw: 0 },
+  header: { x: 0, z: HEADER.z, yaw: 0 },
+  // Turned so its bottom outlet faces −z, toward the tundish.
+  tank: { x: TANK_AT.x, z: TANK_AT.z, yaw: Math.PI / 2 },
   drain: { x: GULLY_AT.x, z: GULLY_AT.z, yaw: 0 },
-};
-
-const zOf = (no: PumpNo) => PUMP_PLACES[no].z;
-/** The header's length along z, from the first pump's line to the last's. */
-export const HEADER_SPAN = {
-  minZ: Math.min(...PUMPS.map((p) => zOf(p.no))) - 0.3,
-  maxZ: Math.max(...PUMPS.map((p) => zOf(p.no))) + 0.3,
 };
 
 /** Each machine's ports, in its own frame. */
@@ -248,39 +261,39 @@ export const PORTS: Record<MachineId, Record<string, Port>> = {
   ...(Object.fromEntries(
     PUMPS.map((p) => {
       const s = SHAPES[p.no];
-      return [
-        pumpId(p.no),
-        (s.suction
-          ? { suction: s.suction, discharge: s.discharge }
-          : { discharge: s.discharge }) as Record<string, Port>,
-      ];
+      return [pumpId(p.no), { suction: s.suction, discharge: s.discharge }];
     }),
-  ) as Record<`p${PumpNo}`, Record<string, Port>>),
-  // The trough's outlets on its west face, one opposite each pump's suction.
+  ) as unknown as Record<`p${PumpNo}`, Record<string, Port>>),
+  // The troughs' outlets on their faces, one opposite each pump's suction.
   source: Object.fromEntries(
-    PUMPS.filter(hasSuction).map((p) => {
-      const s = SHAPES[p.no];
+    PUMPS.map((p) => {
+      const st = STATIONS[p.no];
+      const [x, z] = onWall(st.side, st.u, TROUGH.gap + TROUGH.d);
+      const [tx, tz] = TOWARD[st.side];
       return [
         `out-${p.no}`,
         {
-          at: [-TROUGH.d / 2, s.suction!.at[1], zOf(p.no)] as Vec3,
-          out: [-1, 0, 0] as Vec3,
+          at: [round(x), SHAPES[p.no].suction.at[1], round(z)] as Vec3,
+          out: [-tx, 0, -tz] as Vec3,
         },
       ];
     }),
   ),
-  // The header: an inlet on its east side opposite each pump; its outlet at its west.
+  // The header: an inlet on its side for each pump; its outlet at its east end.
   header: {
     ...Object.fromEntries(
-      PUMPS.map((p) => [
-        `in-${p.no}`,
-        {
-          at: [HEADER.od / 2, HEADER.y, zOf(p.no)] as Vec3,
-          out: [1, 0, 0] as Vec3,
-        },
-      ]),
+      PUMPS.map((p) => {
+        const i = STATIONS[p.no].inlet;
+        return [
+          `in-${p.no}`,
+          {
+            at: [i.x, HEADER.y, (i.side * HEADER.od) / 2] as Vec3,
+            out: [0, 0, i.side] as Vec3,
+          },
+        ];
+      }),
     ),
-    out: { at: [-HEADER.od / 2, HEADER.y, 0], out: [-1, 0, 0] },
+    out: { at: [HEADER_SPAN.maxX, HEADER.y, 0], out: [1, 0, 0] },
   },
   // The IBC (its own frame: outlet toward +x): the fill down into its top
   // filler, the overflow out of its bottle's shoulder, the drain from its
@@ -293,11 +306,11 @@ export const PORTS: Record<MachineId, Record<string, Port>> = {
     },
     drain: { at: [0.72, 0.25, 0], out: [1, 0, 0] },
   },
+  // The overflow in line with the tank's overflow; the drain a little
+  // below the IBC's outlet, so its run falls (`FALL`).
   drain: {
-    // The overflow in line with the tank's overflow; the drain a little
-    // below the IBC's outlet, so its run falls (`FALL`).
-    'in-1': { at: [0.3, 0.3, 0], out: [0, 0, -1] },
-    'in-2': { at: [0, 0.22, 0], out: [0, 0, -1] },
+    'in-1': { at: [-0.3, 0.3, 0], out: [0, 0, 1] },
+    'in-2': { at: [0, 0.22, 0], out: [0, 0, 1] },
   },
 };
 
@@ -305,27 +318,35 @@ export const BOXES: Record<MachineId, { min: Vec3; max: Vec3 }> = {
   ...(Object.fromEntries(
     PUMPS.map((p) => [pumpId(p.no), SHAPES[p.no].box]),
   ) as Record<`p${PumpNo}`, { min: Vec3; max: Vec3 }>),
-  source: {
-    min: [-TROUGH.d / 2, 0, interior.minZ + 0.4],
-    max: [TROUGH.d / 2, TROUGH.h, interior.maxZ - 0.4],
-  },
+  source: { min: [0, 0, 0], max: [0, 0, 0] },
   header: {
-    min: [-HEADER.od / 2, HEADER.y - HEADER.od / 2, HEADER_SPAN.minZ],
-    max: [HEADER.od / 2, HEADER.y + HEADER.od / 2, HEADER_SPAN.maxZ],
+    min: [HEADER_SPAN.minX, HEADER.y - HEADER.od / 2, -HEADER.od / 2],
+    max: [HEADER_SPAN.maxX, HEADER.y + HEADER.od / 2, HEADER.od / 2],
   },
   tank: { min: [-0.62, 0, -0.52], max: [0.62, TANK_TOP, 0.52] },
   drain: { min: [0, 0, 0], max: [0, 0, 0] },
 };
 
-/** Not obstacles to route round: the gully in the floor. */
-export const POINTS: readonly MachineId[] = ['drain'];
+/** Not obstacles as boxes: the gully in the floor, and the reservoir (its troughs are, `troughBoxes`). */
+export const POINTS: readonly MachineId[] = ['drain', 'source'];
 
-const round = (v: number) => Math.round(v * 1e4) / 1e4;
-const turn = ([x, y, z]: Vec3, yaw: number): Vec3 => [
-  x * Math.cos(yaw) + z * Math.sin(yaw),
-  y,
-  -x * Math.sin(yaw) + z * Math.cos(yaw),
-];
+/** The troughs' boxes in the hall. */
+export function troughBoxes(): { min: Vec3; max: Vec3 }[] {
+  return TROUGHS.map((t) => {
+    const along = t.side === 'west' ? 'z' : 'x';
+    const half = t.length / 2;
+    const hd = TROUGH.d / 2;
+    return along === 'x'
+      ? {
+          min: [t.x - half, 0, t.z - hd] as Vec3,
+          max: [t.x + half, TROUGH.h, t.z + hd] as Vec3,
+        }
+      : {
+          min: [t.x - hd, 0, t.z - half] as Vec3,
+          max: [t.x + hd, TROUGH.h, t.z + half] as Vec3,
+        };
+  });
+}
 
 export function inHall(id: MachineId, p: Vec3): Vec3 {
   const place = PLACES[id];
@@ -396,7 +417,6 @@ export interface Hall6Room {
   expansion: Expansion;
   lines: HallLine[];
   items: PlacedItem[];
-  regions: RouterRegion[];
   problems: string[];
   solids: { minX: number; maxX: number; minZ: number; maxZ: number }[];
 }
@@ -469,48 +489,40 @@ export function lowPipeFootprints(lines: readonly HallLine[], below = 2.0) {
 }
 
 /**
- * Where each pump's RUN stand and plaque stand: in front of it, on the
- * visitors' side; beside its discharge where that leaves toward the
- * visitors (the plaque would stand in its pipe), and clear of a column's
- * line, so it is seen from the walkway past both.
+ * Where each pump's RUN stand and plaque stand: in front of it, toward the
+ * hall's middle, clear of a column's line where it would stand in its
+ * shadow; `inward` is the way the visitor looks from the walkway (the
+ * plaque faces back along it), `yaw` the stand's turn so its +z faces them.
  */
-export function standOf(no: PumpNo): { x: number; z: number } {
+export function standOf(no: PumpNo): {
+  x: number;
+  z: number;
+  yaw: number;
+  inward: [number, number];
+} {
+  const st = STATIONS[no];
+  const [tx, tz] = TOWARD[st.side];
   const b = boxInHall(pumpId(no));
-  const x = Math.min(b.min[0] - 0.55, TROUGH_FACE - 0.55);
-  const columnZ = hallColumns('museum6').map((c) => c.z);
-  const clearance = (z: number) =>
-    Math.min(...columnZ.map((c) => Math.abs(z - c)));
-  const d = portInHall(pumpId(no), 'discharge');
-  let z = PUMP_PLACES[no].z;
-  if (d.out[0] <= -0.5) {
-    // Beside its discharge, on the side further from the columns.
-    const sides = [d.at[2] - STAND_ASIDE, d.at[2] + STAND_ASIDE];
-    z = clearance(sides[1]) > clearance(sides[0]) ? sides[1] : sides[0];
-  }
-  // Clear of the column line's shadow, seen from either side.
-  for (const c of columnZ)
-    if (Math.abs(z - c) < COLUMN_CLEAR)
-      z = c + Math.sign(z - c || 1) * COLUMN_CLEAR;
-  return { x, z: round(z) };
+  // Out from the wall to just beyond the pump's front, then 0.55 m more.
+  const reach =
+    st.side === 'west'
+      ? b.max[0] - interior.minX
+      : st.side === 'north'
+        ? b.max[2] - interior.minZ
+        : interior.maxZ - b.min[2];
+  const [x, z] = onWall(st.side, st.u, reach + 0.55);
+  return {
+    x: round(x),
+    z: round(z),
+    yaw: Math.atan2(-tx, -tz),
+    inward: [-tx, -tz],
+  };
 }
-/** How far a plaque stands from a column's line, so it is seen from either side, m. */
-const COLUMN_CLEAR = 0.9;
-/** How far a stand stands aside of a discharge that leaves toward the visitors, m. */
-const STAND_ASIDE = 0.6;
 
 /** A plaque's face: its centre's height and its half-width, m (`createRunStand`). */
 export const PLAQUE = { y: 1.08, half: 0.32 } as const;
-/** The visitors' walkway: how far west of the stands they stand to read the plaques, and their eye's height, m. */
+/** The visitors' walkway: how far in front of the stands they stand to read the plaques, and their eye's height, m. */
 export const READER = { back: 1.5, eye: 1.6 } as const;
-
-/** Each stand's keep-clear zone: from its reader to just behind its plaque, no pipe run through it. */
-export function standClearZone(no: PumpNo): { min: Vec3; max: Vec3 } {
-  const s = standOf(no);
-  return {
-    min: [s.x - READER.back, 0, s.z - PLAQUE.half - 0.1],
-    max: [s.x + 0.15, 2.2, s.z + PLAQUE.half + 0.1],
-  };
-}
 
 /** A gravity line's fall along its level-ish runs: 1 in 40. */
 export const FALL = 1 / 40;
@@ -534,18 +546,24 @@ const distinct = (points: readonly Vec3[]): Vec3[] =>
   );
 
 /**
- * A fill line from a pump's discharge to its header inlet: out of the
- * discharge (up, or out sideways and then up), up to the header's level,
- * and level into it; never above the header.
+ * A pump's fill line: up from its discharge to its level, along its
+ * corners, up at the last to the header's level, and level into its inlet
+ * (along z); never above the header, never down.
  */
-function upAndIn(from: Port, to: Port, outward: number): Vec3[] {
-  const y = to.at[1];
-  const riser = from.out[1] > 0.5 ? from.at : lift(from, outward);
+function fillLineOf(no: PumpNo): Vec3[] {
+  const st = STATIONS[no];
+  const from = portInHall(pumpId(no), 'discharge');
+  const to = portInHall('header', `in-${no}`);
+  const y = Math.min(st.level, to.at[1]);
+  const corners = st.corners.map(([x, z]) => [x, y, z] as Vec3);
+  const last = corners.at(-1) ?? [from.at[0], y, from.at[2]];
+  // The way along z into the inlet, from the last corner.
   return distinct([
     from.at,
-    riser,
-    [riser[0], y, riser[2]],
-    [riser[0], y, to.at[2]],
+    [from.at[0], y, from.at[2]],
+    ...corners,
+    [last[0], to.at[1], last[2]],
+    [to.at[0], to.at[1], last[2]],
     to.at,
   ]);
 }
@@ -562,7 +580,7 @@ function overAndDown(from: Port, to: Port): Vec3[] {
 
 /**
  * The overflow: out of the tank falling (`FALL`), down beside it, and
- * falling into the gully; its ends in line, so it never rises or runs level.
+ * falling into the tundish; its ends in line, so it never rises or runs level.
  */
 function fallingTo(from: Port, to: Port): Vec3[] {
   const out = 0.4;
@@ -579,30 +597,18 @@ function fallingTo(from: Port, to: Port): Vec3[] {
 /** Lay out and plumb Hall 6. */
 export function plumbHall6(): Hall6Room {
   const expansion = hall6Expansion();
-  // No pipe runs low over the visitors' floor: west of the pumps, below 2.4
-  // m, but round the tank. Its edge 0.9 m west of the pumps, where the
-  // split case's DN250 line turns up (the end-suction pumps' bodies set it
-  // there until they went, 2026-10-30).
-  const westOfPumps =
-    Math.min(...PUMPS.map((p) => boxInHall(pumpId(p.no)).min[0])) - 0.9;
-  const regions: RouterRegion[] = [
-    {
-      min: [TANK_AT.x + 1.2, 0, interior.minZ],
-      max: [westOfPumps, 2.4, interior.maxZ],
-      forbids: { runs: true },
-    },
-    // Nor in front of any pump's plaque.
-    ...PUMPS.map((p) => ({ ...standClearZone(p.no), forbids: { runs: true } })),
-  ];
   const machines = (Object.keys(PLACES) as MachineId[]).filter(
     (id) => !POINTS.includes(id),
   );
-  // The columns, already in the hall's own coordinates.
   const columns = hallColumns('museum6').map((c) => ({
     min: [c.x - 0.3, 0, c.z - 0.3] as Vec3,
     max: [c.x + 0.3, ROOM.height, c.z + 0.3] as Vec3,
   }));
-  const obstacles = [...machines.map((id) => boxInHall(id)), ...columns];
+  const obstacles = [
+    ...machines.map((id) => boxInHall(id)),
+    ...troughBoxes(),
+    ...columns,
+  ];
   const requests: RouterLine[] = LINKS.map((l) => {
     const dn = LINK_DN[l.id];
     const things = itemsOf(expansion, l.id);
@@ -623,25 +629,14 @@ export function plumbHall6(): Hall6Room {
         : {}),
     };
   });
-  const straight = requests.filter((q) => facing(q.start, q.end));
-  // The lines laid by hand: each fill line up from its pump and level
-  // into the header (the router's levels all stand above both ends, so it
-  // would hump them over the header and trap air); the tank fill level
-  // from the header and down into the tank; the overflow and the drain
-  // falling all the way to the gully.
+  // Laid by hand: each fill line (the router's levels all stand above
+  // both ends, so it would hump them over the header and trap air), the
+  // tank fill, and the overflow and drain falling all the way. Each
+  // suction runs straight from its trough.
   const hand = new Map<string, Vec3[]>([
     ...PUMPS.map((p): [string, Vec3[]] => [
       `delivery${p.no}`,
-      upAndIn(
-        portInHall(pumpId(p.no), 'discharge'),
-        portInHall('header', `in-${p.no}`),
-        // Out to its riser no further than the visitors' zone's edge.
-        Math.min(
-          reach(itemsOf(expansion, `delivery${p.no}`).source, p.dn),
-          portInHall(pumpId(p.no), 'discharge').at[0] -
-            (westOfPumps + odOf(p.dn) / 2 + 0.05),
-        ),
-      ),
+      fillLineOf(p.no),
     ]),
     [
       'fill',
@@ -656,28 +651,22 @@ export function plumbHall6(): Hall6Room {
       [portInHall('tank', 'drain').at, portInHall('drain', 'in-2').at],
     ],
   ]);
-  const fixed = [
-    ...straight.map((q) => ({
+  for (const q of requests)
+    if (!hand.has(q.id) && facing(q.start, q.end))
+      hand.set(q.id, [q.start.at, q.end.at]);
+  const fixed = requests
+    .filter((q) => hand.has(q.id))
+    .map((q) => ({
       name: q.id,
-      points: [q.start.at, q.end.at],
+      points: hand.get(q.id)!,
       od: q.od,
       joint: q.joint,
-    })),
-    ...requests
-      .filter((q) => hand.has(q.id))
-      .map((q) => ({
-        name: q.id,
-        points: hand.get(q.id)!,
-        od: q.od,
-        joint: q.joint,
-      })),
-  ];
+    }));
   const routed = routeVoxelLines(
-    { ...ROOM, regions, obstacles },
-    requests.filter((q) => !straight.includes(q) && !hand.has(q.id)),
+    { ...ROOM, regions: [], obstacles },
+    requests.filter((q) => !hand.has(q.id)),
     fixed,
   );
-  for (const q of straight) routed.routes.set(q.id, [q.start.at, q.end.at]);
   for (const [id, points] of hand) routed.routes.set(id, points);
   const problems = [...routed.problems];
   const lines: HallLine[] = [];
@@ -732,7 +721,7 @@ export function plumbHall6(): Hall6Room {
       })),
     ...lowPipeFootprints(lines),
   ];
-  return { expansion, lines, items, regions, problems, solids };
+  return { expansion, lines, items, problems, solids };
 }
 
 export function hall6PipeClashes(room: Hall6Room): string[] {

@@ -5,10 +5,10 @@ import { fillSentence } from '../../../game/plant/museum-6-pumps';
 describe('Hall 6’s words', () => {
   it('gives each pump its fill time from the model', () => {
     const plaques = hall6Plaques();
-    expect(plaques).toHaveLength(2);
+    expect(plaques).toHaveLength(6);
     expect(plaques[0].headline).toBe(fillSentence(1));
-    expect(plaques[1].headline).toContain('seconds');
-    expect(plaques[0].headline).toContain('minutes');
+    expect(plaques[5].headline).toContain('seconds');
+    expect(plaques[0].headline).toContain('days');
   });
 
   it('says power in watts and kilowatts', () => {

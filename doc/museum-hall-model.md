@@ -28,7 +28,7 @@ Pure display items are exempt, but must be marked `decorative` so the test can t
 | museum3, Safe water        | plant   | Chemistry: dosing, sample cell, controllers (`museum-3-dosing.ts`).                                                                                                                                             |
 | museum4, Chemistry         | plant   | The lab: chemical tanks, dosing pot, pump, analyser (`museum-4-lab.ts`).                                                                                                                                        |
 | museum5, A Day in the Life | display | Purely decorative by the owner's ruling (2026-10-30): the painted pool, finds, captions. Its wall skimmer (M5-SK1) is dry and capped, a display piece; if it is ever made to work, Hall 5 becomes a plant hall. |
-| museum6, World of Pumps    | plant   | Two pumps, a tank and header (`museum-6-pumps.ts`).                                                                                                                                                             |
+| museum6, World of Pumps    | plant   | Six of the game's pumps round three walls, a tank and header (`museum-6-pumps.ts`).                                                                                                                             |
 | museum7, Grout             | display | Grout specimens.                                                                                                                                                                                                |
 | museum8, Never Again       | display | The incident story: stands and HEAR WHAT HAPPENED buttons, which work the exhibit's narration, not plant.                                                                                                       |
 | museum9, The whole plant   | plant   | The whole plant, with faults (`museum-9-plant.ts`, `museum-9-faults.ts`).                                                                                                                                       |
@@ -43,7 +43,7 @@ Every plant hall has a schematic, expanded by the plumber, with tags derived fro
 | museum2 | yes            | all bound: machines, valves, pipes and their markings, every instrument, the mimic panel (M2-MP1)                                        | yes     |
 | museum3 | yes            | as Hall 1; 63 unbound (the DC1 controllers and their keys, the chemistry board); 13 undrawn (sample fittings, instruments)               | partly  |
 | museum4 | yes            | tanks, pipes, pot, pump, analyser bound; 37 unbound (the challenge desk's buttons and selectors); 15 undrawn (header, the tanks' valves) | partly  |
-| museum6 | yes            | as Hall 1; 28 unbound (plates, labels, lamp test, clock); 5 undrawn (P2 gauges, tank level instruments)                                  | partly  |
+| museum6 | yes            | as Hall 1; 37 unbound (plates, labels, stands, lamp test, clock); 7 undrawn (P5 and P6 gauges, tank level instruments)                   | partly  |
 | museum9 | yes            | as Hall 1; 47 unbound (DC1, fault key switch, panel parts, thermometer board); 25 undrawn (sample fittings, instruments)                 | partly  |
 
 Display halls 0, 5, 7 and 8 conform by being exempt.

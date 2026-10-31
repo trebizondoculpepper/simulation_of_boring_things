@@ -70,16 +70,27 @@ describe('Hall 6’s plaques, seen from the visitors’ walkway', () => {
     for (const p of PUMPS) {
       const s = standOf(p.no);
       // Straight on and from either side; to the plaque's middle and both edges.
-      for (const dz of [-0.6, 0, 0.6])
+      const [ix, iz] = s.inward;
+      // Across the plaque: the inward direction turned a quarter.
+      const [ax, az] = [-iz, ix];
+      for (const d of [-0.6, 0, 0.6])
         for (const edge of [-0.25, 0, 0.25]) {
           const hit = sightBlockers(
-            [s.x - READER.back, READER.eye, s.z + dz],
-            [s.x - 0.02, PLAQUE.y, s.z + edge],
+            [
+              s.x + ix * READER.back + ax * d,
+              READER.eye,
+              s.z + iz * READER.back + az * d,
+            ],
+            [
+              s.x + ix * 0.02 + ax * edge,
+              PLAQUE.y,
+              s.z + iz * 0.02 + az * edge,
+            ],
             pipes,
             columns,
           );
           if (hit.length)
-            blocked.push(`P${p.no} (${dz}, ${edge}): ${hit.join(', ')}`);
+            blocked.push(`P${p.no} (${d}, ${edge}): ${hit.join(', ')}`);
         }
     }
     expect(blocked).toEqual([]);
