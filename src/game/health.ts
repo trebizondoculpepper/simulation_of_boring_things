@@ -367,6 +367,8 @@ export const WORLD_HEALTH_COVERAGE = {
     'not checked itself: the pools’ water chemistry and dosing; its readings are the pools’ chemistry, checked there',
   dosingPumps:
     'not checked itself: the dosing pumps; one gas-locked or worn shows in its pool’s chemistry',
+  aqualis:
+    'not checked itself: the Dr Aqualis Trios; one off, crashed or offline shows in its pool’s chemistry, and its alarms on its annunciator',
   chemicals: 'chemicals: stock against capacity',
   distribution:
     'not checked: the day tanks; one run dry shows in its pool’s chemistry',
@@ -439,7 +441,8 @@ export const KIND_HEALTH_COVERAGE = {
   'ozone-generator':
     'not in the world: its state is its room’s own model (Codex, review of 069); its isolator is checked under services',
   'contact-tank': 'pools: treatment flow through it',
-  'dosing-controller': 'pools: pH and free chlorine in band',
+  'dosing-controller':
+    'pools: pH and free chlorine in band (the Lounge’s and Olympic’s, Dr Aqualis Trios, mission 114)',
   'hypo-pumps': 'pools: free chlorine in band; chemicals: stock',
   'acid-pump': 'pools: pH in band; chemicals: stock',
   'jacuzzi-pack': 'jacuzzi: cabinet powered, no trip',

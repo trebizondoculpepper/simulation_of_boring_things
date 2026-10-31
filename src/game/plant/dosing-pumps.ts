@@ -12,7 +12,31 @@ import type {
   PeristalticState,
 } from '../../toolkit/components/plant/logic/metering-pump';
 import type { MotorPumpState } from '../../toolkit/components/plant/logic/motor-dosing-pump';
-import { admitGas } from '../../toolkit/components/plant/logic/motor-dosing-pump';
+import {
+  admitGas,
+  pressMotorKey,
+} from '../../toolkit/components/plant/logic/motor-dosing-pump';
+import type { MotorPumpKey } from '../../toolkit/components/plant/logic/motor-dosing-pump';
+import { pressKey } from '../../toolkit/components/plant/logic/diaphragm-pump';
+import type { DiaphragmKey } from '../../toolkit/components/plant/logic/diaphragm-pump';
+
+const DIAPHRAGM_KEYS: readonly string[] = [
+  'start',
+  'stop',
+  'up',
+  'down',
+  'mode',
+];
+const MOTOR_KEYS: readonly string[] = [
+  'startStop',
+  'mode',
+  'up',
+  'down',
+  'info',
+];
+const isDiaphragmKey = (k: string): k is DiaphragmKey =>
+  DIAPHRAGM_KEYS.includes(k);
+const isMotorKey = (k: string): k is MotorPumpKey => MOTOR_KEYS.includes(k);
 import { POOL_IDS } from './pools';
 import type { PoolId } from './pools';
 import type { Chemical } from './chemicals';
@@ -198,6 +222,16 @@ export function stepDosingPumps(
 /** What can be done to a pool's pump: its fault acknowledged; gas let into its head (a scenario's). */
 export type DosingPumpAction =
   | { act: 'acknowledge'; pool: PoolId; chemical: Chemical }
+  /**
+   * A key at its own keypad (mission 114): a keyed diaphragm pump's START,
+   * STOP, P (AUTO or MANUAL), ▲ ▼; the DMH's STOP/START, P, ▲ ▼ and i.
+   */
+  | {
+      act: 'key';
+      pool: PoolId;
+      chemical: Chemical;
+      key: DiaphragmKey | MotorPumpKey;
+    }
   /** Its bleed (priming, deaeration) valve opened or shut. */
   | { act: 'bleed'; pool: PoolId; chemical: Chemical; open: boolean }
   | { act: 'gas'; pool: PoolId; chemical: Chemical; ml: number };
@@ -211,7 +245,17 @@ export function actOnDosingPumps(
   const model = pumpModel(a.pool, a.chemical);
   let state = pump.state;
   if (a.act === 'acknowledge') state = model.acknowledge(state);
-  else if (a.act === 'bleed') {
+  else if (a.act === 'key') {
+    if (pump.kind === 'motor' && isMotorKey(a.key))
+      state = pressMotorKey(state as MotorPumpState, a.key);
+    else if (
+      (pump.kind === 'solenoid' || pump.kind === 'stepper') &&
+      isDiaphragmKey(a.key)
+    ) {
+      const s = state as KeyedDiaphragmState;
+      state = { ...s, keys: pressKey(s.keys, a.key) };
+    }
+  } else if (a.act === 'bleed') {
     if (pump.kind === 'motor')
       state = { ...(state as MotorPumpState), bleedOpen: a.open };
     else if (pump.kind === 'solenoid' || pump.kind === 'stepper') {

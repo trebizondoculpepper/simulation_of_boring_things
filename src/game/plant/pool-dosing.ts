@@ -6,6 +6,8 @@ import { pumpRates } from './water-treatment';
 import { dosedByPool } from './pools';
 import { BOTTLE } from './dose-bottle';
 import { serviceAvailable } from './services';
+import { isTrioPool, trioSignals } from './aqualis-world';
+import { pumpMost } from './dosing-pumps';
 import type { ServiceRoom } from './services';
 
 /**
@@ -24,12 +26,11 @@ import type { ServiceRoom } from './services';
  *   down to the DoseCell's dry-run cut-out.
  */
 
-/** Whether each chemical can be dosed: its day tank has some, and its way in is open. */
-export function dosingStock(
-  world: Pick<World, 'distribution' | 'installedValves'>,
+/** Whether each chemical's way in is open, its day tank's stock aside. */
+export function dosingPath(
+  world: Pick<World, 'installedValves'>,
   id: PoolId,
 ): Record<Chemical, boolean> {
-  const s = dayTankStock(world.distribution, id);
   const open = (fitting: string) => world.installedValves[fitting] ?? true;
   // Its day tank's outlet isolating valve, and the dosing end's where its
   // cabinet doses (the owner, 2026-10-28: shutting the day tank off should
@@ -41,14 +42,24 @@ export function dosingStock(
       ? open(`${room}.cabinet.${c}.iso`)
       : true);
   if (id !== 'pool_01')
-    return {
-      hypochlorite: s.hypochlorite && fed('hypochlorite'),
-      acid: s.acid && fed('acid'),
-    };
+    return { hypochlorite: fed('hypochlorite'), acid: fed('acid') };
   const quill = (k: string) => open(`${k}-quill.in.iso`);
   return {
-    hypochlorite: s.hypochlorite && fed('hypochlorite') && quill('hypo'),
-    acid: s.acid && fed('acid') && quill('acid'),
+    hypochlorite: fed('hypochlorite') && quill('hypo'),
+    acid: fed('acid') && quill('acid'),
+  };
+}
+
+/** Whether each chemical can be dosed: its day tank has some, and its way in is open. */
+export function dosingStock(
+  world: Pick<World, 'distribution' | 'installedValves'>,
+  id: PoolId,
+): Record<Chemical, boolean> {
+  const s = dayTankStock(world.distribution, id);
+  const path = dosingPath(world, id);
+  return {
+    hypochlorite: s.hypochlorite && path.hypochlorite,
+    acid: s.acid && path.acid,
   };
 }
 
@@ -62,7 +73,7 @@ type DosingWorld = Pick<
   | 'motors'
   | 'treatment'
 > &
-  Partial<Pick<World, 'dosingPumps'>>;
+  Partial<Pick<World, 'dosingPumps' | 'aqualis'>>;
 
 /** Litres a second, from a pool's pumps' l/h as its controller sets them, while `stock` lets it dose. */
 function drawn(
@@ -78,6 +89,17 @@ function drawn(
     true,
     world.motors,
   );
+  // Where a Dr Aqualis Trio drives the pumps (mission 114), what it asks:
+  // its demand on each port of its pump's most, while it releases it.
+  const trio = isTrioPool(id) ? world.aqualis?.[id] : undefined;
+  if (trio && !real) {
+    const signals = trioSignals(trio);
+    const ask = (c: Chemical) =>
+      signals[c].release && (dosed[id]?.[c] ?? 0) > 0
+        ? (signals[c].demand * pumpMost(id, c)) / 3600
+        : 0;
+    return { hypochlorite: ask('hypochlorite'), acid: ask('acid') };
+  }
   const control = world.treatment?.circuits[id]?.control;
   if (!control) return { hypochlorite: 0, acid: 0 };
   // What its pumps deliver (prompt 102), where it is asked what it gives;

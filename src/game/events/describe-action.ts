@@ -297,6 +297,29 @@ function said(
             ? `pump ${action.action.pump + 1} selected duty`
             : `${action.action.act.toUpperCase()} pressed`,
       };
+    case 'aqualis': {
+      const a = action.action;
+      const what =
+        a.act === 'selector'
+          ? `knob to ${a.selector.toUpperCase()}`
+          : a.act === 'mainSwitch' || a.act === 'isolator'
+            ? `${a.act === 'isolator' ? 'isolator' : 'POWER'} ${a.on ? 'on' : 'off'}`
+            : a.act === 'hand'
+              ? `HAND ${a.channel} ${Math.round(a.demand * 100)} %`
+              : a.act === 'firstAid'
+                ? a.programme
+                  ? `First Aid ${a.programme} started`
+                  : 'First Aid stopped'
+                : a.act === 'watchdog'
+                  ? `watchdog ${a.works ? 'works' : 'fails'}`
+                  : a.act === 'crash'
+                    ? `crashed (${a.kind})`
+                    : a.act;
+      return {
+        subject: `${action.pool} Dr Aqualis`,
+        text: `${action.pool} Dr Aqualis Trio: ${what}`,
+      };
+    }
     case 'dosing-pump': {
       const a = action.action;
       const what =
@@ -304,7 +327,9 @@ function said(
           ? 'fault acknowledged'
           : a.act === 'bleed'
             ? `bleed valve ${openShut(a.open)}`
-            : `${a.ml} ml of gas let into its head`;
+            : a.act === 'key'
+              ? `${a.key.toUpperCase()} pressed`
+              : `${a.ml} ml of gas let into its head`;
       return {
         subject: `${a.pool} ${a.chemical} pump`,
         text: `${a.pool} ${a.chemical} dosing pump: ${what}`,

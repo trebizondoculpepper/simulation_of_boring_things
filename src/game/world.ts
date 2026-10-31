@@ -1,4 +1,22 @@
-import { cabinetFeeds, dosingStock, feedMessages } from './plant/pool-dosing';
+import {
+  cabinetFeeds,
+  dosingPath,
+  dosingStock,
+  feedMessages,
+} from './plant/pool-dosing';
+import {
+  SAMPLE_FLOW_LH,
+  TRIO_POOLS,
+  TRIO_SAMPLE_VALVES,
+  actOnTrio,
+  stepTrio,
+  triosFor,
+} from './plant/aqualis-world';
+import type { TrioAction, TrioPool, Trios } from './plant/aqualis-world';
+import { pumpFeedback, pumpInputs } from './plant/aqualis-ports';
+import type { PumpInputsByPool } from './plant/dosing-pumps';
+import { INJECTION_BAR, pumpModel } from './plant/dosing-pumps';
+import { dayTankStock } from './plant/chemical-distribution';
 import {
   actOnDosingPumps,
   newDosingPumps,
@@ -307,7 +325,7 @@ import type {
   LiftState,
 } from '../toolkit/gallery/logic/freight-lift';
 
-export const WORLD_VERSION = 60;
+export const WORLD_VERSION = 61;
 
 /**
  * Where the main corridor's control room doors lead (the owner,
@@ -351,6 +369,13 @@ export interface World {
    * water's dose.
    */
   dosingPumps: DosingPumps;
+  /**
+   * The Dr Aqualis Trios (mission 114): the Lounge's and the Olympic's
+   * dosing controllers, each its computer, analyser, controller, First
+   * Aid, settings, knob, power and watchdog (`plant/aqualis-world.ts`),
+   * driving its pool's dosing pumps in place of the unseen controller.
+   */
+  aqualis: Trios;
   /** The dosing chemicals left in their stores, litres. */
   chemicals: ChemicalStores;
   /**
@@ -464,13 +489,15 @@ const newLifts = () =>
   ) as Record<LiftId, LiftState>;
 
 export function newWorld(): World {
+  const treatment = newWaterTreatment(newPools());
   return {
     time: 0,
     demo: { on: false, presses: 0 },
     plant: newPlantServices(),
     pools: newPools(),
-    treatment: newWaterTreatment(newPools()),
+    treatment,
     dosingPumps: newDosingPumps(),
+    aqualis: triosFor(treatment, newPools()),
     chemicals: newChemicalStores(),
     distribution: newChemicalDistribution(),
     chemControl: newChemControlBox(),
@@ -574,6 +601,8 @@ export type WorldAction =
   | { type: 'distribution'; action: DistributionAction }
   /** A pool's dosing pump worked at its keys: its fault acknowledged, its bleed valve; or gas let into its head. */
   | { type: 'dosing-pump'; action: DosingPumpAction }
+  /** At a Dr Aqualis Trio: its knob, switches, touch screen, or a scenario's crash (mission 114). */
+  | { type: 'aqualis'; pool: TrioPool; action: TrioAction }
   /** The chemical transfer control box worked: a terminal's command, its isolator or MCB, or a fault. */
   | { type: 'chem-control'; action: ChemControlAction }
   | { type: 'booster/changeover'; action: ChangeoverAction }
@@ -781,6 +810,12 @@ export function applyAction(world: World, action: WorldAction): World {
         r.box === world.chemControl
         ? world
         : { ...world, distribution: r.distribution, chemControl: r.box };
+    }
+    case 'aqualis': {
+      const trio = actOnTrio(world.aqualis[action.pool], action.action);
+      return trio === world.aqualis[action.pool]
+        ? world
+        : { ...world, aqualis: { ...world.aqualis, [action.pool]: trio } };
     }
     case 'dosing-pump': {
       const dosingPumps = actOnDosingPumps(world.dosingPumps, action.action);
@@ -1208,6 +1243,91 @@ function stepChemicals(
   };
 }
 
+/**
+ * The Trios `delta` seconds on (mission 114): each given its room's supply,
+ * its sample (the balance tank's water, flowing while its pool circulates
+ * and its sample's valves are open) and its pumps' feedback; and what
+ * each of its pumps is given from its ports: its release in series with
+ * the plant's interlocks (its pool circulating, its chemical service, its
+ * way open), its demand, its supply and its day tank's level switch.
+ */
+function stepTrios(
+  world: World,
+  delta: number,
+  motors: World['motors'],
+  jacuzzi: Parameters<typeof dosedByPool>[5],
+  loungeValvePositions: World['loungeValvePositions'],
+): { aqualis: Trios; driven: PumpInputsByPool } {
+  // The pools that may be dosed, their day tanks' stock aside: a dry tank
+  // is the pump's level switch's to see.
+  const interlocks = dosedByPool(
+    world.pools,
+    world.plant,
+    (id) => dosingPath(world, id),
+    loungeValveFlows(loungeValvePositions, true).toPool > 0,
+    motors,
+    jacuzzi,
+  );
+  const aqualis = { ...world.aqualis };
+  const driven: PumpInputsByPool = {};
+  for (const id of TRIO_POOLS) {
+    const room = `plant_${id}` as const;
+    const pumpsPowered = serviceAvailable(world.plant, room, 'chemical');
+    const pumps = world.dosingPumps[id];
+    const flowing =
+      world.pools[id].flow > 0.5 &&
+      TRIO_SAMPLE_VALVES[id].every((tag) =>
+        installedValveOpen(world.installedValves, tag),
+      );
+    const r = stepTrio(
+      id,
+      world.aqualis[id],
+      {
+        supply: serviceAvailable(world.plant, room, 'power'),
+        sample: {
+          water: world.treatment.circuits[id].tank,
+          temperature: world.pools[id].temperature,
+          flowLh: flowing ? SAMPLE_FLOW_LH : 0,
+        },
+        ports: {
+          hypochlorite: pumpFeedback(
+            pumps.hypochlorite,
+            pumpModel(id, 'hypochlorite'),
+            pumpsPowered,
+          ),
+          acid: pumpFeedback(pumps.acid, pumpModel(id, 'acid'), pumpsPowered),
+          // The CO₂ gland is blanked: nothing connected yet.
+          co2: null,
+        },
+      },
+      delta,
+    );
+    aqualis[id] = r.trio;
+    const tanks = dayTankStock(world.distribution, id);
+    driven[id] = {
+      hypochlorite: pumpInputs(
+        r.signals.hypochlorite,
+        {
+          interlock: (interlocks[id]?.hypochlorite ?? 0) > 0,
+          powered: pumpsPowered,
+          level: tanks.hypochlorite ? 'ok' : 'empty',
+        },
+        INJECTION_BAR,
+      ),
+      acid: pumpInputs(
+        r.signals.acid,
+        {
+          interlock: (interlocks[id]?.acid ?? 0) > 0,
+          powered: pumpsPowered,
+          level: tanks.acid ? 'ok' : 'empty',
+        },
+        INJECTION_BAR,
+      ),
+    };
+  }
+  return { aqualis, driven };
+}
+
 function stepPlant(world: World, delta: number): World {
   // The Wash-O-Tron first: the filters' valves it drives this step.
   world = { ...world, ...stepWashWorld(world, delta) };
@@ -1372,6 +1492,9 @@ function stepPlant(world: World, delta: number): World {
   // its chemical service, its day tank's stock and open path); its water's
   // chemistry, a step on (mission 101). Each pump stepped on: released while its pool may be dosed, asked its
   // controller's output; what it delivers is the dose (prompt 102).
+  // The Dr Aqualis Trios (mission 114): each its analyser on its sample,
+  // its controller on its pumps' feedback; what it sends drives its pumps.
+  const trios = stepTrios(world, delta, motors, jacuzzi, loungeValvePositions);
   const dosing = stepDosingPumps(
     world.dosingPumps,
     Object.fromEntries(
@@ -1386,6 +1509,7 @@ function stepPlant(world: World, delta: number): World {
       jacuzzi,
     ),
     delta,
+    trios.driven,
   );
   const pumps = dosing.rates;
   const pools = withSolids(world, water.pools, delta);
@@ -1427,6 +1551,7 @@ function stepPlant(world: World, delta: number): World {
     pools: withWaterReadings(pools, treatment, world.treatment),
     treatment,
     dosingPumps: dosing.pumps,
+    aqualis: trios.aqualis,
     airHandling,
     motors,
     jacuzzi: stepJacuzzi(

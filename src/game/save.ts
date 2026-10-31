@@ -4,6 +4,8 @@ import { DAY_TANKS, newDayTank } from './plant/chemical-distribution';
 import { POOL_IDS, newPools } from './plant/pools';
 import type { PoolsState } from './plant/pools';
 import { newWaterTreatment } from './plant/water-treatment';
+import type { WaterTreatment } from './plant/water-treatment';
+import { TRIO_POOLS, triosFor } from './plant/aqualis-world';
 import {
   FOOTBATH,
   newIdentifiedPlant,
@@ -270,6 +272,33 @@ export const MIGRATIONS: Record<number, (world: unknown) => unknown> = {
       : world.bridgeConsoles;
     return { ...world, distribution, bridgeConsoles: consoles };
   },
+  // 60 → 61: the Dr Aqualis Trios (mission 114), the Lounge's and the
+  // Olympic's, running in AUTO, each cell settled on its pool's tank water
+  // and its chlorine integral carrying on the old controller's dose, so
+  // dosing goes on without a jump; their sample valves open, their pumps
+  // in remote (as they were: `fillDefaults` keeps both).
+  60: (world) => {
+    if (!isRecord(world)) return world;
+    const fresh = newWorld();
+    const treatment = world.treatment as WaterTreatment | undefined;
+    const pools = world.pools as PoolsState | undefined;
+    const usable = TRIO_POOLS.every((id) => {
+      const c = isRecord(treatment?.circuits)
+        ? treatment.circuits[id]
+        : undefined;
+      return (
+        isRecord(c) &&
+        isRecord(c.tank) &&
+        isRecord(c.control) &&
+        isRecord(pools?.[id]) &&
+        typeof pools[id].temperature === 'number'
+      );
+    });
+    if (!usable) return world;
+    const t = fillDefaults(treatment, fresh.treatment);
+    const p = fillDefaults(pools, fresh.pools);
+    return { ...world, aqualis: triosFor(t, p) };
+  },
   // 59 → 60: the lifts (mission 108): the freight lift at B2, the trial
   // lift at its floor 1, their doors shut, nobody calling (`fillDefaults`
   // adds them).
@@ -388,12 +417,89 @@ export function deserialiseWorld(text: string): LoadResult {
   if (!isRecord(world)) return { ok: false, reason: 'the save holds no world' };
   return {
     ok: true,
-    world: fillDefaults(world, newWorld()),
+    world: withTrioNullables(fillDefaults(world, newWorld()), world),
     savedAt:
       typeof savedAt === 'number' && Number.isFinite(savedAt)
         ? savedAt
         : Date.now(),
   };
+}
+
+/**
+ * The Trios' fields that are null at rest but objects in use (a boot
+ * under way, a crash, a First Aid programme), which `fillDefaults` would
+ * drop (a null default keeps only a plain value): restored from the save,
+ * each filled to its own shape where one exists to fill it from.
+ */
+function withTrioNullables(world: World, raw: Record<string, unknown>): World {
+  const saved = isRecord(raw.aqualis) ? raw.aqualis : null;
+  if (!saved) return world;
+  const aqualis = { ...world.aqualis };
+  for (const id of TRIO_POOLS) {
+    const t = saved[id];
+    if (!isRecord(t)) continue;
+    const rawOs = isRecord(t.os) ? t.os : {};
+    const boot =
+      isRecord(rawOs.boot) &&
+      typeof rawOs.boot.n === 'number' &&
+      typeof rawOs.boot.t === 'number'
+        ? {
+            n: rawOs.boot.n,
+            unclean: rawOs.boot.unclean === true,
+            t: rawOs.boot.t,
+          }
+        : null;
+    const crash =
+      isRecord(rawOs.crash) &&
+      (rawOs.crash.kind === 'stop' || rawOs.crash.kind === 'glitch')
+        ? fillDefaults(rawOs.crash, {
+            kind: rawOs.crash.kind,
+            seed: 0,
+            watchdog: false,
+            latched: { hypochlorite: 0, acid: 0, co2: 0 },
+            t: 0,
+            outcome: rawOs.crash.outcome ?? null,
+            rebootAt: rawOs.crash.rebootAt ?? null,
+          } as NonNullable<World['aqualis']['pool_01']['os']['crash']>)
+        : null;
+    const firstAid =
+      isRecord(t.firstAid) && typeof t.firstAid.id === 'string'
+        ? fillDefaults(t.firstAid, {
+            id: t.firstAid.id,
+            phase: 'holding',
+            elapsed: 0,
+            held: 0,
+            target: t.firstAid.target ?? null,
+          } as NonNullable<World['aqualis']['pool_01']['firstAid']>)
+        : null;
+    const trio = aqualis[id];
+    aqualis[id] = {
+      ...trio,
+      os: {
+        ...trio.os,
+        boot: trio.os.phase === 'booting' ? boot : null,
+        crash: trio.os.phase === 'crashed' ? crash : null,
+      },
+      firstAid,
+    };
+    // A phase whose object was unreadable is put right: a boot begun again, a crash power-cycled.
+    const os = aqualis[id].os;
+    if (
+      (os.phase === 'booting' && !os.boot) ||
+      (os.phase === 'crashed' && !os.crash)
+    )
+      aqualis[id] = {
+        ...aqualis[id],
+        os: {
+          ...os,
+          phase: 'booting',
+          boot: { n: os.boots, unclean: true, t: 0 },
+          boots: os.boots + 1,
+          crash: null,
+        },
+      };
+  }
+  return { ...world, aqualis };
 }
 
 /** How many seconds to catch up on, from when it was saved to `now` (ms). */
