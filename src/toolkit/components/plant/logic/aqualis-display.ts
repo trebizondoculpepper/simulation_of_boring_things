@@ -140,8 +140,8 @@ export function tickDisplay(s: DisplayState, dt: number): DisplayState {
 
 /** The title strip, the page tabs in it, the content and the status strip. */
 export const LAYOUT = {
-  title: { x: 0, y: 0, w: SCREEN.w, h: 52 } as Rect,
-  content: { x: 14, y: 62, w: SCREEN.w - 28, h: 374 } as Rect,
+  title: { x: 0, y: 0, w: SCREEN.w, h: 48 } as Rect,
+  content: { x: 10, y: 56, w: SCREEN.w - 20, h: 382 } as Rect,
   status: { x: 0, y: SCREEN.h - 36, w: SCREEN.w, h: 36 } as Rect,
 };
 
@@ -154,13 +154,13 @@ const TAB_NAMES: Record<Page, string> = {
 
 export function tabRects(): { page: Page; name: string; rect: Rect }[] {
   const pages: Page[] = ['pumps', 'water', 'doctor', 'settings'];
-  const w = 112;
-  const gap = 6;
+  const w = 90;
+  const gap = 5;
   const x0 = SCREEN.w - 10 - pages.length * w - (pages.length - 1) * gap;
   return pages.map((page, i) => ({
     page,
     name: TAB_NAMES[page],
-    rect: { x: x0 + i * (w + gap), y: 9, w, h: 34 },
+    rect: { x: x0 + i * (w + gap), y: 8, w, h: 32 },
   }));
 }
 
@@ -171,8 +171,8 @@ export function pumpRow(i: number) {
   const row: Rect = { x: c.x, y: c.y + i * (h + 9), w: c.w, h };
   return {
     row,
-    minus: { x: row.x + row.w - 132, y: row.y + 64, w: 56, h: 38 } as Rect,
-    plus: { x: row.x + row.w - 66, y: row.y + 64, w: 56, h: 38 } as Rect,
+    minus: { x: row.x + row.w - 124, y: row.y + 64, w: 52, h: 38 } as Rect,
+    plus: { x: row.x + row.w - 62, y: row.y + 64, w: 52, h: 38 } as Rect,
   };
 }
 
@@ -181,41 +181,41 @@ export function waterTile(i: number): Rect {
   const c = LAYOUT.content;
   const col = Math.floor(i / 5);
   const row = i % 5;
-  const w = (c.w - 12) / 2;
+  const w = (c.w - 10) / 2;
   const h = 68;
-  return { x: c.x + col * (w + 12), y: c.y + row * (h + 8), w, h };
+  return { x: c.x + col * (w + 10), y: c.y + row * (h + 8), w, h };
 }
 
 /** The doctor page: his place, his bubble, and its buttons. */
 export const DOCTOR = {
-  him: { x: 20, y: 120, w: 230, h: 300 } as Rect,
-  bubble: { x: 270, y: 72, w: 510, h: 270 } as Rect,
-  prev: { x: 270, y: 362, w: 60, h: 46 } as Rect,
-  next: { x: 420, y: 362, w: 60, h: 46 } as Rect,
-  dose: { x: 560, y: 362, w: 220, h: 46 } as Rect,
+  him: { x: 8, y: 132, w: 196, h: 270 } as Rect,
+  bubble: { x: 212, y: 62, w: 418, h: 280 } as Rect,
+  prev: { x: 212, y: 360, w: 56, h: 46 } as Rect,
+  next: { x: 330, y: 360, w: 56, h: 46 } as Rect,
+  dose: { x: 440, y: 360, w: 190, h: 46 } as Rect,
 };
 
 /** The settings page: its two tabs, and the editing rows. */
 export const SETTINGS = {
   tabs: [
-    { x: 24, y: 70, w: 200, h: 40 },
-    { x: 232, y: 70, w: 200, h: 40 },
+    { x: 16, y: 62, w: 180, h: 40 },
+    { x: 204, y: 62, w: 180, h: 40 },
   ] as Rect[],
   /** Pool dynamics: two rows of a value and its − and +. */
   dynamics: [0, 1].map((i) => ({
-    row: { x: 24, y: 136 + i * 96, w: 752, h: 80 } as Rect,
-    minus: { x: 560, y: 150 + i * 96, w: 90, h: 52 } as Rect,
-    plus: { x: 666, y: 150 + i * 96, w: 90, h: 52 } as Rect,
+    row: { x: 16, y: 124 + i * 96, w: 608, h: 80 } as Rect,
+    minus: { x: 420, y: 138 + i * 96, w: 88, h: 52 } as Rect,
+    plus: { x: 522, y: 138 + i * 96, w: 88, h: 52 } as Rect,
   })),
   /** Targets: the list on the left, the chosen target's set, low and high on the right. */
-  list: { x: 24, y: 120, w: 300, h: 310 } as Rect,
-  up: { x: 330, y: 120, w: 46, h: 46 } as Rect,
-  down: { x: 330, y: 384, w: 46, h: 46 } as Rect,
+  list: { x: 16, y: 112, w: 250, h: 310 } as Rect,
+  up: { x: 272, y: 112, w: 42, h: 42 } as Rect,
+  down: { x: 272, y: 380, w: 42, h: 42 } as Rect,
   fields: (['set', 'low', 'high'] as const).map((field, i) => ({
     field,
-    row: { x: 392, y: 150 + i * 92, w: 384, h: 76 } as Rect,
-    minus: { x: 590, y: 162 + i * 92, w: 80, h: 52 } as Rect,
-    plus: { x: 684, y: 162 + i * 92, w: 80, h: 52 } as Rect,
+    row: { x: 322, y: 142 + i * 92, w: 302, h: 76 } as Rect,
+    minus: { x: 472, y: 154 + i * 92, w: 70, h: 52 } as Rect,
+    plus: { x: 548, y: 154 + i * 92, w: 70, h: 52 } as Rect,
   })),
   rowH: 34,
 };
@@ -407,6 +407,10 @@ export function pressDisplay(
 
 export type Band = 'low' | 'ok' | 'high';
 
+/** The decimal places a step needs: 0.05 → 2, 0.1 → 1, 10 → 0. */
+export const decimalsOf = (step: number) =>
+  step >= 1 ? 0 : Math.ceil(-Math.log10(step) - 1e-9);
+
 export function bandOf(v: number, t: Target): Band {
   return v < t.low ? 'low' : v > t.high ? 'high' : 'ok';
 }
@@ -491,7 +495,14 @@ export interface DisplayModel {
   settings: {
     dynamics: { volumeM3: number; flowM3h: number; turnoverH: number };
     row: number;
-    targets: { id: ReadingId; name: string; unit: string; target: Target }[];
+    targets: {
+      id: ReadingId;
+      name: string;
+      unit: string;
+      target: Target;
+      /** The places its values are shown to, from its step. */
+      decimals: number;
+    }[];
   };
   key: string;
 }
@@ -579,6 +590,7 @@ export function displayModel(
         name: READING_LABELS[id].name,
         unit: READING_LABELS[id].unit,
         target: inputs.settings.targets[id],
+        decimals: decimalsOf(TARGET_STEP[id]),
       })),
     },
   };

@@ -67,7 +67,7 @@ export function drawAqualisScreen(
             : 'normal',
       tint: 'grey',
       shape: 'rounded',
-      size: 15,
+      size: 14,
     });
   if (m.page === 'pumps') drawPumps(ctx, m);
   else if (m.page === 'water') drawWater(ctx, m);
@@ -102,9 +102,9 @@ function drawPumps(ctx: Ctx, m: DisplayModel) {
       colour: AERO.inkSoft,
     });
     const badge: Rect = {
-      x: row.x + row.w - 330,
+      x: row.x + row.w - 264,
       y: row.y + 10,
-      w: 316,
+      w: 252,
       h: 34,
     };
     drawGlossyButton(ctx, badge, p.badge.text, {
@@ -161,7 +161,7 @@ function drawWater(ctx: Ctx, m: DisplayModel) {
     if (w.along !== null)
       gauge(
         ctx,
-        { x: r.x + r.w - 170, y: r.y + 38, w: 156, h: 16 },
+        { x: r.x + r.w - 140, y: r.y + 38, w: 128, h: 16 },
         w.along,
         w.band,
       );
@@ -315,8 +315,8 @@ function drawSettings(ctx: Ctx, m: DisplayModel) {
     drawText(
       ctx,
       'Doses are worked out from these: enter them as the pool is built.',
-      24,
-      348,
+      16,
+      336,
       {
         size: 15,
         colour: AERO.inkSoft,
@@ -344,10 +344,16 @@ function drawSettings(ctx: Ctx, m: DisplayModel) {
     size: 16,
   });
   const t = s.targets[s.row];
-  drawText(ctx, `${t.name}${t.unit ? ` (${t.unit})` : ''}`, 392, 130, {
-    size: 18,
-    weight: 700,
-  });
+  drawText(
+    ctx,
+    `${t.name}${t.unit ? ` (${t.unit})` : ''}`,
+    SETTINGS.fields[0].row.x,
+    122,
+    {
+      size: 18,
+      weight: 700,
+    },
+  );
   const names = {
     set: 'Set point',
     low: 'Low limit',
@@ -360,16 +366,10 @@ function drawSettings(ctx: Ctx, m: DisplayModel) {
       colour: AERO.inkSoft,
     });
     const v = t.target[f.field];
-    drawText(
-      ctx,
-      Number.isInteger(v) ? String(v) : v.toFixed(2),
-      f.row.x + 14,
-      f.row.y + 52,
-      {
-        size: 26,
-        weight: 700,
-      },
-    );
+    drawText(ctx, v.toFixed(t.decimals), f.row.x + 14, f.row.y + 52, {
+      size: 26,
+      weight: 700,
+    });
     drawGlossyButton(ctx, f.minus, '−', {
       state: press(m, `tgt-:${f.field}`),
       size: 24,

@@ -292,5 +292,5 @@ export interface Alarm {
 
 // ---- The screen ----------------------------------------------------------------------
 
-/** The upper section's 7-inch touch screen, px (800 × 480, the period's 7-inch panel). */
-export const SCREEN = { w: 800, h: 480 } as const;
+/** The upper section's 12-inch touch screen, px: 640 × 480, the period's 4:3 panel (the owner, 2026-10-31). */
+export const SCREEN = { w: 640, h: 480 } as const;
