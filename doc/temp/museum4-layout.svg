@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900"><rect width="100%" height="100%" fill="#fff"/>
+<line x1="35.0" y1="85.0" x2="85.0" y2="85.0" stroke="#222" stroke-width="2"/>
+<line x1="265.0" y1="85.0" x2="635.0" y2="85.0" stroke="#222" stroke-width="2"/>
+<line x1="815.0" y1="85.0" x2="865.0" y2="85.0" stroke="#222" stroke-width="2"/>
+<line x1="35.0" y1="115.0" x2="85.0" y2="115.0" stroke="#222" stroke-width="2"/>
+<line x1="265.0" y1="115.0" x2="635.0" y2="115.0" stroke="#222" stroke-width="2"/>
+<line x1="815.0" y1="115.0" x2="865.0" y2="115.0" stroke="#222" stroke-width="2"/>
+<line x1="635.0" y1="85.0" x2="635.0" y2="115.0" stroke="#1a9e5c" stroke-width="2"/>
+<line x1="815.0" y1="85.0" x2="815.0" y2="115.0" stroke="#1a9e5c" stroke-width="2"/>
+<line x1="85.0" y1="85.0" x2="85.0" y2="115.0" stroke="#1a9e5c" stroke-width="2"/>
+<line x1="265.0" y1="85.0" x2="265.0" y2="115.0" stroke="#1a9e5c" stroke-width="2"/>
+<line x1="35.0" y1="785.0" x2="865.0" y2="785.0" stroke="#222" stroke-width="2"/>
+<line x1="35.0" y1="815.0" x2="865.0" y2="815.0" stroke="#222" stroke-width="2"/>
+<line x1="275.0" y1="800.0" x2="395.0" y2="800.0" stroke="#2a6fd6" stroke-width="4"/>
+<line x1="475.0" y1="800.0" x2="595.0" y2="800.0" stroke="#2a6fd6" stroke-width="4"/>
+<line x1="35.0" y1="85.0" x2="35.0" y2="815.0" stroke="#222" stroke-width="2"/>
+<line x1="65.0" y1="85.0" x2="65.0" y2="815.0" stroke="#222" stroke-width="2"/>
+<line x1="835.0" y1="85.0" x2="835.0" y2="815.0" stroke="#222" stroke-width="2"/>
+<line x1="865.0" y1="85.0" x2="865.0" y2="815.0" stroke="#222" stroke-width="2"/>
+<rect x="512.5" y="730.0" width="305.0" height="45.0" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="512.5" y="727.0" font-size="9" font-family="Helvetica" fill="#333">BUND</text>
+<rect x="789.0" y="741.5" width="22.0" height="22.0" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="789.0" y="738.5" font-size="9" font-family="Helvetica" fill="#333">TANK_hypo</text>
+<rect x="759.0" y="741.5" width="22.0" height="22.0" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="759.0" y="738.5" font-size="9" font-family="Helvetica" fill="#333">TANK_calHypo</text>
+<rect x="729.0" y="741.5" width="22.0" height="22.0" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="729.0" y="738.5" font-size="9" font-family="Helvetica" fill="#333">TANK_hcl</text>
+<rect x="699.0" y="741.5" width="22.0" height="22.0" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="699.0" y="738.5" font-size="9" font-family="Helvetica" fill="#333">TANK_bisulphate</text>
+<rect x="669.0" y="741.5" width="22.0" height="22.0" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="669.0" y="738.5" font-size="9" font-family="Helvetica" fill="#333">TANK_co2</text>
+<rect x="639.0" y="741.5" width="22.0" height="22.0" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="639.0" y="738.5" font-size="9" font-family="Helvetica" fill="#333">TANK_bicarbonate</text>
+<rect x="609.0" y="741.5" width="22.0" height="22.0" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="609.0" y="738.5" font-size="9" font-family="Helvetica" fill="#333">TANK_sodaAsh</text>
+<rect x="579.0" y="741.5" width="22.0" height="22.0" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="579.0" y="738.5" font-size="9" font-family="Helvetica" fill="#333">TANK_calciumChloride</text>
+<rect x="549.0" y="741.5" width="22.0" height="22.0" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="549.0" y="738.5" font-size="9" font-family="Helvetica" fill="#333">TANK_thiosulphate</text>
+<rect x="519.0" y="741.5" width="22.0" height="22.0" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="519.0" y="738.5" font-size="9" font-family="Helvetica" fill="#333">TANK_fresh</text>
+<rect x="355.0" y="691.3" width="100.0" height="37.5" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="355.0" y="688.3" font-size="9" font-family="Helvetica" fill="#333">DESK</text>
+<rect x="306.0" y="685.0" width="33.0" height="28.0" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="306.0" y="682.0" font-size="9" font-family="Helvetica" fill="#333">PRINTER</text>
+<rect x="305.0" y="752.5" width="20.0" height="20.0" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="305.0" y="749.5" font-size="9" font-family="Helvetica" fill="#333">DOSING_POT</text>
+<rect x="252.5" y="632.5" width="40.0" height="105.0" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="252.5" y="629.5" font-size="9" font-family="Helvetica" fill="#333">POOL_PUMP</text>
+<rect x="269.0" y="759.0" width="7.0" height="7.0" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="269.0" y="756.0" font-size="9" font-family="Helvetica" fill="#333">TEE</text>
+<rect x="80.0" y="645.0" width="170.0" height="120.0" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="80.0" y="642.0" font-size="9" font-family="Helvetica" fill="#333">IDEAL_POOL</text>
+<rect x="132.5" y="580.0" width="95.0" height="25.0" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="132.5" y="577.0" font-size="9" font-family="Helvetica" fill="#333">BALANCE_BEAM</text>
+<rect x="465.0" y="690.0" width="25.0" height="25.0" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="465.0" y="687.0" font-size="9" font-family="Helvetica" fill="#333">RESET</text>
+<rect x="646.5" y="649.5" width="47.0" height="21.0" fill="none" stroke="#8e44ad" stroke-width="1.5"/>
+<text x="646.5" y="646.5" font-size="9" font-family="Helvetica" fill="#333">LECTERN_1</text>
+<rect x="511.5" y="634.5" width="47.0" height="21.0" fill="none" stroke="#8e44ad" stroke-width="1.5"/>
+<text x="511.5" y="631.5" font-size="9" font-family="Helvetica" fill="#333">LECTERN_2</text>
+<rect x="76.5" y="554.5" width="47.0" height="21.0" fill="none" stroke="#8e44ad" stroke-width="1.5"/>
+<text x="76.5" y="551.5" font-size="9" font-family="Helvetica" fill="#333">LECTERN_3</text>
+<rect x="246.5" y="604.5" width="47.0" height="21.0" fill="none" stroke="#8e44ad" stroke-width="1.5"/>
+<text x="246.5" y="601.5" font-size="9" font-family="Helvetica" fill="#333">LECTERN_4</text>
+<rect x="336.5" y="619.5" width="47.0" height="21.0" fill="none" stroke="#8e44ad" stroke-width="1.5"/>
+<text x="336.5" y="616.5" font-size="9" font-family="Helvetica" fill="#333">LECTERN_5</text>
+<rect x="345.0" y="782.0" width="120.0" height="3.0" fill="none" stroke="#16a085" stroke-width="1.5"/>
+<text x="345.0" y="779.0" font-size="9" font-family="Helvetica" fill="#333">MIMIC_BOARD</text>
+<rect x="605.0" y="782.0" width="120.0" height="3.0" fill="none" stroke="#16a085" stroke-width="1.5"/>
+<text x="605.0" y="779.0" font-size="9" font-family="Helvetica" fill="#333">CARDS_BOARD</text>
+<rect x="65.0" y="586.0" width="3.0" height="148.0" fill="none" stroke="#16a085" stroke-width="1.5"/>
+<text x="65.0" y="583.0" font-size="9" font-family="Helvetica" fill="#333">READOUT_BOARD</text>
+<rect x="337.5" y="115.0" width="95.0" height="3.0" fill="none" stroke="#16a085" stroke-width="1.5"/>
+<text x="337.5" y="112.0" font-size="9" font-family="Helvetica" fill="#333">ENTRANCE_PANEL</text>
+<text x="65.0" y="40.0" font-size="14" font-family="Helvetica" fill="#333">HALL 4 - THE CHEMISTRY OF POOLS - north up, 1 unit = 1 m, the hall's middle at 0,0</text>
+<text x="130.0" y="150.0" font-size="12" font-family="Helvetica" fill="#333">from Hall 3</text>
+<text x="680.0" y="150.0" font-size="12" font-family="Helvetica" fill="#333">to Hall 5</text>
+</svg>

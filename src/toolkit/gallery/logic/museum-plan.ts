@@ -932,7 +932,7 @@ function archAlong(id: MuseumHallId, a: MuseumArch) {
  * In the hall's own coordinates.
  */
 export function hallColumns(id: MuseumHallId): { x: number; z: number }[] {
-  if (id === 'museum0' || isBlackBox(id)) return [];
+  if (id === 'museum0' || isBlackBox(id) || NO_COLUMNS.has(id)) return [];
   const footprint = EXHIBIT_FOOTPRINTS[id] ?? [];
   const r = COLUMN_SPAN + COLUMN_CLEARANCE;
   return gridColumns(id).filter(
@@ -978,6 +978,12 @@ function gridColumns(id: MuseumHallId): { x: number; z: number }[] {
   }
   return out;
 }
+
+/**
+ * Halls with no columns (the owner, 2026-10-31, of Hall 4: "actually get
+ * rid of the columns in this room"): their roof's beams span wall to wall.
+ */
+export const NO_COLUMNS: ReadonlySet<MuseumHallId> = new Set(['museum4']);
 
 /** A gallery bench: its width and its length (along the hall). */
 export const BENCH = { w: 0.5, l: 2.0, h: 0.45 } as const;
