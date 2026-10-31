@@ -246,6 +246,8 @@ export interface AqualisHostOptions {
   watchdog?: boolean;
   /** How a stop screen ends: dev58's hang until power-cycled, by default. */
   stopOutcome?: StopOutcome['kind'];
+  /** Its boots show the permission dialog (`&consent=on`): a scenario's option, off normally. */
+  consent?: boolean;
 }
 
 /** A canvas to keep the last good frame in, where there is a DOM. */
@@ -296,7 +298,11 @@ export function createAqualisRoomHost(
   const seed = options.seed ?? 58;
   /** The boot script of the boot under way (or the last), built once per boot. */
   let bootN = -1;
-  let boot: BootScript = bootScript('gui', { seed, app: TRIO_BOOT_APP });
+  let boot: BootScript = bootScript('gui', {
+    seed,
+    app: TRIO_BOOT_APP,
+    consent: options.consent,
+  });
   const bootNow = (): BootScript => {
     const b = os.boot;
     if (b && b.n !== bootN) {
@@ -305,6 +311,7 @@ export function createAqualisRoomHost(
         seed: seed + b.n * 7919,
         app: TRIO_BOOT_APP,
         unclean: b.unclean,
+        consent: options.consent,
       });
     }
     return boot;

@@ -118,6 +118,7 @@ export function startAqualisControllerRoom(canvas: HTMLCanvasElement) {
           ? (params.get('crash') as 'stop' | 'glitch')
           : undefined,
       watchdog: params.get('watchdog') !== 'fails',
+      consent: params.get('consent') === 'on',
     },
   );
   const parts = createPartSet();

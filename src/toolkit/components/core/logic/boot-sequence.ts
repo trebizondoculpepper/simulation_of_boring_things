@@ -204,6 +204,12 @@ export interface BootOptions {
   app?: BootApp | null;
   /** The last switch-off was a power cut, not a shutdown (the OS notices). */
   unclean?: boolean;
+  /**
+   * The `gui` boot's permission dialog, which waits and then presses
+   * itself: a nod to the period's consent prompts, for scenarios only (the
+   * owner, 2026-10-31); a normal boot goes without it.
+   */
+  consent?: boolean;
 }
 
 // ---- A seeded source -------------------------------------------------------------------
@@ -493,7 +499,9 @@ function guiScript(r: () => number, o: BootOptions): BootStep[] {
       ],
       live: [{ kind: 'spinner', at: 0, rect: SPINNER }],
     },
-    {
+  ];
+  if (o.consent)
+    steps.push({
       id: 'consent',
       kind: 'consent',
       duration: jitter(r, 3.8, 0.02),
@@ -504,8 +512,7 @@ function guiScript(r: () => number, o: BootOptions): BootStep[] {
           text: `Nobody was here to press Continue, so ${g.os} pressed it.`,
         },
       ],
-    },
-  ];
+    });
   if (o.app) {
     const secs = o.app.seconds ?? 5.5;
     const n = o.app.messages.length;

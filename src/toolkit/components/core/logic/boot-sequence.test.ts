@@ -111,7 +111,7 @@ describe('boot scripts', () => {
 });
 
 describe('the gui boot', () => {
-  it('runs POST, the logo, the Welcome, the permission, then the application', () => {
+  it('runs POST, the logo, the Welcome, then the application', () => {
     const { s, out } = frames('gui');
     const order = [...new Set(out.map((x) => x.f.step))];
     expect(order).toEqual([
@@ -121,7 +121,6 @@ describe('the gui boot', () => {
       'loader',
       'logo',
       'welcome',
-      'consent',
       'app',
     ]);
     expect(bootFrame(s, s.total).done).toBe(true);
@@ -175,7 +174,14 @@ describe('the gui boot', () => {
 
   it('has no application step without one', () => {
     const s = bootScript('gui', { seed: 1 });
-    expect(s.steps.at(-1)!.id).toBe('consent');
+    expect(s.steps.at(-1)!.id).toBe('welcome');
+  });
+
+  it('asks its permission only when a scenario wants it', () => {
+    const ids = (consent: boolean) =>
+      bootScript('gui', { seed: 1, consent, app: null }).steps.map((x) => x.id);
+    expect(ids(false)).not.toContain('consent');
+    expect(ids(true).at(-1)).toBe('consent');
   });
 });
 
