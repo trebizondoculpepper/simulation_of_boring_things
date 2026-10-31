@@ -124,7 +124,9 @@ import type { HallExhibit } from './exhibits';
  * In the hall's frame, metres.
  */
 
-const SOUTH = interior.maxZ - 0.04;
+// The south wall's face: its panels hang flush on it (the audit,
+// 2026-10-31: they hung 40 mm off it).
+const SOUTH = interior.maxZ;
 const FACE_NORTH = Math.PI;
 const E = interior.maxX;
 
@@ -389,7 +391,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     tuning: true,
   });
   dc.object.scale.setScalar(1.6);
-  turnTo(dc.object, PLACES.sampleCell.x + 1.0, PANEL_Y + 0.25, NORTH + 0.01, 0);
+  turnTo(dc.object, PLACES.sampleCell.x + 1.0, PANEL_Y + 0.25, NORTH, 0);
   object.add(
     instrument(dc.object, 'controller', 'Chlorella DC-1 pair (chlorine, pH)'),
   );
@@ -403,7 +405,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   dcPlate.position.set(
     PLACES.sampleCell.x + 1.0,
     PANEL_Y - 0.05,
-    NORTH + 0.012,
+    NORTH + 0.001,
   );
   // Its settings plate is the controller's own.
   object.add(instrument(dcPlate, 'controller', 'settings plate'));
@@ -697,7 +699,11 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     airLit: () => state().airFault,
     weakLit: () => state().storeStrength === WEAK_STRENGTH,
   });
-  turnTo(faults.group, WEST + 1.2, 0, PLANT_EDGE + 0.4, 0);
+  // Beside its own placard (When it goes wrong, station 7), between it and
+  // The pumps' (station 4), clear of both and of the columns on this line
+  // at x −6, 0 and 6 (the audit, 2026-10-31: it stood through The tanks').
+  const faultsX = (LECTERNS[7] + LECTERNS[4]) / 2;
+  turnTo(faults.group, faultsX, 0, PLANT_EDGE + 0.4, 0);
   object.add(
     markComponent(faults.group, {
       name: `${TAGS['faults']} fault pedestal`,
@@ -708,7 +714,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   );
   take(faults.parts);
   updates.push(faults.update);
-  footprint(WEST + 1.2, PLANT_EDGE + 0.4, 0.2);
+  footprint(faultsX, PLANT_EDGE + 0.4, 0.2);
 
   // ---- The south wall: the mimic, the chemistry board, the entrance, RESET ----
   const board = createMimicBoard(kit, HALL3_MIMIC, {
