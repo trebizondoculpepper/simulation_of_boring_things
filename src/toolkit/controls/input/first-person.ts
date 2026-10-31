@@ -17,7 +17,7 @@ import type { Mesh } from 'three';
 import { noclip, flyCamera, flightHelp, rollCamera } from '../logic/noclip';
 import type { FlightBounds } from '../logic/noclip';
 import { createObjectHandling } from './object-handling';
-import type { DropPlacement } from './object-handling';
+import type { DropPlacement, TargetFeedback } from './object-handling';
 import type { PortableObject, SupportSurface } from './object-handling';
 import { lockUnavailable } from '../logic/pointer-lock';
 import { cutOpenings, slide } from '../logic/walk-collision';
@@ -27,7 +27,13 @@ import { smoothStairFloor } from '../logic/stair-smoothing';
 import { standsUp } from '../logic/seat';
 import type { SeatPose } from '../logic/seat';
 import type { LadderZone } from '../logic/ladder-zone';
-import { PAD, deadZone, copyShortcut, noclipShortcut } from '../logic/controls';
+import {
+  PAD,
+  carryingHelp,
+  deadZone,
+  copyShortcut,
+  noclipShortcut,
+} from '../logic/controls';
 import type { InputMode } from '../logic/controls';
 import {
   hudControls,
@@ -43,13 +49,13 @@ import { usableOf, visibleAll } from './use-marking';
 import type { Usable } from './use-marking';
 import {
   PLAIN_USE,
-  cueGoes,
   cuePlace,
+  handsCue,
   useCue,
   useCueKey,
 } from '../logic/use-cue';
-import type { UseCue } from '../logic/use-cue';
-import { CUE_GO, CUE_STOP, useCueMarkup } from './use-cue-markup';
+import type { CarryAnswer, UseAnswer, UseCue } from '../logic/use-cue';
+import { CARRY_CUE_CENTRE, ringStyle, useCueMarkup } from './use-cue-markup';
 import { usingHold } from './use-holding';
 import { TOUCH_HOLD_DELAY, createUseHolds } from '../logic/use-hold';
 import type { HoldSource } from '../logic/use-hold';
@@ -233,21 +239,35 @@ export interface FirstPersonOptions {
     x: number,
     y: number,
   ) => boolean | 'refuse';
+  /**
+   * What `heldAction` will do at a point (`createObjectHandling`): asked
+   * purely, by the crosshair's cue and by a click.
+   */
   targetFeedback?: (
     object: Object3D,
     portable: PortableObject,
     x: number,
     y: number,
-  ) => 'accept' | 'reject' | null;
+  ) => TargetFeedback;
   nearbyTargetFeedback?: (
     object: Object3D,
     portable: PortableObject,
   ) => 'accept' | 'reject' | null;
+  /** Whether a part may be picked up now: a pure question (`createObjectHandling`). */
   allowPickup?: (object: Object3D, portable: PortableObject) => boolean;
+  /** A part is being picked up (what that sets off: a spark, a notice). */
+  onPickUp?: (object: Object3D, portable: PortableObject) => void;
   /** Use whatever is at a normalised screen point (centre is 0, 0). */
   use: (x: number, y: number) => void;
   /** Operate a separate control while carrying, without releasing the part. */
   useWhileHolding?: (object: Object3D, x: number, y: number) => boolean;
+  /**
+   * `useWhileHolding`'s query twin (mission 116): whether it would take a
+   * click at the point, changing nothing. A room that passes
+   * `useWhileHolding` without it shows only the plain ring while carrying,
+   * because the cue cannot know what its click will do.
+   */
+  useWhileHoldingAt?: (object: Object3D, x: number, y: number) => boolean;
   /** Whether something usable is under the crosshair. */
   aimed?: () => boolean;
   /**
@@ -309,6 +329,17 @@ const CUE_HIT_KEPT_MS = 500;
 /** How often the aim is looked at to name what is there, ms. */
 const INSPECT_EVERY_MS = 100;
 
+/**
+ * A carried thing's name, for the help line: the name it is marked with as
+ * a component (`userData.component.name`, read without importing the
+ * components), else its object's name, else none.
+ */
+export function carriedName(object: Object3D) {
+  const marked = (object.userData.component as { name?: unknown } | undefined)
+    ?.name;
+  return typeof marked === 'string' && marked ? marked : object.name;
+}
+
 export function createFirstPerson(options: FirstPersonOptions) {
   const { canvas, camera, metre, floorY } = options;
   // The torch's light, in this room's scene, lit while the torch is on.
@@ -328,10 +359,13 @@ export function createFirstPerson(options: FirstPersonOptions) {
         options.allowPickup,
         options.targetFeedback,
         options.nearbyTargetFeedback,
+        options.onPickUp,
       )
     : null;
   const use = (x: number, y: number) => {
     if (noclip.value || inputHeld()) return;
+    // What the click did shows at the next frame, not a probe later.
+    cueAt = -Infinity;
     const carried = handling?.heldObject();
     if (carried && options.useWhileHolding?.(carried, x, y)) return;
     if (attachedLadder) return;
@@ -568,6 +602,63 @@ export function createFirstPerson(options: FirstPersonOptions) {
       x,
       pad,
     });
+  };
+
+  /**
+   * The cue's one answer at the aim (mission 116): what the hands would do
+   * there (`handling.resolve`, asked and never run), the room's own first
+   * refusal while carrying (`useWhileHoldingAt`), and mission 115's use
+   * cue, chosen between by `handsCue`.
+   */
+  const probeCue = (
+    carrying: boolean,
+    free: boolean,
+    now: number,
+  ): UseAnswer | CarryAnswer | null => {
+    const pad = input === 'gamepad';
+    const [x, y] = free ? hoverPoint : [0, 0];
+    const reach = free ? CURSOR_CUE_REACH : CENTRE_CUE_REACH;
+    const marked = () => usableAt(x, y, reach, pad && !free, now) ?? PLAIN_USE;
+    if (carrying && handling) {
+      const carried = handling.heldObject()!;
+      if (options.useWhileHolding) {
+        // The room has first refusal; without its twin, no carrying glyph.
+        if (!options.useWhileHoldingAt) return null;
+        if (options.useWhileHoldingAt(carried, x, y)) return marked();
+      }
+      const { answer } = handling.resolve(x, y);
+      return handsCue({
+        carrying,
+        hands: answer,
+        otherwiseUsed: true,
+        use: answer === 'use' ? marked() : null,
+      });
+    }
+    const hands = handling ? handling.resolve(x, y).answer : 'use';
+    // A lift that will happen needs nothing else asked.
+    if (hands && hands !== 'use' && hands.possible) return hands;
+    if (free)
+      // A free cursor: only things marked with what they do; and a red
+      // lift never, since no room can say there what else takes the click.
+      return handsCue({
+        carrying,
+        hands,
+        otherwiseUsed: true,
+        use: usableAt(x, y, reach, false, now),
+      });
+    // A room that says what is aimed at must agree; one that does not
+    // leaves it to the thing's own reach. Anything usable that says
+    // nothing of how shows the plain ring.
+    const roomAimed = options.aimed ? options.aimed() : null;
+    let use = roomAimed !== false ? usableAt(0, 0, reach, pad, now) : null;
+    if (!use && roomAimed) use = PLAIN_USE;
+    return handsCue({ carrying, hands, otherwiseUsed: Boolean(use), use });
+  };
+  /** The carried thing's name for the help line, worked out when it changes. */
+  let named: { object: Object3D; name: string } | null = null;
+  const heldName = (object: Object3D) => {
+    if (named?.object !== object) named = { object, name: carriedName(object) };
+    return named.name;
   };
 
   // On-screen controls, for anyone without a keyboard (`.hud-button`, in
@@ -1438,23 +1529,27 @@ export function createFirstPerson(options: FirstPersonOptions) {
               );
         inspection = stepInspection(inspection, target, now);
       }
+      // Carrying, the help line names the thing and how to turn it over.
+      const carried = handling?.heldObject() ?? null;
       const text = flying
         ? flightHelp(input ?? 'mouse')
         : attachedLadder
           ? input === 'touch' || input === 'gamepad'
             ? 'Left stick forward: climb · back: descend'
             : 'W: climb · S: descend'
-          : inspection.shown
-            ? inspectionText(inspection.shown)
-            : seated
-              ? input === 'touch'
-                ? 'Seated · CROUCH or walk: stand up'
-                : input === 'gamepad'
-                  ? 'Seated · B or left stick: stand up'
-                  : 'Seated · C or walk: stand up'
-              : menuHintVisible(hintUntil, now, false)
-                ? menuHint(input ?? 'mouse')
-                : '';
+          : carried
+            ? carryingHelp(heldName(carried), input ?? 'mouse')
+            : inspection.shown
+              ? inspectionText(inspection.shown)
+              : seated
+                ? input === 'touch'
+                  ? 'Seated · CROUCH or walk: stand up'
+                  : input === 'gamepad'
+                    ? 'Seated · B or left stick: stand up'
+                    : 'Seated · C or walk: stand up'
+                : menuHintVisible(hintUntil, now, false)
+                  ? menuHint(input ?? 'mouse')
+                  : '';
       // Only when it changes, so it is not announced again every frame.
       if (help.textContent !== text) help.textContent = text;
       help.classList.toggle('is-inspecting', Boolean(inspection.shown));
@@ -1698,47 +1793,26 @@ export function createFirstPerson(options: FirstPersonOptions) {
         handling?.holding()
       );
       if (!crosshair.hidden) {
-        const target = handling?.targetFeedback(
-          cursorAim ? hoverPoint[0] : 0,
-          cursorAim ? hoverPoint[1] : 0,
-        );
-        crosshair.textContent = target === 'reject' ? '×' : '';
+        // The ring from the probe's one answer (mission 116): larger for a
+        // socket, today's red × where a place refuses what is carried.
+        const ring = ringStyle(cueShown);
+        if (crosshair.textContent !== ring.text)
+          crosshair.textContent = ring.text;
         Object.assign(crosshair.style, {
           left: cursorAim ? `${hoverPosition[0]}px` : '50%',
           top: cursorAim ? `${hoverPosition[1]}px` : '50%',
-          width: target ? '18px' : '10px',
-          height: target ? '18px' : '10px',
-          borderRadius: target === 'reject' ? '0' : '50%',
-          boxShadow: target === 'reject' ? 'none' : '0 0 0 2px #182327',
-          // Over something usable, the ring says whether the use its cue
-          // shows will do anything: green if so, red if not (an end stop,
-          // a latch, no power); green alone for a use of some other kind
-          // (the owner, 2026-10-31).
-          borderColor:
-            target === 'accept'
-              ? CUE_GO
-              : target === 'reject'
-                ? 'transparent'
-                : cueShown
-                  ? cueGoes(cueShown)
-                    ? CUE_GO
-                    : CUE_STOP
-                  : '#f5f1df',
-          color: CUE_STOP,
-          textShadow:
-            '1px 0 #182327, -1px 0 #182327, 0 1px #182327, 0 -1px #182327',
-          fontSize: '26px',
-          fontWeight: 'bold',
-          lineHeight: '14px',
-          textAlign: 'center',
+          ...ring.style,
         });
       }
       // The use cue, a few times a second, where a use would land: the
       // centre (with the room agreeing something is aimed at there), or the
-      // free cursor over the canvas. Never while carrying.
-      const cueAtCentre = !crosshair.hidden && !handling?.holding();
-      const cueAtCursor =
-        cursorAim && hoverInside && crosshair.hidden && !handling?.holding();
+      // free cursor over the canvas. The hands answer first (mission 116):
+      // the same resolver as the click, asked and not run; nothing is
+      // kept from one probe to the next, since a drawer, a door or a
+      // target can move while the eye stands still.
+      const carrying = Boolean(handling?.holding());
+      const cueAtCentre = !crosshair.hidden;
+      const cueAtCursor = cursorAim && hoverInside && crosshair.hidden;
       if (
         !controlsActive ||
         flying ||
@@ -1749,27 +1823,10 @@ export function createFirstPerson(options: FirstPersonOptions) {
         cueShown = null;
       else if (now - cueAt >= INSPECT_EVERY_MS) {
         cueAt = now;
-        const pad = input === 'gamepad';
-        let answer = null;
-        if (cueAtCursor)
-          // A free cursor: only things marked with what they do.
-          answer = usableAt(
-            hoverPoint[0],
-            hoverPoint[1],
-            CURSOR_CUE_REACH,
-            false,
-            now,
-          );
-        else {
-          // A room that says what is aimed at must agree; one that does
-          // not leaves it to the thing's own reach. Anything usable that
-          // says nothing of how shows the plain ring.
-          const roomAimed = options.aimed ? options.aimed() : null;
-          if (roomAimed !== false)
-            answer = usableAt(0, 0, CENTRE_CUE_REACH, pad, now);
-          if (!answer && (roomAimed || handling?.aimed())) answer = PLAIN_USE;
-        }
-        cueShown = useCue(answer, pad);
+        cueShown = useCue(
+          probeCue(carrying, cursorAim, now),
+          input === 'gamepad',
+        );
       }
       const cueKey = useCueKey(cueShown);
       const place = cueShown ? cuePlace(cueShown) : 'none';
@@ -1785,11 +1842,18 @@ export function createFirstPerson(options: FirstPersonOptions) {
                 transform: 'translate(0, -100%) scale(var(--overlay-scale, 1))',
                 transformOrigin: '0 100%',
               }
-            : {
-                transform:
-                  'translate(-50%, -100%) scale(var(--overlay-scale, 1))',
-                transformOrigin: '50% 100%',
-              },
+            : place === 'centre'
+              ? {
+                  // The carrying glyphs' box has the ring's centre at
+                  // (17, 23), whatever its height (a pad's A below).
+                  transform: `translate(-${CARRY_CUE_CENTRE[0]}px, -${CARRY_CUE_CENTRE[1]}px) scale(var(--overlay-scale, 1))`,
+                  transformOrigin: `${CARRY_CUE_CENTRE[0]}px ${CARRY_CUE_CENTRE[1]}px`,
+                }
+              : {
+                  transform:
+                    'translate(-50%, -100%) scale(var(--overlay-scale, 1))',
+                  transformOrigin: '50% 100%',
+                },
         );
       }
       cueBox.hidden = place === 'none';

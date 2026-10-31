@@ -12,6 +12,7 @@ import type { Material, MeshStandardMaterial, Object3D, Texture } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import deskUrl from '../../../../../resources/models/office/desk.glb?url';
 import type { PortableObject } from '../../../controls/input/object-handling';
+import type { CarryAnswer } from '../../../controls/logic/use-cue';
 import { createDropProfile } from '../../../controls/logic/drop-profile';
 import { createPortableBoard } from '../../../controls/logic/portable-board';
 import type { PanelKit } from '../../core/views/eighties-controls';
@@ -454,6 +455,21 @@ export function createEngineersDesk(
       applyPose(object, pose);
       portable.component.reset();
       return true;
+    },
+    /**
+     * What `release` would do with a held box, for the crosshair's cue
+     * (mission 116), changing nothing: aimed at the carton, into it;
+     * otherwise back where it was, refused if its support is away. Null
+     * if it is not one of the desk's boxes, or not held.
+     */
+    cue(object: Object3D, target?: Object3D): CarryAnswer | null {
+      const id = boxes.get(object);
+      if (id === undefined || things.held() !== id) return null;
+      if (target && inCarton(target))
+        return { gesture: 'put-in', possible: true };
+      return things.canPutBack(id)
+        ? { gesture: 'put-back', possible: true }
+        : { gesture: 'put-back', possible: false, refused: true };
     },
     /** What is in the carton, bottom first, by title id. */
     binned: () => things.binned(),

@@ -488,6 +488,14 @@ export function startRacksRoom(canvas: HTMLCanvasElement) {
   };
   const raycaster = new Raycaster();
   const pointer = new Vector2();
+  /** What a release at a screen point is aimed at, within reach. */
+  const releaseAim = (x: number, y: number) => {
+    raycaster.setFromCamera(pointer.set(x, y), camera);
+    const hit = raycaster
+      .intersectObjects(scene.children, true)
+      .find((candidate) => !isHeldPortableHit(candidate.object));
+    return hit && hit.distance <= 3.2 * m ? hit.object : undefined;
+  };
   const params = new URLSearchParams(location.search);
   const walk = createFirstPerson({
     scene,
@@ -502,14 +510,21 @@ export function startRacksRoom(canvas: HTMLCanvasElement) {
       return true;
     },
     heldAction(object, _portable, x, y) {
-      raycaster.setFromCamera(pointer.set(x, y), camera);
-      const hit = raycaster
-        .intersectObjects(scene.children, true)
-        .find((candidate) => !isHeldPortableHit(candidate.object));
-      if (!hit || hit.distance > 3.2 * m) return false;
+      const near = releaseAim(x, y);
+      if (!near) return false;
       return storageCupboards.some((cupboard) =>
-        cupboard.returnItem(object, hit.object),
+        cupboard.returnItem(object, near),
       );
+    },
+    // What heldAction will do there, for the crosshair's cue (mission 116).
+    targetFeedback(object, _portable, x, y) {
+      const near = releaseAim(x, y);
+      if (!near) return null;
+      for (const cupboard of storageCupboards) {
+        const cue = cupboard.cue(object, near);
+        if (cue) return cue;
+      }
+      return null;
     },
     metre: m,
     floorY: 0,

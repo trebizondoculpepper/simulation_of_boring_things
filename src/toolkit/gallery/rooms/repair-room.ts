@@ -614,7 +614,9 @@ export function startRepairRoom(canvas: HTMLCanvasElement) {
       afterSparks.push((at += 0.12 + Math.random() * 0.45));
     notice(station, message);
   };
-  const allowPickup = (object: Object3D) => {
+  // Anything may be pulled, live or not: the spark is the pick-up's own
+  // (mission 116), so the crosshair's cue can ask without setting it off.
+  const onPickUp = (object: Object3D) => {
     const liveRack = racks.findIndex(
       (rack) => rack.power.value && object.parent === rack.device.object,
     );
@@ -625,7 +627,6 @@ export function startRepairRoom(canvas: HTMLCanvasElement) {
           ? 2
           : -1;
     if (station >= 0) sparkAt(object, station, 'PULLED LIVE');
-    return true;
   };
   const views = {
     room: { x: 0, z: -1.5 * m, yaw: 0, pitch: 0 },
@@ -645,7 +646,7 @@ export function startRepairRoom(canvas: HTMLCanvasElement) {
     floorY: 0,
     objects: scene,
     heldAction,
-    allowPickup,
+    onPickUp,
     targetFeedback,
     carrySolids,
     solids,
@@ -661,6 +662,8 @@ export function startRepairRoom(canvas: HTMLCanvasElement) {
       action();
       return true;
     },
+    useWhileHoldingAt: (_object, x, y) =>
+      !aimedSocket(x, y) && Boolean(usableAt(x, y)),
     aimed: () => Boolean(usableAt(0, 0)),
   });
   const resize = () => {

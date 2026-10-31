@@ -8,6 +8,12 @@ export interface PlacementTarget {
   place(object: Object3D, portable: PortableObject): void;
   /** Ordinary surfaces use normal use reach; magnetic bins use their own rule. */
   reach?: number;
+  /**
+   * What putting a thing here is, for the crosshair's cue (mission 116):
+   * fitting it into a socket (the default), putting it back in its own
+   * place, into a bin or carton, or down on a surface.
+   */
+  cue?: 'fit' | 'put-back' | 'put-in' | 'put-down';
 }
 
 /** Contents attached to a plinth remain occupants, including respawn animations. */

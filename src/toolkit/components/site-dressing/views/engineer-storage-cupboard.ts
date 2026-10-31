@@ -17,6 +17,7 @@ import type { EngineerStorageContainer } from './engineer-storage-container';
 import { createDropProfile } from '../../../controls/logic/drop-profile';
 import { createPortableBoard } from '../../../controls/logic/portable-board';
 import type { PortableObject } from '../../../controls/input/object-handling';
+import type { CarryAnswer } from '../../../controls/logic/use-cue';
 
 export type StorageDoorStyle = 'solid' | 'glass';
 
@@ -619,6 +620,18 @@ export function createEngineerStorageCupboard(
       object.material.userData.unpowered = true;
   });
 
+  /** The item's own drawer, if `target` is in it and it may go back now. */
+  const homeDrawer = (item: Object3D, target: Object3D) => {
+    if (!drawersAccessible() || !itemAccess.has(item)) return null;
+    const id = item.userData.storageContainerId as string | undefined;
+    const drawer = containers.find(
+      (part) => part.id === id && part.kind === 'drawer',
+    );
+    if (!drawer || drawer.items.includes(item)) return null;
+    let at: Object3D | null = target;
+    while (at && at !== drawer.group) at = at.parent;
+    return at === drawer.group ? drawer : null;
+  };
   return {
     group,
     uses,
@@ -627,16 +640,19 @@ export function createEngineerStorageCupboard(
       const access = itemAccess.get(item);
       return access ? access() : null;
     },
+    /**
+     * What `returnItem` would do, for the crosshair's cue (mission 116),
+     * changing nothing: aimed at its own drawer, open, back in; else null
+     * (a drop).
+     */
+    cue(item: Object3D, target: Object3D): CarryAnswer | null {
+      return homeDrawer(item, target)
+        ? { gesture: 'put-back', possible: true }
+        : null;
+    },
     returnItem(item: Object3D, target: Object3D) {
-      if (!drawersAccessible() || !itemAccess.has(item)) return false;
-      const id = item.userData.storageContainerId as string | undefined;
-      const drawer = containers.find(
-        (part) => part.id === id && part.kind === 'drawer',
-      );
-      if (!drawer || drawer.items.includes(item)) return false;
-      let at: Object3D | null = target;
-      while (at && at !== drawer.group) at = at.parent;
-      if (at !== drawer.group) return false;
+      const drawer = homeDrawer(item, target);
+      if (!drawer) return false;
       item.position.set((drawer.items.length - 1) * 0.065, -0.005, -0.22);
       item.rotation.set(0, 0, 0);
       item.scale.set(1, 1, 1);

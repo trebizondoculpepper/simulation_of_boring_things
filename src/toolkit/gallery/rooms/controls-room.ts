@@ -37,6 +37,7 @@ import { knobDirection } from '../../controls/input/knob-turning';
 import { partAudio } from '../../components/core/audio/part-audio';
 import { createDazzle } from '../../components/core/views/dazzle';
 import { createFirstPerson } from '../../controls/input/first-person';
+import { createCarryCueSheet } from '../views/carry-cue-sheet';
 import { isHeldPortableHit } from '../../controls/input/object-handling';
 import {
   createPs1Material,
@@ -543,6 +544,8 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
     // Whether anything is aimed at, for the crosshair's plain ring.
     aimed: () => usableAt(0, 0) !== null,
     useWhileHolding: (_object, x, y) => use(x, y),
+    // Its twin: whether that use would find anything, without working it.
+    useWhileHoldingAt: (_object, x, y) => usableAt(x, y) !== null,
     // What is aimed at, named in the help line (prompt 061): dev0's trial.
     // Its exhibits carry no plant tags: a control is named by its part's
     // name, the nearest control up the parents (a switch over its board).
@@ -596,6 +599,7 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
     () => reducedMotion?.matches ?? false,
   );
 
+  const cueSheet = createCarryCueSheet();
   // A handle for scripted views and checks.
   (window as unknown as { devControls: unknown }).devControls = {
     /** Stand with the eye at (x, y, z), looking at (tx, ty, tz), in metres. */
@@ -633,7 +637,17 @@ export function startControlsRoom(canvas: HTMLCanvasElement) {
           facing: object.getWorldDirection(new Vector3()).toArray(),
         })),
     log: () => [...log.children].map((item) => item.textContent),
+    /**
+     * Show or hide the sheet of carrying cues, both sets side by side at
+     * real size (mission 116, the owner's question 1); `?cues=sheet`
+     * opens the room with it shown.
+     */
+    cueSheet(show = true) {
+      if (show && !cueSheet.isConnected) canvas.parentElement?.append(cueSheet);
+      else if (!show) cueSheet.remove();
+    },
   };
+  if (params.get('cues') === 'sheet') canvas.parentElement?.append(cueSheet);
 
   let last = 0;
   const frame = (time: number) => {

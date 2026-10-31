@@ -165,6 +165,7 @@ export function createBinTossing({
       bins.push(entry);
       const target: PlacementTarget = {
         reach: Infinity,
+        cue: 'put-in',
         inRange: (object) => accepts(object, entry),
         accepts: (object) => accepts(object, entry),
         place: (object, portable) => {

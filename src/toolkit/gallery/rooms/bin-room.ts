@@ -323,6 +323,7 @@ export function startBinRoom(canvas: HTMLCanvasElement) {
       action();
       return true;
     },
+    useWhileHoldingAt: (_object, x, y) => Boolean(usableAt(x, y)),
     aimed: () => Boolean(usableAt(0, 0)),
   });
   const resize = () => {

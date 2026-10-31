@@ -1819,6 +1819,24 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
         cupboard.returnItem(item, target),
       );
     },
+    /**
+     * What `release`, then `returnItem`, would do with a held thing aimed
+     * at `target`, for the crosshair's cue (mission 116), changing
+     * nothing: a desk's box back or into the carton, a cupboard's item
+     * back in its drawer, or null (not theirs: a drop).
+     */
+    releaseCue(item: Object3D, target?: Object3D) {
+      for (const desk of desks) {
+        const cue = desk.cue(item, target);
+        if (cue) return cue;
+      }
+      if (!target) return null;
+      for (const cupboard of storageCupboards) {
+        const cue = cupboard.cue(item, target);
+        if (cue) return cue;
+      }
+      return null;
+    },
     /** What its working machines bar now, for where the walker stands. */
     movingSolids(walker: { x: number; z: number }) {
       return lives.flatMap((live) => live.solids?.(walker) ?? []);

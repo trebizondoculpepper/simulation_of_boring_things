@@ -1,4 +1,5 @@
-import type { UseCue } from '../logic/use-cue';
+import { isCarryGlyph } from '../logic/use-cue';
+import type { CueGlyph, UseCue } from '../logic/use-cue';
 
 /**
  * The use cue's drawings (prompt 115, `doc/plans/115/push-pull-cue.md`):
@@ -161,6 +162,139 @@ function depthArrow(gesture: 'push' | 'pull', possible: boolean, button = '') {
   );
 }
 
+/**
+ * The carrying glyphs (mission 116, `doc/plans/116/pick-up-cues.md`), drawn
+ * centred on the ring in a 34 × 46 box whose (17, 23) is the ring's centre
+ * (`first-person.ts` places it so): an arrow above the ring says which way
+ * the thing goes (up out of it for a lift, down into it for a put), and a
+ * mark below says what kind of place (a line for a surface, corner
+ * brackets for its own place, an open bin; ticks round the ring for a
+ * socket). The marks are 2.5 px strokes over a 4.5 px dark under-stroke,
+ * so they read on cream tile and in a dark plant room alike; only the
+ * filled arrows have the half-pixel edge, as the turn arrow has.
+ */
+export const CARRY_CUE_CENTRE = [17, 23] as const;
+const CARRY = { W: 34, H: 46 } as const;
+
+/** A mark: the dark under-stroke, then the colour. */
+const mark = (d: string, colour: string, width = 2.5) =>
+  `<path d="${d}" fill="none" stroke="${CUE_EDGE}" stroke-width="${width + 2}" stroke-linecap="round" stroke-linejoin="round"/>` +
+  `<path d="${d}" fill="none" stroke="${colour}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"/>`;
+
+/** A vertical arrow: a tail fading from `faint` (y) to the head's base, and the head. */
+const verticalArrow = (
+  id: string,
+  colour: string,
+  tail: string,
+  head: string,
+  faint: number,
+  bold: number,
+) =>
+  `<defs><linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="${faint}" x2="0" y2="${bold}">` +
+  `<stop offset="0" stop-color="${colour}" stop-opacity="0.15"/><stop offset="1" stop-color="${colour}" stop-opacity="1"/></linearGradient></defs>` +
+  `<polygon points="${tail}" fill="url(#${id})" stroke="${CUE_EDGE}" stroke-opacity="0.6" stroke-width="0.5" stroke-linejoin="round"/>` +
+  `<polygon points="${head}" fill="${colour}" stroke="${CUE_EDGE}" stroke-width="0.5" stroke-linejoin="round"/>`;
+
+/** The lift: rising from the ring's top, faint at the ring and bold above. */
+const liftArrow = (colour: string, key: string) =>
+  verticalArrow(
+    `lift-fade-${key}`,
+    colour,
+    '16.4,15 17.6,15 18.8,7 15.2,7',
+    '17,0.5 11.5,7.5 22.5,7.5',
+    15,
+    7,
+  );
+
+/** The put: coming down into the ring's top, its tail fading upwards. */
+const putArrow = (colour: string, key: string) =>
+  verticalArrow(
+    `put-fade-${key}`,
+    colour,
+    '15.2,1 18.8,1 17.6,9 16.4,9',
+    '11.5,8.5 22.5,8.5 17,15.5',
+    1,
+    9,
+  );
+
+/** The two grips either side of the ring, closing on it like fingers. */
+const GRIPS = 'M7,17 Q3.5,23 7,29 M27,17 Q30.5,23 27,29';
+/** A flat line under the ring: a surface to set it down on. */
+const SURFACE = 'M6,34 H28';
+/** The bottom corners of an outline: its own place. */
+const BRACKETS = 'M6,29 V35 H11 M28,29 V35 H23';
+/** An open bin round the ring's lower half, the ring inside it. */
+const BIN = 'M5,22 L8.5,37 H25.5 L29,22';
+/** Four ticks at the diagonals, closing on the larger ring: a socket. */
+const TICKS =
+  'M6.4,12.4 L9.2,15.2 M27.6,12.4 L24.8,15.2 M6.4,33.6 L9.2,30.8 M27.6,33.6 L24.8,30.8';
+
+/** A carrying glyph, green or red, with a pad's A under it. */
+function carryGlyph(glyph: CueGlyph, possible: boolean, button = '') {
+  const colour = possible ? CUE_GO : CUE_STOP;
+  const key = possible ? 'go' : 'stop';
+  const H = button ? CARRY.H + 8 : CARRY.H;
+  const body =
+    glyph === 'pick-up'
+      ? liftArrow(colour, key) + mark(GRIPS, colour)
+      : glyph === 'fit'
+        ? mark(TICKS, colour, 2)
+        : putArrow(colour, key) +
+          (glyph === 'put-down'
+            ? mark(SURFACE, colour)
+            : glyph === 'put-back'
+              ? mark(BRACKETS, colour)
+              : glyph === 'put-in'
+                ? mark(BIN, colour)
+                : '');
+  return (
+    `<svg width="${CARRY.W}" height="${H}" viewBox="0 0 ${CARRY.W} ${H}">` +
+    body +
+    `${button ? label(button, CARRY.W / 2, H - 1) : ''}</svg>`
+  );
+}
+
+/**
+ * How the crosshair's ring looks under a cue (`first-person.ts`): the plain
+ * light ring with no cue (carrying, a click drops the thing), green or red
+ * with one, larger for a socket, and today's red × in place of the ring
+ * where a place refuses what is carried.
+ */
+export function ringStyle(cue: UseCue | null) {
+  const carry = cue?.kind === 'one' && isCarryGlyph(cue.gesture) ? cue : null;
+  const refused = Boolean(carry?.refused);
+  const size = refused || carry?.gesture === 'fit' ? '18px' : '10px';
+  return {
+    /** The ring's text: the × where a place refuses. */
+    text: refused ? '×' : '',
+    style: {
+      width: size,
+      height: size,
+      borderRadius: refused ? '0' : '50%',
+      boxShadow: refused ? 'none' : `0 0 0 2px ${CUE_EDGE}`,
+      // Over something usable, the ring says whether the use its cue
+      // shows will do anything: green if so, red if not (an end stop, a
+      // latch, no power); green alone for a use of some other kind (the
+      // owner, 2026-10-31). Carrying with nowhere aimed at, it is the
+      // plain light ring: a click drops the thing.
+      borderColor: refused
+        ? 'transparent'
+        : cue
+          ? (cue.kind === 'both' ? cue.down || cue.up : cue.possible)
+            ? CUE_GO
+            : CUE_STOP
+          : RING_PLAIN,
+      color: CUE_STOP,
+      textShadow: `1px 0 ${CUE_EDGE}, -1px 0 ${CUE_EDGE}, 0 1px ${CUE_EDGE}, 0 -1px ${CUE_EDGE}`,
+      fontSize: '26px',
+      fontWeight: 'bold',
+      lineHeight: '14px',
+      textAlign: 'center',
+    },
+  };
+}
+export const RING_PLAIN = '#f5f1df';
+
 /** The cue's markup: its glyph, or a knob's LB and RB arrows; none for the plain ring. */
 export function useCueMarkup(cue: UseCue): string {
   if (cue.kind === 'both')
@@ -169,5 +303,7 @@ export function useCueMarkup(cue: UseCue): string {
     return turnArrow(cue.direction < 0 ? -1 : 1, cue.possible, cue.button);
   if (cue.gesture === 'push' || cue.gesture === 'pull')
     return depthArrow(cue.gesture, cue.possible, cue.button);
+  if (isCarryGlyph(cue.gesture))
+    return carryGlyph(cue.gesture, cue.possible, cue.button);
   return '';
 }

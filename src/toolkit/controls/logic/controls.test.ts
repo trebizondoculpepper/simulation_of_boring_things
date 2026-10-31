@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import {
   CONTROL_SCHEME,
   INPUT_MODES,
+  carryingHelp,
   controlsHelp,
   copyShortcut,
   titleShortcut,
@@ -135,4 +136,20 @@ it('keeps title navigation on unmodified bracket presses and out of keyboard hel
     expect(titleShortcut({ ...plain, [key]: true })).toBeNull();
   expect(titleShortcut({ ...plain, code: 'KeyR' })).toBeNull();
   expect(controlsHelp('keyboard')).not.toMatch(/restart|next shot|\[|\]/i);
+});
+
+describe('the help line while carrying', () => {
+  it('names the thing and says how to turn it over on each input', () => {
+    expect(carryingHelp('10 A fuse cartridge', 'mouse')).toBe(
+      '10 A fuse cartridge · hold X: turn it over',
+    );
+    expect(carryingHelp('Card', 'keyboard')).toBe(
+      'Card · hold X: turn it over',
+    );
+    expect(carryingHelp('Card', 'touch')).toBe(
+      'Card · hold INSPECT: turn it over',
+    );
+    expect(carryingHelp('Card', 'gamepad')).toBe('Card · hold Y: turn it over');
+    expect(carryingHelp('', 'gamepad')).toBe('hold Y: turn it over');
+  });
 });

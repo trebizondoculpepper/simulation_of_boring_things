@@ -34,6 +34,8 @@ export interface PutBack<K> {
   canPickUp(key: K): boolean;
   /** Pick `key` up, if it may be; whether it was. */
   pickUp(key: K): boolean;
+  /** Whether the held `key` could be put back now (its support home), changing nothing. */
+  canPutBack(key: K): boolean;
   /** Put the held `key` back: its home, or null if it is not the one held or its support is away. */
   putBack(key: K): Pose | null;
   /** Throw the held `key` in the bin: its place there (0 at the bottom), or null if it is not the one held. */
@@ -65,6 +67,11 @@ export function createPutBack<K>(): PutBack<K> {
       ([other, { restsOn }]) => restsOn === key && where(other) === 'home',
     );
   };
+  const canPutBack = (key: K) => {
+    if (held === null || held !== key) return false;
+    const { restsOn } = homes.get(key)!;
+    return restsOn === undefined || where(restsOn) === 'home';
+  };
   return {
     home(key, pose, restsOn) {
       homes.set(key, { pose, restsOn });
@@ -78,12 +85,11 @@ export function createPutBack<K>(): PutBack<K> {
       held = key;
       return true;
     },
+    canPutBack,
     putBack(key) {
-      if (held === null || held !== key) return null;
-      const { pose, restsOn } = homes.get(key)!;
-      if (restsOn !== undefined && where(restsOn) !== 'home') return null;
+      if (!canPutBack(key)) return null;
       held = null;
-      return pose;
+      return homes.get(key)!.pose;
     },
     bin(key) {
       if (held === null || held !== key) return null;

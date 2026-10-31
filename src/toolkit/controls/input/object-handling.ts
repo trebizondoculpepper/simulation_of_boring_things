@@ -12,6 +12,7 @@ import { assertDropProfile } from '../logic/drop-profile';
 import type { Object3D, PerspectiveCamera } from 'three';
 import type { createPortableBoard } from '../logic/portable-board';
 import { createBoardFall } from '../logic/portable-board';
+import type { CarryAnswer } from '../logic/use-cue';
 import { plinthOccupied } from './placement-target';
 import type { PlacementTarget } from './placement-target';
 
@@ -36,6 +37,35 @@ export interface SupportSurface {
   minZ: number;
   maxZ: number;
   top: number;
+}
+
+/**
+ * What a room's `targetFeedback` says its `heldAction` will do at a point:
+ * 'accept' (it fits) and 'reject' (refused) as before, or a carrying answer
+ * naming the kind of place (mission 116).
+ */
+export type TargetFeedback = 'accept' | 'reject' | CarryAnswer | null;
+
+/** A feedback answer as a carrying one. */
+export const feedbackAnswer = (
+  feedback: TargetFeedback,
+  gesture: CarryAnswer['gesture'] = 'fit',
+): CarryAnswer | null =>
+  feedback === 'accept'
+    ? { gesture, possible: true }
+    : feedback === 'reject'
+      ? { gesture, possible: false, refused: true }
+      : feedback;
+
+/**
+ * What a use at a point would do with the hands (`resolve`): a carrying
+ * answer, 'use' (the click is not the hands': a control is worked, or the
+ * room's own use runs), or null (carrying, a drop). `run` does it, and
+ * says whether the hands took the click.
+ */
+export interface HandsResolution {
+  answer: CarryAnswer | 'use' | null;
+  run(): boolean;
 }
 
 export interface DropPlacement {
@@ -69,18 +99,30 @@ export function createObjectHandling(
     x: number,
     y: number,
   ) => boolean | 'refuse',
-  /** A room may interlock pickup of installed parts. */
+  /**
+   * A room may interlock pickup of installed parts. A pure question, asked
+   * by the crosshair's cue a few times a second as well as by a click: it
+   * must change nothing (what a pick-up sets off belongs in `onPickUp`).
+   */
   allowPickup?: (object: Object3D, portable: PortableObject) => boolean,
+  /**
+   * What the room's `heldAction` will do at a point, asked (purely) by the
+   * cue and by a click; an answer also stops a `useWhileCarrying` part
+   * from taking the click.
+   */
   targetFeedback?: (
     object: Object3D,
     portable: PortableObject,
     x: number,
     y: number,
-  ) => 'accept' | 'reject' | null,
+  ) => TargetFeedback,
+  /** Whether `divert` would take the held object now (a bin near enough). Pure. */
   nearbyTargetFeedback?: (
     object: Object3D,
     portable: PortableObject,
   ) => 'accept' | 'reject' | null,
+  /** A part is being picked up, before it leaves its place (a spark, a notice). */
+  onPickUp?: (object: Object3D, portable: PortableObject) => void,
 ) {
   const fixedSupports: SupportSurface[] = [];
   root.updateMatrixWorld(true);
@@ -203,13 +245,13 @@ export function createObjectHandling(
     };
   };
   /** Ignore the held model itself; a destination can be seen behind it. */
-  const placementAt = (x: number, y: number) => {
-    root.updateMatrixWorld(true);
-    camera.updateMatrixWorld(true);
-    ray.setFromCamera(point.set(x, y), camera);
-    const hit = ray
-      .intersectObject(root, true)
-      .find((hit) => visible(hit.object) && !hit.object.userData.noCollision);
+  const placementAt = (
+    x: number,
+    y: number,
+    // The same ray's first hit, when the caller has already cast it.
+    found?: ReturnType<typeof hitAt> | null,
+  ) => {
+    const hit = found === undefined ? hitAt(x, y) : found;
     if (!hit) return null;
     for (let at: Object3D | null = hit.object; at; at = at.parent) {
       const target = at.userData.placementTarget as PlacementTarget | undefined;
@@ -226,6 +268,7 @@ export function createObjectHandling(
           target: destination,
           accepts: destination.accepts(held!.object, portable),
           retainReset: Boolean(deck),
+          cue: target?.cue ?? (deck ? 'put-down' : 'fit'),
         };
       }
     }
@@ -354,6 +397,7 @@ export function createObjectHandling(
         scale: object.scale.clone(),
       });
     assertDropProfile(portable.component.dropProfile);
+    onPickUp?.(object, portable);
     portable.component.pickUp();
     portable.detach();
     root.attach(object);
@@ -370,20 +414,86 @@ export function createObjectHandling(
         .multiply(object.getWorldQuaternion(new Quaternion())),
     };
   };
+  const NOT_THE_HANDS: HandsResolution = { answer: 'use', run: () => false };
+  /**
+   * What a use at a normalised screen point would do with the hands, and
+   * the step that does it (mission 116): the click and the crosshair's cue
+   * both come from here, so they cannot disagree. Asking changes nothing:
+   * it calls only the pure hooks (`allowPickup`, `targetFeedback`,
+   * `nearbyTargetFeedback`, a target's `inRange` and `accepts`), never
+   * `heldAction`, `divert`, `place` or a pick-up. Its order is the use's.
+   *
+   * Carrying: the room's `targetFeedback` (what its `heldAction` will do);
+   * else a `useWhileCarrying` part aimed at (not the hands'); else a
+   * placement target or surface aimed at (fit, put down, put back, put
+   * in, or refused, when the thing is kept, without trying a bin); else a
+   * bin near enough (`divert`: put in); else a drop.
+   *
+   * Not carrying: a portable thing under the aim, in reach, is a lift,
+   * possible or not; a fixed one, or nothing, is not the hands'.
+   */
+  function resolve(x: number, y: number): HandsResolution {
+    if (held) {
+      const object = held.object;
+      const portable = records.get(object)!.portable;
+      const releaseHere = () => {
+        release(x, y);
+        return true;
+      };
+      const custom = feedbackAnswer(
+        targetFeedback?.(object, portable, x, y) ?? null,
+      );
+      if (custom) return { answer: custom, run: releaseHere };
+      // One raycast for both: the control aimed at, and the place.
+      const hit = hitAt(x, y) ?? null;
+      if (hit && hit.distance <= 3.2 * metre)
+        for (let at: Object3D | null = hit.object; at; at = at.parent)
+          if (at.userData.useWhileCarrying) return NOT_THE_HANDS;
+      const destination = placementAt(x, y, hit);
+      if (destination)
+        return {
+          answer: destination.accepts
+            ? { gesture: destination.cue, possible: true }
+            : { gesture: destination.cue, possible: false, refused: true },
+          run: releaseHere,
+        };
+      return {
+        // A bin near enough takes it; anything else lets it fall.
+        answer:
+          nearbyTargetFeedback?.(object, portable) === 'accept'
+            ? { gesture: 'put-in', possible: true }
+            : null,
+        run: releaseHere,
+      };
+    }
+    const hit = hitAt(x, y);
+    if (!hit || hit.distance > 3.2 * metre) return NOT_THE_HANDS;
+    const found = portableAt(hit.object);
+    if (!found || found.portable.component.attachment === 'fixed')
+      return NOT_THE_HANDS;
+    const { object, portable } = found;
+    const possible =
+      portable.component.canPickUp.value &&
+      (!allowPickup || allowPickup(object, portable));
+    return {
+      answer: { gesture: 'pick-up', possible },
+      run() {
+        if (!possible) return false;
+        take(object, portable, hit.point);
+        return true;
+      },
+    };
+  }
   return {
     holding: () => held !== null,
     heldObject: () => held?.object ?? null,
-    targetFeedback(x: number, y: number) {
+    resolve,
+    /** The old feedback, from the resolver: 'accept', 'reject', or null. */
+    targetFeedback(x: number, y: number): 'accept' | 'reject' | null {
       if (!held) return null;
-      const portable = records.get(held.object)!.portable;
-      const custom = targetFeedback?.(held.object, portable, x, y);
-      if (custom) return custom;
-      const destination = placementAt(x, y);
-      return destination
-        ? destination.accepts
-          ? 'accept'
-          : 'reject'
-        : (nearbyTargetFeedback?.(held.object, portable) ?? null);
+      const { answer } = resolve(x, y);
+      if (!answer || answer === 'use') return null;
+      return answer.possible ? 'accept' : answer.refused ? 'reject' : null;
     },
     rotate(yaw: number, pitch: number) {
       if (!held) return;
@@ -400,27 +510,8 @@ export function createObjectHandling(
         held.object.quaternion.copy(cameraRotation).multiply(previous);
       }
     },
-    use(x: number, y: number) {
-      if (held) {
-        const portable = records.get(held.object)!.portable;
-        if (!targetFeedback?.(held.object, portable, x, y)) {
-          const hit = hitAt(x, y);
-          if (hit && hit.distance <= 3.2 * metre)
-            for (let at: Object3D | null = hit.object; at; at = at.parent)
-              if (at.userData.useWhileCarrying) return false;
-        }
-        release(x, y);
-        return true;
-      }
-      const hit = hitAt(x, y);
-      if (!hit || hit.distance > 3.2 * metre) return false;
-      const found = portableAt(hit.object);
-      if (!found || !found.portable.component.canPickUp.value) return false;
-      const { object, portable } = found;
-      if (allowPickup && !allowPickup(object, portable)) return false;
-      take(object, portable, hit.point);
-      return true;
-    },
+    /** Use at a point: whether the hands took it (else the room's use runs). */
+    use: (x: number, y: number) => resolve(x, y).run(),
     /**
      * Put a portable object straight into the hands (a find handed over
      * from a container, which the visitor did not pick off the floor): it
@@ -449,13 +540,15 @@ export function createObjectHandling(
       falling.delete(object);
       if (held?.object === object) held = null;
     },
+    /** Whether the hands have something, or something at the centre can be lifted now. */
     aimed() {
-      const hit = hitAt(0, 0);
+      if (held) return true;
+      const { answer } = resolve(0, 0);
       return Boolean(
-        held ||
-        (hit &&
-          hit.distance <= 3.2 * metre &&
-          portableAt(hit.object)?.portable.component.canPickUp.value),
+        answer &&
+        answer !== 'use' &&
+        answer.gesture === 'pick-up' &&
+        answer.possible,
       );
     },
     update(dt: number) {

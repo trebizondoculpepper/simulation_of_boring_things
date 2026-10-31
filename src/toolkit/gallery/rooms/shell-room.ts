@@ -711,6 +711,14 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
   let standing = cfg.floorAt(cfg.start.x, cfg.start.z, 0);
   let onLadderLanding = false;
   const flightBox = new Box3().setFromObject(rooms);
+  /** What a release at a screen point is aimed at in the office, within reach. */
+  const releaseAim = (x: number, y: number) => {
+    raycaster.setFromCamera(pointer.set(x, y), camera);
+    const hit = raycaster
+      .intersectObject(machines.group, true)
+      .find((candidate) => !isHeldPortableHit(candidate.object));
+    return hit && hit.distance <= 3 * metre ? hit.object : undefined;
+  };
   const walk = createFirstPerson({
     scene,
     canvas,
@@ -724,16 +732,17 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       cfg.self === 'engineers_office' && machines.canRemove(object),
     heldAction(object, _portable, x, y) {
       if (cfg.self !== 'engineers_office') return false;
-      raycaster.setFromCamera(pointer.set(x, y), camera);
-      const hit = raycaster
-        .intersectObject(machines.group, true)
-        .find((candidate) => !isHeldPortableHit(candidate.object));
-      const near = hit && hit.distance <= 3 * metre ? hit.object : undefined;
+      const near = releaseAim(x, y);
       // A software box goes back where it was, or into the carton aimed at.
       const placed = machines.release(object, near);
       if (placed !== null) return placed;
       return Boolean(near && machines.returnItem(object, near));
     },
+    // What heldAction will do there, for the crosshair's cue (mission 116).
+    targetFeedback: (object, _portable, x, y) =>
+      cfg.self === 'engineers_office'
+        ? machines.releaseCue(object, releaseAim(x, y))
+        : null,
     metre,
     floorY: cfg.floorAt(cfg.start.x, cfg.start.z, 0) * metre,
     // The loading dock's noclip reaches out over its yard (prompt 080).

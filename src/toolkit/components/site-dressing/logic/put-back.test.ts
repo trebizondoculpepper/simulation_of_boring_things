@@ -102,6 +102,25 @@ describe('picking a thing up to look at it, and putting it back', () => {
     expect(things.putBack('lean')).toEqual(at(0.2));
   });
 
+  it('says whether the held thing would go back, as putBack does, changing nothing', () => {
+    const things = createPutBack<string>();
+    things.home('book', at(0.15));
+    things.home('lean', at(0.2), 'book');
+    // Resting on something that is not home (never set out here).
+    things.home('stray', at(0.4), 'shelf');
+    expect(things.canPutBack('lean')).toBe(false);
+    things.pickUp('lean');
+    for (let i = 0; i < 10; i++) expect(things.canPutBack('lean')).toBe(true);
+    expect(things.held()).toBe('lean');
+    expect(things.canPutBack('book')).toBe(false);
+    expect(things.putBack('lean')).toEqual(at(0.2));
+    things.pickUp('stray');
+    expect(things.canPutBack('stray')).toBe(false);
+    expect(things.held()).toBe('stray');
+    expect(things.putBack('stray')).toBeNull();
+    expect(things.held()).toBe('stray');
+  });
+
   it('knows nothing of what it was never given', () => {
     const things = createPutBack<string>();
     expect(things.has('stapler')).toBe(false);

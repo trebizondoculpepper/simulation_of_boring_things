@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
   PLAIN_USE,
+  carryGlyph,
   cueGoes,
+  handsCue,
+  isCarry,
   cuePlace,
   knobAnswer,
   turnSide,
@@ -119,6 +122,149 @@ describe('the cue key', () => {
       useCue(knobAnswer(knob(true, true), 1, 0), false),
       useCue(knobAnswer(knob(true, true), -1, 0), false),
       useCue(knobAnswer(knob(true, true), 1, 0), true),
+    ].map(useCueKey);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+});
+
+describe('the carrying cues', () => {
+  const lift = { gesture: 'pick-up', possible: true } as const;
+  const stuck = { gesture: 'pick-up', possible: false } as const;
+  const occupied = { gesture: 'fit', possible: false, refused: true } as const;
+  const push = { gesture: 'push', possible: true } as const;
+
+  it('shows a carrying answer', () => {
+    expect(
+      handsCue({
+        carrying: false,
+        hands: lift,
+        otherwiseUsed: true,
+        use: push,
+      }),
+    ).toBe(lift);
+    expect(
+      handsCue({
+        carrying: true,
+        hands: occupied,
+        otherwiseUsed: false,
+        use: null,
+      }),
+    ).toBe(occupied);
+  });
+
+  it('defers to the use cue when the hands say so', () => {
+    expect(
+      handsCue({
+        carrying: true,
+        hands: 'use',
+        otherwiseUsed: true,
+        use: push,
+      }),
+    ).toBe(push);
+    expect(
+      handsCue({
+        carrying: false,
+        hands: 'use',
+        otherwiseUsed: false,
+        use: null,
+      }),
+    ).toBeNull();
+  });
+
+  it('gives way to anything else that takes the click over a red lift', () => {
+    expect(
+      handsCue({
+        carrying: false,
+        hands: stuck,
+        otherwiseUsed: true,
+        use: push,
+      }),
+    ).toBe(push);
+    expect(
+      handsCue({
+        carrying: false,
+        hands: stuck,
+        otherwiseUsed: true,
+        use: null,
+      }),
+    ).toBeNull();
+    expect(
+      handsCue({
+        carrying: false,
+        hands: stuck,
+        otherwiseUsed: false,
+        use: null,
+      }),
+    ).toBe(stuck);
+  });
+
+  it('is the plain ring for a drop, and the use cue with nothing to carry', () => {
+    expect(
+      handsCue({ carrying: true, hands: null, otherwiseUsed: true, use: push }),
+    ).toBeNull();
+    expect(
+      handsCue({
+        carrying: false,
+        hands: null,
+        otherwiseUsed: true,
+        use: push,
+      }),
+    ).toBe(push);
+  });
+
+  it('tells a carrying answer from a use', () => {
+    expect(isCarry(lift)).toBe(true);
+    expect(isCarry(push)).toBe(false);
+    expect(isCarry(PLAIN_USE)).toBe(false);
+  });
+
+  it('is one glyph, centred on the ring, labelled A on a pad', () => {
+    expect(useCue(lift, false)).toEqual({
+      kind: 'one',
+      gesture: 'pick-up',
+      direction: 0,
+      possible: true,
+      button: '',
+    });
+    expect(useCue(occupied, true)).toEqual({
+      kind: 'one',
+      gesture: 'fit',
+      direction: 0,
+      possible: false,
+      refused: true,
+      button: 'A',
+    });
+    expect(cuePlace(useCue(lift, false)!)).toBe('centre');
+    expect(cueGoes(useCue(stuck, false)!)).toBe(false);
+  });
+
+  it('draws every put as one down arrow in the simple set', () => {
+    for (const gesture of ['put-down', 'put-back', 'put-in'] as const) {
+      expect(carryGlyph(gesture, 'full')).toBe(gesture);
+      expect(carryGlyph(gesture, 'simple')).toBe('put');
+      expect(
+        useCue({ gesture, possible: true }, false, 'simple'),
+      ).toMatchObject({ gesture: 'put' });
+    }
+    expect(carryGlyph('pick-up', 'simple')).toBe('pick-up');
+    expect(carryGlyph('fit', 'simple')).toBe('fit');
+    expect(
+      cuePlace(useCue({ gesture: 'put-in', possible: true }, false, 'simple')!),
+    ).toBe('centre');
+  });
+
+  it('keys each carrying gesture, possibility, refusal and button apart', () => {
+    const keys = [
+      useCue(lift, false),
+      useCue(stuck, false),
+      useCue(lift, true),
+      useCue({ gesture: 'fit', possible: true }, false),
+      useCue({ gesture: 'fit', possible: false }, false),
+      useCue(occupied, false),
+      useCue({ gesture: 'put-down', possible: true }, false),
+      useCue({ gesture: 'put-back', possible: true }, false),
+      useCue({ gesture: 'put-in', possible: true }, false),
+      useCue({ gesture: 'put-in', possible: true }, false, 'simple'),
     ].map(useCueKey);
     expect(new Set(keys).size).toBe(keys.length);
   });

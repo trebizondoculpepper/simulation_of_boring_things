@@ -179,6 +179,23 @@ export function controlsHelp(mode: InputMode) {
   return parts.join(' · ');
 }
 
+/** How each input turns a carried thing over, in the help line while carrying. */
+const TURN_OVER: Record<InputMode, string> = {
+  keyboard: 'hold X: turn it over',
+  mouse: 'hold X: turn it over',
+  touch: 'hold INSPECT: turn it over',
+  gamepad: 'hold Y: turn it over',
+};
+
+/**
+ * The help line while carrying (mission 116): the thing's name, if it has
+ * one, and how to turn it over on the input in use ("10 A fuse cartridge ·
+ * hold X: turn it over").
+ */
+export function carryingHelp(name: string, mode: InputMode) {
+  return name ? `${name} · ${TURN_OVER[mode]}` : TURN_OVER[mode];
+}
+
 /** A gamepad stick's dead zone, as a share of its travel. */
 export const GAMEPAD_DEAD_ZONE = 0.15;
 

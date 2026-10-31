@@ -46,6 +46,32 @@ describe('the use cue drawings', () => {
     expect(markup).toContain('>RB</text>');
   });
 
+  it('draws every carrying glyph in both sets, green and red, a pad labelled A', () => {
+    const gestures = [
+      'pick-up',
+      'put-down',
+      'put-back',
+      'put-in',
+      'fit',
+    ] as const;
+    const drawn = new Set<string>();
+    for (const set of ['full', 'simple'] as const)
+      for (const gesture of gestures)
+        for (const possible of [true, false]) {
+          const cue = useCue({ gesture, possible }, false, set)!;
+          const markup = useCueMarkup(cue);
+          expect(markup.match(/<svg /g)).toHaveLength(1);
+          expect(markup).toContain(possible ? CUE_GO : CUE_STOP);
+          expect(markup).not.toContain(possible ? CUE_STOP : CUE_GO);
+          drawn.add(markup);
+          expect(
+            useCueMarkup(useCue({ gesture, possible }, true, set)!),
+          ).toContain('>A</text>');
+        }
+    // Five full glyphs and the simple set's one down arrow, each two ways.
+    expect(drawn.size).toBe(12);
+  });
+
   it('draws the same exactly when the key is the same', () => {
     const cues = [false, true].flatMap((pad) =>
       answers.map((a) => useCue(a, pad)!),
