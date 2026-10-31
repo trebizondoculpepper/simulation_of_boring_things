@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test';
 import {
+  APPROACHES,
   COLUMNS,
   INTERIOR,
-  WALKWAY,
   distanceTo,
   fittingPlaces,
   footprints,
@@ -13,14 +13,35 @@ import { FITTINGS, LINKS } from '../../../game/plant/museum-4-lab';
 
 describe('Hall 4’s layout', () => {
   const feet = footprints();
-  it('fits the hall and keeps the walk between the archways clear', () => {
+  it("fits the hall and keeps both archways' approaches clear", () => {
     for (const f of feet) {
       expect(f.minX).toBeGreaterThanOrEqual(INTERIOR.minX);
       expect(f.maxX).toBeLessThanOrEqual(INTERIOR.maxX);
       expect(f.minZ).toBeGreaterThanOrEqual(INTERIOR.minZ);
       expect(f.maxZ).toBeLessThanOrEqual(INTERIOR.maxZ);
-      expect(f.maxZ <= WALKWAY.minZ || f.minZ >= WALKWAY.maxZ).toBe(true);
+      for (const a of APPROACHES)
+        expect(
+          f.maxX <= a.minX ||
+            f.minX >= a.maxX ||
+            f.maxZ <= a.minZ ||
+            f.minZ >= a.maxZ,
+        ).toBe(true);
     }
+  });
+  it('overlaps nothing on the floor with anything else', () => {
+    feet.forEach((a, i) =>
+      feet
+        .slice(i + 1)
+        .forEach((b, j) =>
+          expect(
+            a.maxX <= b.minX ||
+              a.minX >= b.maxX ||
+              a.maxZ <= b.minZ ||
+              a.minZ >= b.maxZ,
+            `${i} and ${i + j + 1}`,
+          ).toBe(true),
+        ),
+    );
   });
   it('stands clear of the columns', () => {
     for (const c of COLUMNS)

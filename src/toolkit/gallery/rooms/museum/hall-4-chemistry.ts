@@ -57,12 +57,12 @@ import {
   CARDS_BOARD,
   DESK,
   EAST,
-  ENTRANCE,
   FRESH_SPOUT,
   LECTERNS,
   MANIFOLD,
   MIMIC_AT,
   NORTH,
+  WEST,
   POOL,
   POT,
   PRINTER,
@@ -71,7 +71,6 @@ import {
   RESET,
   TANK_Z,
   BUND,
-  INTERIOR,
   TEE,
   STANDS,
   fittingPlaces,
@@ -87,7 +86,6 @@ import {
 import {
   BEAM_PLAQUE,
   RESET_SIGN,
-  hall4Entrance,
   hall4Placards,
 } from '../../logic/museum-4-placards';
 import {
@@ -103,7 +101,6 @@ import {
   createResetPedestal,
   createWallPanel,
   heldPumpSound,
-  paintEntrance,
   paintResetSign,
 } from '../../views/museum-exhibit';
 import type { MimicState } from '../../../components/industrial-control/logic/mimic';
@@ -120,6 +117,8 @@ import type { HallExhibit } from './exhibits';
 
 const FACE_SOUTH = 0;
 const FACE_WEST = -Math.PI / 2;
+const FACE_EAST = Math.PI / 2;
+const FACE_NORTH = Math.PI;
 
 const turnTo = (o: Object3D, x: number, y: number, z: number, yaw: number) => {
   o.position.set(x, y, z);
@@ -411,7 +410,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   // The make-up's spout, turned down over the pool: a short wider nozzle.
   const spout = new Group();
   t.cyl(spout, t.paint('#4d5a63', 0.5), 0.042, 0.08, 0, 0.04, 0);
-  spout.position.set(FRESH_SPOUT.x, FRESH_SPOUT.y, -6.0);
+  spout.position.set(FRESH_SPOUT.x, FRESH_SPOUT.y, FRESH_SPOUT.z);
   object.add(
     still(
       markComponent(spout, {
@@ -489,7 +488,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       }),
     },
   });
-  turnTo(board.group, MIMIC_AT.x, MIMIC_AT.y, NORTH, FACE_SOUTH);
+  turnTo(board.group, WEST, MIMIC_AT.y, MIMIC_AT.z, FACE_EAST);
   board.group.userData.onWall = 'Hall 4 mimic board';
   // The mimic panel is in the model (M4-MP1), its lamps, readouts and
   // buttons bound through it.
@@ -573,7 +572,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     ),
   );
   const pump = createEndSuctionPump(kit);
-  turnTo(pump, PUMP.x, 0, PUMP.z, FACE_WEST);
+  turnTo(pump, PUMP.x, 0, PUMP.z, PUMP.yaw);
   object.add(
     markComponent(pump, {
       name: `${TAGS['pump']} circulation pump`,
@@ -601,7 +600,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     name: 'Ideal pool',
     ports: [],
   });
-  turnTo(pool.group, POOL.x, 0, POOL.z, FACE_SOUTH);
+  turnTo(pool.group, POOL.x, 0, POOL.z, FACE_WEST);
   object.add(
     markComponent(still(pool.group), {
       name: `${TAGS['pool']} ideal pool (25 × 12.5 m, 470 m³, with its 30 m³ tank)`,
@@ -654,7 +653,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
 
   // ---- The Balance Beam ----
   const beam = createBalanceBeam(kit, BEAM_PLAQUE);
-  turnTo(beam.group, BEAM.x, 0, BEAM.z, FACE_SOUTH);
+  turnTo(beam.group, BEAM.x, 0, BEAM.z, FACE_WEST);
   object.add(
     instrument(
       beam.group,
@@ -667,7 +666,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     beam.show(balanceTerms(state().bench.pool), reading.lsi, delta),
   );
 
-  // ---- The cards board, the entrance, RESET, the lecterns ----
+  // ---- The cards board, RESET, the lecterns ----
   const cardsBoard = createWallPanel(
     kit,
     'Challenge cards',
@@ -702,20 +701,10 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   cardsBoard.userData.onWall = 'Challenge cards';
   object.add(still(cardsBoard));
 
-  const entrance = createWallPanel(
-    kit,
-    'Entrance panel',
-    1.9,
-    1.5,
-    paintEntrance(hall4Entrance(), 'Hall 4 · The chemistry of pools'),
-  );
-  // On the north wall as the hall stands, beside the arrival archway,
-  // facing into the hall: it belongs to the archways, outside the turn.
-  turnTo(entrance, ENTRANCE.x, ENTRANCE.y, INTERIOR.minZ, FACE_SOUTH);
-  entrance.userData.onWall = 'Entrance panel';
+  // No entrance panel (the owner, 2026-10-31): the desk invites the visitor.
   const root = new Group();
   root.name = 'Hall 4';
-  root.add(object, still(entrance));
+  root.add(object);
   const resetSign = createWallPanel(
     kit,
     'RESET sign',
@@ -723,12 +712,13 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     0.56,
     paintResetSign(RESET_SIGN),
   );
-  resetSign.position.set(0, 1.55, -0.12);
+  // Its back flush to the wall behind the pedestal.
+  resetSign.position.set(0, 1.55, -0.24);
   const resetButton = createResetPedestal(kit, {
     reset: () => reset(localNow()),
     lit: () => sinceReset < 2.5,
   });
-  turnTo(resetButton.group, RESET.x, 0, RESET.z, FACE_SOUTH);
+  turnTo(resetButton.group, RESET.x, 0, RESET.z, FACE_NORTH);
   resetButton.group.add(resetSign);
   // The exhibit's RESET: it restarts the simulation, it works no plant.
   object.add(
@@ -743,7 +733,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   for (const p of hall4Placards()) {
     const at = LECTERNS[p.station!];
     const lectern = createLectern(kit, p);
-    turnTo(lectern, at.x, 0, at.z, FACE_SOUTH);
+    turnTo(lectern, at.x, 0, at.z, at.yaw);
     object.add(still(lectern));
   }
 

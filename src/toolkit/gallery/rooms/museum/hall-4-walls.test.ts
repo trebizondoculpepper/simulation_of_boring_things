@@ -5,15 +5,15 @@ import {
   expect,
   it,
   vi,
-} from "vite-plus/test";
-import { Box3 } from "three";
-import type { Object3D } from "three";
-import { createPanelKit } from "../../../components/core/views/eighties-controls";
-import { hallInterior, hallOrigin } from "../../logic/museum-plan";
-import { buildHallExhibit } from "./hall-4-chemistry";
+} from 'vite-plus/test';
+import { Box3 } from 'three';
+import type { Object3D } from 'three';
+import { createPanelKit } from '../../../components/core/views/eighties-controls';
+import { hallInterior, hallOrigin } from '../../logic/museum-plan';
+import { buildHallExhibit } from './hall-4-chemistry';
 
 beforeEach(() => {
-  vi.stubGlobal("document", {
+  vi.stubGlobal('document', {
     createElement: () => {
       const canvas = { width: 0, height: 0, getContext: () => context };
       const context = new Proxy(
@@ -36,18 +36,17 @@ afterEach(() => vi.unstubAllGlobals());
 
 /** Hall 4's wall boards (the audit, 2026-10-31: they stood 40 mm off their walls). */
 const ON_THE_WALLS = [
-  "Entrance panel",
-  "Hall 4 mimic board",
-  "Challenge cards",
-  "Analyser readout board",
+  'Hall 4 mimic board',
+  'Challenge cards',
+  'Analyser readout board',
 ];
 
-describe("Hall 4’s wall boards", () => {
-  it("hang flush, their backs (brackets and all) within 0.05 m of a wall", () => {
+describe('Hall 4’s wall boards', () => {
+  it('hang flush, their backs (brackets and all) within 0.05 m of a wall', () => {
     const hall = buildHallExhibit(createPanelKit());
     hall.object.updateMatrixWorld(true);
-    const i = hallInterior("museum4");
-    const o = hallOrigin("museum4");
+    const i = hallInterior('museum4');
+    const o = hallOrigin('museum4');
     const hx = (i.maxX - i.minX) / 2;
     const hz = (i.maxZ - i.minZ) / 2;
     expect(Math.abs(i.minX - o.x + hx)).toBeLessThan(1e-6);

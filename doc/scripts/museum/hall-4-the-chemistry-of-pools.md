@@ -12,45 +12,13 @@ Subject: A hands-on chemistry lab
 
 Footer: PLANTROOMS · How a swimming pool really works
 
-## Entrance panel
-
-Heading: Hall 4 · The chemistry of pools
-
-Title: The chemistry of pools
-
-Subtitle: Hall 4: a hands-on chemistry lab
-
-Introduction: Keeping a pool safe is a balancing act. Every chemical you add changes more than one thing. Here, you are the pool’s chemist. The pool’s 500 cubic metres weigh 500 tonnes: a 10-litre dose is like less than half a teaspoon in a bath.
-
-FOLLOW THE WATER
-
-- 1 The tanks: Ten ideal tanks
-- 2 The station: Dosing desk
-- 3 The readout: The museum’s ideal analyser, which knows the water exactly
-- 4 The swimmers: Ideal swimmers
-- 5 The challenges: Challenge cards
-
-Reset: Can’t break it: the big red RESET SIMULATION button puts everything back to the start.
-
 ## RESET sign
 
 Headline: Don’t worry, you can’t break anything!
 
 Body: This is a simulation. If you get the plant into a muddle, press this button and everything goes back to the start.
 
-## Lectern 1: The tanks
-
-Headline: The tanks
-
-Title: Ten ideal tanks · M4-CT1 to M4-FW1
-
-Body: CT1 Sodium hypochlorite 14 %: chlorine: kills germs; adds salt (TDS), a little alkalinity, and raises the pH. CT2 Calcium hypochlorite 65 %: chlorine, as granules; brings calcium (hardness) with it. CT3 Hydrochloric acid 10 %: acid: brings the pH down; takes alkalinity away, adds chloride (TDS). CT4 Sodium bisulphate (dry acid): dry acid: brings the pH down; takes alkalinity away, adds sulphate, which eats grout above 360 mg/l. CT5 Carbon dioxide: brings the pH down, leaving the alkalinity alone; leaves to the air over hours, so the pH creeps back up. CT6 Sodium bicarbonate: raises alkalinity, the buffer; hardly moves the pH; adds TDS. CT7 Soda ash (sodium carbonate): raises the pH; raises alkalinity too, and the pH sharply. CT8 Calcium chloride: raises calcium hardness; hardly moves the pH; adds TDS. CT9 Sodium thiosulphate: takes chlorine away; the pH rises afterwards: check it and add acid. FW1 Fresh water from the mains: dilutes everything towards the mains water; the only cure for TDS, sulphate and stabiliser; costs water and heat.
-
-Did you know?: Never let acid and hypochlorite meet: together they make chlorine gas. (Tank you won’t find here: coagulant. It works on dirt, not on chemistry.)
-
-Try it: Find the tank that raises alkalinity without moving the pH.
-
-## Lectern 2: The station
+## Lectern 1: The station
 
 Headline: The station
 
@@ -62,19 +30,19 @@ Did you know?: Here you are the controller: nothing doses itself.
 
 Try it: Dose 12.7 litres of acid (CT3) and watch the pH fall to about 7.24.
 
-## Lectern 3: The readout
+## Lectern 2: The tanks
 
-Headline: The readout
+Headline: The tanks
 
-Title: The museum’s ideal analyser, which knows the water exactly · M4-AN1
+Title: Ten ideal tanks · M4-CT1 to M4-FW1
 
-Body: Green means within the recommended range (PWTAG). Free chlorine kills germs; combined chlorine is chlorine used up on swimmers; pH decides how much chlorine works; alkalinity is the buffer; hardness keeps the water from eating the grout; TDS is everything dissolved; sulphate above 360 mg/l attacks cement grout (see what it does in the Grout hall).
+Body: CT1 Sodium hypochlorite 14 %: chlorine: kills germs; adds salt (TDS), a little alkalinity, and raises the pH. CT2 Calcium hypochlorite 65 %: chlorine, as granules; brings calcium (hardness) with it. CT3 Hydrochloric acid 10 %: acid: brings the pH down; takes alkalinity away, adds chloride (TDS). CT4 Sodium bisulphate (dry acid): dry acid: brings the pH down; takes alkalinity away, adds sulphate, which eats grout above 360 mg/l. CT5 Carbon dioxide: brings the pH down, leaving the alkalinity alone; leaves to the air over hours, so the pH creeps back up. CT6 Sodium bicarbonate: raises alkalinity, the buffer; hardly moves the pH; adds TDS. CT7 Soda ash (sodium carbonate): raises the pH; raises alkalinity too, and the pH sharply. CT8 Calcium chloride: raises calcium hardness; hardly moves the pH; adds TDS. CT9 Sodium thiosulphate: takes chlorine away; the pH rises afterwards: check it and add acid. FW1 Fresh water from the mains: dilutes everything towards the mains water; the only cure for TDS, sulphate and stabiliser; costs water and heat.
 
-Did you know?: At pH 7.4 about 54 % of the free chlorine is working (HOCl); at pH 8.0 only about a quarter.
+Did you know?: Never let acid and hypochlorite meet: together they make chlorine gas. (Tank you won’t find here: coagulant. It works on dirt, not on chemistry.)
 
-Try it: Add soda ash and watch the HOCl meter fall as the pH rises.
+Try it: Find the tank that raises alkalinity without moving the pH.
 
-## Lectern 4: The swimmers
+## Lectern 3: The swimmers
 
 Headline: The swimmers
 
@@ -85,6 +53,18 @@ Body: Every swimmer brings sweat and urine. Chlorine reacts with them and is use
 Did you know?: Urea from swimmers breaks down slowly: half of it lasts about 63 hours.
 
 Try it: Press +20 SWIMMERS, then TIME ×600, and watch the free chlorine fall.
+
+## Lectern 4: The readout
+
+Headline: The readout
+
+Title: The museum’s ideal analyser, which knows the water exactly · M4-AN1
+
+Body: Green means within the recommended range (PWTAG). Free chlorine kills germs; combined chlorine is chlorine used up on swimmers; pH decides how much chlorine works; alkalinity is the buffer; hardness keeps the water from eating the grout; TDS is everything dissolved; sulphate above 360 mg/l attacks cement grout (see what it does in the Grout hall).
+
+Did you know?: At pH 7.4 about 54 % of the free chlorine is working (HOCl); at pH 8.0 only about a quarter.
+
+Try it: Add soda ash and watch the HOCl meter fall as the pH rises.
 
 ## Lectern 5: The challenges
 

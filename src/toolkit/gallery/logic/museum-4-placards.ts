@@ -14,7 +14,7 @@ export { RESET_SIGN };
 
 /**
  * Hall 4's words (107d): its entrance panel and a placard at each of its
- * five stations, tanks to challenges, left to right, and the Balance
+ * five stations, desk to challenges, along the way round from the arrival archway, and the Balance
  * Beam's plaque. Every number comes from the model; the plaque facts are
  * the brief's sourced ones (PWTAG CoP, via the research notes). Pure.
  */
@@ -41,6 +41,17 @@ export function hall4Placards(): Placard[] {
   return [
     {
       station: 1,
+      of: 'desk',
+      icon: 'meter',
+      headline: 'The station',
+      title: `Dosing desk · ${TAGS['desk']}`,
+      body: `Choose a chemical, dial how much on the thumbwheels, press DOSE. Its valve opens, the dose runs down the header to the dosing pot ${shortTag('pot')} and into the pool’s return. CANCEL stops it. The teleprinter ${shortTag('printer')} writes every dose down against the time.`,
+      fact: 'Here you are the controller: nothing doses itself.',
+      tryIt:
+        'Dose 12.7 litres of acid (CT3) and watch the pH fall to about 7.24.',
+    },
+    {
+      station: 2,
       of: 'tanks',
       icon: 'tank',
       headline: 'The tanks',
@@ -52,28 +63,7 @@ export function hall4Placards(): Placard[] {
       tryIt: 'Find the tank that raises alkalinity without moving the pH.',
     },
     {
-      station: 2,
-      of: 'desk',
-      icon: 'meter',
-      headline: 'The station',
-      title: `Dosing desk · ${TAGS['desk']}`,
-      body: `Choose a chemical, dial how much on the thumbwheels, press DOSE. Its valve opens, the dose runs down the header to the dosing pot ${shortTag('pot')} and into the pool’s return. CANCEL stops it. The teleprinter ${shortTag('printer')} writes every dose down against the time.`,
-      fact: 'Here you are the controller: nothing doses itself.',
-      tryIt:
-        'Dose 12.7 litres of acid (CT3) and watch the pH fall to about 7.24.',
-    },
-    {
       station: 3,
-      of: 'readout',
-      icon: 'meter',
-      headline: 'The readout',
-      title: `The museum’s ideal analyser, which knows the water exactly · ${TAGS['analyser']}`,
-      body: 'Green means within the recommended range (PWTAG). Free chlorine kills germs; combined chlorine is chlorine used up on swimmers; pH decides how much chlorine works; alkalinity is the buffer; hardness keeps the water from eating the grout; TDS is everything dissolved; sulphate above 360 mg/l attacks cement grout (see what it does in the Grout hall).',
-      fact: `At pH 7.4 about ${round(k.resetHocl)} % of the free chlorine is working (HOCl); at pH 8.0 only about a quarter.`,
-      tryIt: 'Add soda ash and watch the HOCl meter fall as the pH rises.',
-    },
-    {
-      station: 4,
       of: 'swimmers',
       icon: 'pool',
       headline: 'The swimmers',
@@ -82,6 +72,16 @@ export function hall4Placards(): Placard[] {
       fact: 'Urea from swimmers breaks down slowly: half of it lasts about 63 hours.',
       tryIt:
         'Press +20 SWIMMERS, then TIME ×600, and watch the free chlorine fall.',
+    },
+    {
+      station: 4,
+      of: 'readout',
+      icon: 'meter',
+      headline: 'The readout',
+      title: `The museum’s ideal analyser, which knows the water exactly · ${TAGS['analyser']}`,
+      body: 'Green means within the recommended range (PWTAG). Free chlorine kills germs; combined chlorine is chlorine used up on swimmers; pH decides how much chlorine works; alkalinity is the buffer; hardness keeps the water from eating the grout; TDS is everything dissolved; sulphate above 360 mg/l attacks cement grout (see what it does in the Grout hall).',
+      fact: `At pH 7.4 about ${round(k.resetHocl)} % of the free chlorine is working (HOCl); at pH 8.0 only about a quarter.`,
+      tryIt: 'Add soda ash and watch the HOCl meter fall as the pH rises.',
     },
     {
       station: 5,
