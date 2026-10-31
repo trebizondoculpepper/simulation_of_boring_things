@@ -12,6 +12,9 @@ import { createDosingConsole } from './dosing-console';
 import {
   AmbientLight,
   Box3,
+  CanvasTexture,
+  MeshBasicMaterial,
+  PlaneGeometry,
   DirectionalLight,
   Group,
   Mesh,
@@ -59,6 +62,10 @@ import { createChartRecorder } from '../../components/industrial-control/views/c
 import { createWashOTron } from '../../components/plant/views/wash-o-tron';
 import { filterValves } from '../../../game/plant/wash-o-tron-world';
 import { WET_HALL_PLANT } from '../../../game/plant/wet-hall';
+import { drAqualisPose } from '../../components/plant/logic/dr-aqualis';
+import type { DrAqualisFrame } from '../../components/plant/logic/dr-aqualis';
+import { drawDrAqualis } from '../../components/plant/views/dr-aqualis';
+import type { Mood } from '../../../game/plant/aqualis-types';
 
 /**
  * The component benchmark (mission 094, `doc/prompts/094-slowest-components.md`),
@@ -292,6 +299,55 @@ async function candidates(usage: Map<string, Usage>): Promise<Candidate[]> {
             }
           }
           desk.update(d);
+        },
+      };
+    },
+  });
+  // Dr Aqualis (mission 114) on a canvas of his own, his five moods in
+  // turn, eight seconds each, redrawn only when his pose key changes.
+  usage.set('part:dr-aqualis', { count: 1, busy: 0, rooms: ['dev58'] });
+  list.push({
+    id: 'part:dr-aqualis',
+    label: 'Dr Aqualis, the dosing controller helper',
+    source: 'part',
+    room: 'dev58',
+    build: () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 256;
+      const ctx = canvas.getContext('2d')!;
+      const texture = new CanvasTexture(canvas);
+      const material = new MeshBasicMaterial({ map: texture });
+      const geometry = new PlaneGeometry(0.4, 0.4);
+      const moods: Mood[] = [
+        'idle',
+        'concerned',
+        'alarmed',
+        'pleased',
+        'pointing',
+      ];
+      let t = 0;
+      let frame: DrAqualisFrame | null = null;
+      let drawn = '';
+      const update = (d: number) => {
+        t += clockStopped.value ? 0 : d;
+        const mood = moods[Math.floor(t / 8) % moods.length];
+        frame = drAqualisPose(mood, t, frame, { aim: { x: 0.9, y: 0.4 } });
+        if (frame.key === drawn) return;
+        drawn = frame.key;
+        ctx.clearRect(0, 0, 256, 256);
+        ctx.fillStyle = '#cfeaf8';
+        ctx.fillRect(0, 0, 256, 256);
+        drawDrAqualis(ctx, frame.pose, { x: 8, y: 8, w: 240, h: 240 });
+        texture.needsUpdate = true;
+      };
+      update(0);
+      return {
+        object: new Mesh(geometry, material),
+        update,
+        dispose: () => {
+          texture.dispose();
+          material.dispose();
+          geometry.dispose();
         },
       };
     },
