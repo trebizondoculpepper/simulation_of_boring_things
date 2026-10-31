@@ -556,6 +556,9 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       );
     });
   updates.push(desk.update);
+  // For checks and screenshots: `hall4Console.press('reset')`, as dev57's.
+  if (typeof window !== 'undefined')
+    Object.assign(window, { hall4Console: desk });
 
   const board = createMimicBoard(kit, HALL4_MIMIC, {
     maker: 'penfold',

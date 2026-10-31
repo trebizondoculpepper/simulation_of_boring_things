@@ -99,7 +99,8 @@ export const DESK = {
   x: TANKS_MID,
   z: STAND.maxZ + 2 + 0.425,
   w: 2.4,
-  d: 0.85,
+  /** The stand's plinth, without the old desk's shelf (the owner, 2026-10-31). */
+  d: 0.5,
 } as const;
 /**
  * Where the pipework was laid for (the first layout): re-plumbing for the

@@ -304,24 +304,32 @@ export function drawDoseScreen(ctx: Ctx, m: DoseScreen) {
     align: 'center',
     glow: true,
   });
-  drawText(
-    ctx,
-    m.ready ? 'Press DOSE to add it all at once.' : 'No doses left.',
-    L.hint.x,
-    L.hint.y,
-    {
-      size: 16,
-      align: 'center',
-      colour: m.ready ? AERO.ink : '#8f1d10',
-      weight: 600,
-    },
-  );
   if (m.left !== null)
     drawText(ctx, `Doses left ${m.left}`, L.left.x, L.left.y, {
-      size: 18,
+      size: 16,
       weight: 700,
       align: 'center',
     });
+  // The lower third: DOSE once a chemical and a size are picked, the hint till then.
+  if (m.armed)
+    drawGlossyButton(ctx, L.dose, m.ready ? 'DOSE' : 'NO DOSES LEFT', {
+      tint: m.ready ? 'green' : 'grey',
+      state: !m.ready ? 'disabled' : state(m.pressed, 'dose'),
+      size: m.ready ? 40 : 22,
+    });
+  else
+    drawText(
+      ctx,
+      m.ready ? 'Choose a chemical and a dose size.' : 'No doses left.',
+      L.hint.x,
+      L.hint.y,
+      {
+        size: 17,
+        align: 'center',
+        colour: m.ready ? AERO.ink : '#8f1d10',
+        weight: 600,
+      },
+    );
   drawText(ctx, 'Each size is about three times the one before.', 256, 360, {
     size: 12,
     align: 'center',

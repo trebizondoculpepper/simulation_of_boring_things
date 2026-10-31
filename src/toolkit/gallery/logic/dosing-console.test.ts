@@ -4,6 +4,9 @@ import {
   DOSE_LAYOUT,
   HOLD_STEP,
   SCENARIO_LAYOUT,
+  SCREEN,
+  afterDose,
+  armed,
   chemicalKey,
   chemicalScreen,
   consoleScreens,
@@ -131,5 +134,41 @@ describe("Hall 4's dosing console screens", () => {
         scenarioScreen(s, demoView('holding', 1000 + HOLD_STEP), null),
       ),
     ).not.toBe(a);
+  });
+
+  it('show DOSE in the lower third only once a chemical and a size are picked afresh', () => {
+    const L = DOSE_LAYOUT.dose;
+    expect(L.y).toBeGreaterThanOrEqual(SCREEN.h * (2 / 3) - 2);
+    expect(L.y + L.h).toBeLessThanOrEqual(SCREEN.h);
+    for (const r of [
+      ...DOSE_LAYOUT.segments,
+      DOSE_LAYOUT.less,
+      DOSE_LAYOUT.more,
+    ])
+      expect(r.y + r.h).toBeLessThan(L.y);
+    let s = newConsole();
+    expect(armed(s)).toBe(false);
+    expect(hitScreen('dose', s, free(s), ...mid(L))).toBeNull();
+    expect(pressConsole(s, 'dose', 7).effect).toBeUndefined();
+    s = press(s, 'size-3');
+    expect(armed(s)).toBe(false);
+    expect(doseScreen(s, null, true).armed).toBe(false);
+    s = press(s, 'row-2');
+    expect(armed(s)).toBe(true);
+    expect(doseScreen(s, null, true).armed).toBe(true);
+    expect(hitScreen('dose', s, free(s), ...mid(L))).toBe('dose');
+    expect(pressConsole(s, 'dose', 7).effect).toEqual({ type: 'dose' });
+    expect(doseScreen(press(s, 'dose'), null, true).pressed).toBe('dose');
+    // Taken, both picks start again; the arrows count as picks too.
+    s = afterDose(s);
+    expect(hitScreen('dose', s, free(s), ...mid(L))).toBeNull();
+    expect(armed(press(press(s, 'chem-down'), 'size-up'))).toBe(true);
+    // RESET clears them too.
+    s = press(press(s, 'chem-down'), 'size-up');
+    expect(armed(press(s, 'reset-yes'))).toBe(false);
+    // The screen's key changes with the button, so it redraws once.
+    expect(doseKey(doseScreen(s, null, true))).not.toBe(
+      doseKey(doseScreen(afterDose(s), null, true)),
+    );
   });
 });

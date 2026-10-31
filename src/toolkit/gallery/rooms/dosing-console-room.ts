@@ -48,8 +48,8 @@ const CAPTION_SECONDS = 20;
 
 /**
  * Dev57, the dosing console (mission 113; the owner, 2026-10-31): Hall 4's
- * new console alone in a plain room, its three Aero touch screens and the
- * red DOSE button, driven by the real challenge engine (free play and the
+ * new console alone in a plain room, its three Aero touch screens on their
+ * stand (DOSE a glossy button on the dose screen), driven by the real challenge engine (free play and the
  * first seven cards, the lab at 1,000×). `?console=free|challenge|holding|won|out`
  * shows the scenario screen in that state instead, `?console=cycle` cycles
  * them every four seconds; `?view=screens|scenario|chemical|dose` frames it.
@@ -161,10 +161,10 @@ export function startDosingConsoleRoom(canvas: HTMLCanvasElement) {
     { x: number; z: number; yaw: number; pitch: number }
   > = {
     room: { x: 0, z: 2.6 * m, yaw: 0, pitch: -0.25 },
-    screens: { x: 0, z: 1.25 * m, yaw: 0, pitch: -0.42 },
-    scenario: { x: -0.72 * m, z: 0.62 * m, yaw: 0, pitch: -0.62 },
-    chemical: { x: 0, z: 0.62 * m, yaw: 0, pitch: -0.62 },
-    dose: { x: 0.72 * m, z: 0.62 * m, yaw: 0, pitch: -0.62 },
+    screens: { x: 0, z: 1.49 * m, yaw: 0, pitch: -0.42 },
+    scenario: { x: -0.72 * m, z: 0.86 * m, yaw: 0, pitch: -0.62 },
+    chemical: { x: 0, z: 0.86 * m, yaw: 0, pitch: -0.62 },
+    dose: { x: 0.72 * m, z: 0.86 * m, yaw: 0, pitch: -0.62 },
   };
   const half = (s: number) => (s / 2) * m;
   const walk = createFirstPerson({
@@ -214,7 +214,8 @@ export function startDosingConsoleRoom(canvas: HTMLCanvasElement) {
       console: desk,
       /** Touch a screen region by id, for checks: `dev57.press('row-2')`. */
       press: (id: string) => desk.press(id),
-      dose: () => desk.touch(desk.touchables[3]),
+      /** Touch DOSE on the dose screen (only once a chemical and a size are picked). */
+      dose: () => desk.press('dose'),
     },
   });
 

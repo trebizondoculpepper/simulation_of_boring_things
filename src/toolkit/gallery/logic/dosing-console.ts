@@ -55,6 +55,13 @@ export interface ConsoleState {
   /** The card shown on the free-play chooser. */
   pick: number;
   level: Level;
+  /**
+   * Whether the visitor has picked a chemical, and a size, since the last
+   * dose taken or reset: the console always has a selection, so the DOSE
+   * button waits for both to be chosen actively (the owner, 2026-10-31).
+   */
+  pickedChemical: boolean;
+  pickedSize: boolean;
 }
 
 export const newConsole = (): ConsoleState => ({
@@ -65,6 +72,18 @@ export const newConsole = (): ConsoleState => ({
   confirmReset: false,
   pick: 0,
   level: 'journeyman',
+  pickedChemical: false,
+  pickedSize: false,
+});
+
+/** Whether the dose screen shows its DOSE button: a chemical and a size both picked. */
+export const armed = (s: ConsoleState) => s.pickedChemical && s.pickedSize;
+
+/** The console after a dose was taken: both picks to be made afresh. */
+export const afterDose = (s: ConsoleState): ConsoleState => ({
+  ...s,
+  pickedChemical: false,
+  pickedSize: false,
 });
 
 export const chosenTank = (s: ConsoleState): TankId => DOSE_ORDER[s.chemical];
@@ -75,7 +94,8 @@ export type ConsoleEffect =
   | { type: 'reset' }
   | { type: 'abandon' }
   | { type: 'continue' }
-  | { type: 'retry' };
+  | { type: 'retry' }
+  | { type: 'dose' };
 
 export type ScreenId = 'scenario' | 'chemical' | 'dose';
 
@@ -130,8 +150,11 @@ export const DOSE_LAYOUT = {
   less: circle(40, 196, 22),
   more: circle(472, 196, 22),
   amount: { x: 256, y: 196 },
-  hint: { x: 256, y: 252 },
-  left: { x: 256, y: 292 },
+  left: { x: 256, y: 242 },
+  /** DOSE, the big glossy button in the screen's lower third, once armed. */
+  dose: rect(116, 262, 280, 82),
+  /** The hint in its place until then. */
+  hint: { x: 256, y: 303 },
 } as const;
 
 /** A list row's rectangle, `i` from the window's top. */
@@ -176,6 +199,8 @@ export interface DoseScreen {
   left: number | null;
   /** Whether DOSE would be taken. */
   ready: boolean;
+  /** Whether the DOSE button shows (a chemical and a size picked). */
+  armed: boolean;
   pressed: string | null;
 }
 
@@ -250,6 +275,7 @@ export function doseRegions(s: ConsoleState): Region[] {
     ...DOSE_LAYOUT.segments.map((r, i) => ({ id: `size-${i}`, rect: r })),
     { id: 'size-down', rect: DOSE_LAYOUT.less, enabled: s.size > 0 },
     { id: 'size-up', rect: DOSE_LAYOUT.more, enabled: s.size < 4 },
+    { id: 'dose', rect: DOSE_LAYOUT.dose, enabled: armed(s) },
   ];
 }
 
@@ -290,19 +316,28 @@ export function pressConsole(
   const n: ConsoleState = { ...s, pressed: id };
   if (id.startsWith('row-')) {
     const w = listWindow(DOSE_ORDER.length, LIST_ROWS, s.top);
-    return { state: selectChemical(n, w.top + Number(id.slice(4))) };
+    return {
+      state: selectChemical(
+        { ...n, pickedChemical: true },
+        w.top + Number(id.slice(4)),
+      ),
+    };
   }
+  const c: ConsoleState = { ...n, pickedChemical: true };
+  const z: ConsoleState = { ...n, pickedSize: true };
   if (id.startsWith('size-') && /\d$/.test(id))
-    return { state: { ...n, size: Number(id.slice(5)) as SizeIndex } };
+    return { state: { ...z, size: Number(id.slice(5)) as SizeIndex } };
   switch (id) {
     case 'chem-up':
-      return { state: selectChemical(n, s.chemical - 1) };
+      return { state: selectChemical(c, s.chemical - 1) };
     case 'chem-down':
-      return { state: selectChemical(n, s.chemical + 1) };
+      return { state: selectChemical(c, s.chemical + 1) };
     case 'size-down':
-      return { state: { ...n, size: Math.max(0, s.size - 1) as SizeIndex } };
+      return { state: { ...z, size: Math.max(0, s.size - 1) as SizeIndex } };
     case 'size-up':
-      return { state: { ...n, size: Math.min(4, s.size + 1) as SizeIndex } };
+      return { state: { ...z, size: Math.min(4, s.size + 1) as SizeIndex } };
+    case 'dose':
+      return armed(s) ? { state: n, effect: { type: 'dose' } } : { state: s };
     case 'card-prev':
       return { state: { ...n, pick: (s.pick - 1 + cards) % cards } };
     case 'card-next':
@@ -322,7 +357,7 @@ export function pressConsole(
       return { state: { ...n, confirmReset: false } };
     case 'reset-yes':
       return {
-        state: { ...n, confirmReset: false },
+        state: afterDose({ ...n, confirmReset: false }),
         effect: { type: 'reset' },
       };
     case 'abandon':
@@ -379,7 +414,9 @@ export function doseScreen(
     amount: doseText(tank, s.size),
     left,
     ready,
-    pressed: s.pressed?.startsWith('size-') ? s.pressed : null,
+    armed: armed(s),
+    pressed:
+      s.pressed?.startsWith('size-') || s.pressed === 'dose' ? s.pressed : null,
   };
 }
 
