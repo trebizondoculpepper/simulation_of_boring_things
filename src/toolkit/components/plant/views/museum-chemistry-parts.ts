@@ -260,6 +260,7 @@ export interface DeskBindings {
   vfd(): string;
   group(): void;
   swimmers: { value: number; set(position: number): void };
+  /** The TIME buttons on the desk; none when they are on a wall panel of their own (`createTimePanel`). */
   speeds: readonly number[];
   speed(): number;
   setSpeed(s: number): void;
@@ -404,8 +405,9 @@ export function createDosingDesk(kit: PanelKit, b: DeskBindings) {
       ),
     ),
   );
-  text('TIME', -0.08, -0.28);
-  // CHALLENGE.
+  if (b.speeds.length) text('TIME', -0.08, -0.28);
+  // CHALLENGE: beside the swimmers when the TIME buttons are elsewhere.
+  const cx = b.speeds.length ? 0 : -0.2;
   parts.add(
     put(
       pushButton(kit, {
@@ -414,13 +416,13 @@ export function createDosingDesk(kit: PanelKit, b: DeskBindings) {
         name: 'CHALLENGE back',
         action: () => b.stepCard(-1),
       }),
-      0.3,
+      0.3 + cx,
       -0.2,
       0.8,
     ),
   );
   const cardNo = createSevenSegment(kit, 2, { digitHeight: 0.03 });
-  cardNo.group.position.set(0.42, -0.2, 0.002);
+  cardNo.group.position.set(0.42 + cx, -0.2, 0.002);
   face.add(cardNo.group);
   parts.add(
     put(
@@ -430,7 +432,7 @@ export function createDosingDesk(kit: PanelKit, b: DeskBindings) {
         name: 'CHALLENGE on',
         action: () => b.stepCard(1),
       }),
-      0.54,
+      0.54 + cx,
       -0.2,
       0.8,
     ),
@@ -443,12 +445,12 @@ export function createDosingDesk(kit: PanelKit, b: DeskBindings) {
         name: 'CHALLENGE START',
         action: b.startCard,
       }),
-      0.72,
+      0.72 + cx,
       -0.2,
       0.8,
     ),
   );
-  text(`CHALLENGE 1–${b.cards}`, 0.48, -0.28);
+  text(`CHALLENGE 1–${b.cards}`, 0.48 + cx, -0.28);
   let vfdShown = '';
   let cardShown = '';
   return {
@@ -471,6 +473,50 @@ export function createDosingDesk(kit: PanelKit, b: DeskBindings) {
         vfd.show([(vfdShown = line).padEnd(24).slice(0, 24)]);
       const c = String(b.card() + 1).padStart(2);
       if (c !== cardShown) cardNo.show((cardShown = c));
+      parts.update(delta);
+    },
+  };
+}
+
+/**
+ * The exhibit's TIME buttons on a small flush wall panel of their own, its
+ * back at its origin, facing +z: an illuminated button for each speed, lit
+ * at the speed running, under the legend TIME.
+ */
+export function createTimePanel(
+  kit: PanelKit,
+  b: { speeds: readonly number[]; speed(): number; setSpeed(s: number): void },
+) {
+  const t = tools(kit);
+  const group = new Group();
+  group.name = 'TIME panel';
+  const W = 0.14 + b.speeds.length * 0.12;
+  const H = 0.22;
+  t.box(group, t.paint('#d8d4c6', 0.5), W, H, 0.03, 0, 0, 0.015);
+  const parts = createPartSet();
+  const lit = b.speeds.map(() => signal(false));
+  b.speeds.forEach((s, k) => {
+    const p = pushButton(kit, {
+      colour: 'white',
+      head: 'illuminated',
+      lamp: lit[k],
+      legend: `×${s}`,
+      name: `TIME ×${s}`,
+      action: () => b.setSpeed(s),
+    });
+    p.object.position.set((k - (b.speeds.length - 1) / 2) * 0.12, -0.02, 0.031);
+    group.add(p.object);
+    parts.add(p);
+  });
+  t.label(group, 'TIME', 0, 0.075, 0.031, 0.03, '#16191b');
+  return {
+    group,
+    parts,
+    update(delta: number) {
+      lit.forEach((l, k) => {
+        const on = b.speed() === b.speeds[k];
+        if (l.value !== on) l.value = on;
+      });
       parts.update(delta);
     },
   };

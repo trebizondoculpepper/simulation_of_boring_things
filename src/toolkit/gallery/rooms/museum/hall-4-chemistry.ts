@@ -24,6 +24,7 @@ import {
   createBalanceBeam,
   createChemicalTank,
   createDosingDesk,
+  createTimePanel,
   createReadoutBoard,
 } from '../../../components/plant/views/museum-chemistry-parts';
 import {
@@ -507,11 +508,10 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
           swimmers: SWIMMERS[Math.max(0, Math.min(2, p))],
         }),
     },
-    speeds: SPEEDS,
+    // The TIME buttons are on the wall under LAB TIME (the owner, 2026-10-31).
+    speeds: [],
     speed: () => session.clock.speed,
-    setSpeed: (s) => {
-      session = { ...session, clock: setSpeed(session.clock, s as TimeSpeed) };
-    },
+    setSpeed: () => {},
     card: () => state().card,
     cards: CARDS.length,
     stepCard: (by) => act({ type: 'card', by }),
@@ -598,6 +598,29 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       status: () => `shows ${clockShown} at TIME ×${session.clock.speed}`,
     }),
   );
+  // The TIME buttons under it, a small flush panel at reach height:
+  // exhibit controls (the simulation's speed), decorative.
+  const timePanel = createTimePanel(kit, {
+    speeds: SPEEDS,
+    speed: () => session.clock.speed,
+    setSpeed: (s) => {
+      session = { ...session, clock: setSpeed(session.clock, s as TimeSpeed) };
+    },
+  });
+  turnTo(timePanel.group, LAB_TIME.x, LAB_TIME.buttonsY, SOUTH, Math.PI);
+  timePanel.group.userData.onWall = 'TIME panel';
+  object.add(
+    markComponent(timePanel.group, {
+      name: 'TIME panel',
+      decorative: true,
+      status: () => `TIME ×${session.clock.speed} lit`,
+    }),
+  );
+  timePanel.group.traverse((o) => {
+    if (/^TIME ×/.test(o.name)) exhibitOnly(o);
+  });
+  take(timePanel.parts.uses);
+  updates.push(timePanel.update);
   let clockShown = '';
   updates.push((delta) => {
     const s = state();

@@ -201,7 +201,8 @@ export const BEAM_LECTERN = {
  * wall), centred between the archways, under the hall's title vinyl (from
  * 2.6 m) and clear of the sounder and the arches' bulkheads.
  */
-export const LAB_TIME = { x: 0, y: 2.2 } as const;
+/** Its TIME buttons on a small flush panel centred under it, at reach height. */
+export const LAB_TIME = { x: 0, y: 2.2, buttonsY: 1.35 } as const;
 export const CARDS_BOARD = { x: -5.0, y: 2.3 } as const;
 /**
  * RESET, in the middle of the north wall as the hall stands, flush to it,
