@@ -59,6 +59,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 
 ### Gameplay features
 
+- [ ] Mission 114: the Aqualis dosing controller and Dr Aqualis (`doc/prompts/114-aqualis-dosing-controller.md`; the owner, 2026-10-31): an early-2000s white touch-screen cabinet on a sampling loop, HAND · OFF · AUTO, driving only the hypochlorite and acid pumps, a science-fiction analyser that measures every reading, alarms to the mimic, the annunciator and both control rooms, diagnosis-and-direction advice with a Show dose button, given by Dr Aqualis, an animated glossy water-drop doctor; one each for the Olympic and Lounge pools. Not started.
 - [ ] Mission 113: Hall 4's dosing console and challenge cards (`doc/prompts/113-hall-4-dosing-console.md`; the owner, 2026-10-31): three touch screens and a DOSE button, free play, golf-style challenge cards at Journeyman and Pool Pro, five exponential dose sizes in each chemical's own unit, a fixed 1,000× clock, an authoring solver with stored solutions replayed and fuzzed ±10 % in the tests, and a briefing and explanation for each card.
   - [x] Plans and Codex critiques (`doc/plans/113/`), the dose table, the challenge engine with its narrations, the solver and the first seven cards, tested (2026-10-31).
   - [x] The Frutiger Aero widget kit and the three screens, tried in dev57 (2026-10-31).
