@@ -1155,7 +1155,9 @@ export function createAqualisCabinet(
     ports: portsOf(model),
     update(dt: number) {
       parts.update(dt);
-      const flowing = valveOpen ? sampleFlow : 0;
+      // Its sample pump turns only with its power on and its own switch on
+      // (the owner, 2026-10-31), whatever the room asks.
+      const flowing = powered && mainOn.peek() && valveOpen ? sampleFlow : 0;
       // Its sample pump's quiet whirr, while it turns (the owner, 2026-10-31).
       const whirring = flowing > 0;
       if (whirring !== pumpHeard) {
