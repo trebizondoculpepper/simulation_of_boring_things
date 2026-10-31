@@ -383,6 +383,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
   - [ ] Try the AppImage on the owner's Steam Deck as a non-Steam game (frame rate, controls, fullscreen, audio), then the Mac and Windows builds; compare frame rates with Chrome.
   - [ ] Run the Desktop check workflow once before the next release, to prove the macOS and Windows packaging on GitHub's runners.
   - [ ] Signing (mission 110, stage 4): macOS Developer ID and notarisation; Windows by Artifact Signing through Team Rocket Ltd.
+  - [ ] Release notes on Steam too (the owner, 2026-10-31): post each release's notes (`scripts/release-notes.ts`, as GitHub and the itch.io devlog get them) as the Steam store page's patch notes (Steamworks Events & Announcements), automatically if Steamworks allows it, otherwise as a step in the release checklist.
   - [ ] Desktop adaptations (mission 110, stage 2): saves to files, a quit item, windowed or fullscreen in Settings, platform tags in Sentry.
   - [ ] Open decisions from the plan: itch.io desktop channels; the app ID (`uk.co.teamrocket.thepool` for now); an arm64 Linux build.
 - [ ] **The first release under mission 104** (the owner to ask): `npm run release` makes 0.2.0 and is the first build itch.io receives since mission 104 stopped pushes to `main` reaching it; check the Release workflow's tag checks, GitHub release and butler upload on that first run.
