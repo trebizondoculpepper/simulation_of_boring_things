@@ -945,7 +945,11 @@ export function startAqualisControllerRoom(canvas: HTMLCanvasElement) {
     for (const b of host.takeBeeps()) cabinet.beep(b);
     cabinet.setSelector(host.selector());
     cabinet.setLeds(host.leds());
-    cabinet.setSampleFlow(host.sampleLh());
+    // Its sample pump runs once its computer is up (the owner, 2026-10-31):
+    // not while it is off or booting.
+    cabinet.setSampleFlow(
+      host.powered() && !host.booting() ? host.sampleLh() : 0,
+    );
     cabinet.setPower(host.powered());
     // Its piezo (the owner, 2026-10-31): a blue screen gives one failure
     // beep and falls silent; a glitch beeps like a PC/XT's keyboard buffer

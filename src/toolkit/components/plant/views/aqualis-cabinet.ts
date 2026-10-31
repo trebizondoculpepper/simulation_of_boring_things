@@ -26,6 +26,8 @@ import type {
   PiezoOneShot,
 } from '../../sound/logic/piezo-beeps';
 import { partAudio } from '../../core/audio/part-audio';
+import type { LoopRecipe } from '../../core/audio/part-audio';
+import { PERISTALTIC_PUMP } from '../audio/dosing-pump-sounds';
 import { SCREEN } from '../../../../game/plant/aqualis-types';
 import type { Selector } from '../../../../game/plant/aqualis-types';
 import {
@@ -93,6 +95,23 @@ export interface CabinetHost {
   /** Its own power switch, at the top of the lower door, turned off or on. */
   power?(on: boolean): void;
 }
+
+/**
+ * The sample pump's sound: the dosing room's peristaltic pump's geared
+ * whirr (`PERISTALTIC_PUMP`), a third as loud, a small pump behind a door.
+ */
+const SAMPLE_PUMP_SOUND: LoopRecipe = (context, out) => {
+  const quiet = context.createGain();
+  quiet.gain.value = 0.35;
+  quiet.connect(out);
+  const sources = PERISTALTIC_PUMP(context, quiet);
+  return [
+    ...sources,
+    {
+      stop: () => quiet.disconnect(),
+    },
+  ];
+};
 
 /** The screen's brightness: its white is this grey, under the bloom threshold (as the console's). */
 const SCREEN_LEVEL = 0xb8b8b8;
@@ -923,6 +942,9 @@ export function createAqualisCabinet(
   let valveOpen = true;
   let leverAngle = 0;
   let sampleFlow = 30;
+  /** Whether its sample pump's whirr is held, and the owner it is held by. */
+  let pumpHeard = false;
+  const samplePumpSound = {};
   /** The lower door: open or shut (its catch's state), and where its swing is. */
   const doorOpen = () => doorState.peek();
   let doorAngle = 0;
@@ -1134,6 +1156,16 @@ export function createAqualisCabinet(
     update(dt: number) {
       parts.update(dt);
       const flowing = valveOpen ? sampleFlow : 0;
+      // Its sample pump's quiet whirr, while it turns (the owner, 2026-10-31).
+      const whirring = flowing > 0;
+      if (whirring !== pumpHeard) {
+        pumpHeard = whirring;
+        partAudio.hold(
+          samplePumpSound,
+          whirring ? SAMPLE_PUMP_SOUND : null,
+          group,
+        );
+      }
       const swing = doorOpen() ? DOOR_OPEN : 0;
       // The catch turns a quarter to open, and back to shut.
       const turned = doorOpen() ? Math.PI / 2 : 0;
@@ -1166,6 +1198,7 @@ export function createAqualisCabinet(
     },
     dispose() {
       partAudio.hold(sounder, null);
+      partAudio.hold(samplePumpSound, null);
       parts.dispose();
       bootInset.dispose();
     },
