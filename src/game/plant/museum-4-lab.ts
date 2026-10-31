@@ -409,8 +409,26 @@ export const TAGS: Readonly<Record<string, string>> = (() => {
   tags['printer'] = `${ROOM_CODE}-TP1`;
   tags['labTime'] = `${ROOM_CODE}-KI1`;
   tags['beam'] = `${ROOM_CODE}-BB1`;
+  tags['mimic'] = `${ROOM_CODE}-MP1`;
   return tags;
 })();
+
+/**
+ * The hall's instruments, not set into a line: the dosing desk that works
+ * the tanks' valves and sends in swimmers, the mimic panel that repeats
+ * them, the teleprinter that logs every dose and reading, and the Balance
+ * Beam that weighs the water's balance. Each binds its drawing by its id;
+ * its tag is above (DS1, MP1, TP1, BB1).
+ */
+export const INSTRUMENTS: readonly {
+  id: 'desk' | 'mimic' | 'printer' | 'beam';
+  role: string;
+}[] = [
+  { id: 'desk', role: 'dosing desk' },
+  { id: 'mimic', role: 'mimic panel' },
+  { id: 'printer', role: 'log teleprinter' },
+  { id: 'beam', role: 'balance indicator' },
+];
 
 export const shortTag = (id: string) => TAGS[id].slice(ROOM_CODE.length + 1);
 

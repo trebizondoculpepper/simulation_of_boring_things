@@ -201,7 +201,11 @@ export function hall4Reading(id: string, s: Hall4State): Reading | undefined {
 }
 
 /** The board's lamps, readouts and chasers. `groupLit` while a group of swimmers is arriving. */
-export function hall4MimicState(s: Hall4State, groupLit = false): MimicState {
+export function hall4MimicState(
+  s: Hall4State,
+  groupLit = false,
+  circulating = true,
+): MimicState {
   const dosing = s.delivering?.tank ?? null;
   const readouts: Record<string, Record<string, Reading>> = {};
   for (const { id } of READOUTS) readouts[id] = { live: hall4Reading(id, s)! };
@@ -231,8 +235,8 @@ export function hall4MimicState(s: Hall4State, groupLit = false): MimicState {
       ),
       header: flowState(chem),
       injection: flowState(chem),
-      circulation: flowState(167),
-      return: flowState(167),
+      circulation: flowState(circulating ? 167 : 0),
+      return: flowState(circulating ? 167 : 0),
     },
   };
 }

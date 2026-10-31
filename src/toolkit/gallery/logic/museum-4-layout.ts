@@ -1,6 +1,6 @@
-import { TANKS } from "../../../game/plant/museum-4-lab";
-import type { LinkId, TankId } from "../../../game/plant/museum-4-lab";
-import { hallColumns, hallInterior, hallOrigin } from "./museum-plan";
+import { TANKS } from '../../../game/plant/museum-4-lab';
+import type { LinkId, TankId } from '../../../game/plant/museum-4-lab';
+import { hallColumns, hallInterior, hallOrigin } from './museum-plan';
 
 /**
  * Hall 4's layout (107d), by hand: laid out along the north wall, facing
@@ -22,8 +22,8 @@ import { hallColumns, hallInterior, hallOrigin } from "./museum-plan";
 export const STANDS = { turn: Math.PI } as const;
 
 export const INTERIOR = (() => {
-  const i = hallInterior("museum4");
-  const o = hallOrigin("museum4");
+  const i = hallInterior('museum4');
+  const o = hallOrigin('museum4');
   return {
     minX: i.minX - o.x,
     maxX: i.maxX - o.x,
@@ -31,7 +31,7 @@ export const INTERIOR = (() => {
     maxZ: i.maxZ - o.z,
   };
 })();
-export const COLUMNS = hallColumns("museum4");
+export const COLUMNS = hallColumns('museum4');
 /** The walk from archway to archway, kept clear. */
 export const WALKWAY = { minZ: -1.9, maxZ: 1.9 } as const;
 
@@ -69,7 +69,19 @@ export const PUMP = { x: 3.55, z: -4.7 } as const;
  * (the facing rule). Its footprint as drawn, about `PUMP`.
  */
 export const PUMP_FOOT = { hw: 0.4, hd: 1.05, h: 1.44 } as const;
-export const TEE = { x: 3.55, z: -6.25, r: 0.07, h: 0.16 } as const;
+export const TEE = { x: 3.43, z: -6.25, r: 0.07, h: 0.16 } as const;
+/**
+ * The pump's nozzles, as drawn (`createEndSuctionPump`, turned to face
+ * west): its axial suction toward the wall, its discharge flange on top.
+ */
+export const PUMP_SUCTION = { x: PUMP.x, y: 0.68, z: PUMP.z - 1.0 } as const;
+export const PUMP_DISCHARGE = {
+  x: PUMP.x - 0.12,
+  y: 1.26,
+  z: PUMP.z - 0.57,
+} as const;
+/** The discharge's run across, over the pump to the injection tee. */
+const OVER = 1.6;
 export const POOL = { x: 5.7, z: -5.1, w: 3.4, d: 2.4, h: 1.3 } as const;
 export const READOUT = { z: -4.2, y: 2.35, h: 1.5, w: 2.96 } as const;
 export const BEAM = { x: 5.4, z: -2.85 } as const;
@@ -99,15 +111,31 @@ const Y = 0.2;
 /** The make-up's spout, over the pool's rim and above its water. */
 export const FRESH_SPOUT = { x: POOL.x - POOL.w / 2 + 0.25, y: POOL.h - 0.05 };
 const H = 0.25;
+/** The header's rise, over the make-up's line, to the pot. */
+const HEADER_Y = 0.45;
+/** The pool's suction, along the wall to the pump's suction nozzle. */
+const SUCTION_Z = -6.05;
+/**
+ * The dosing header DH1: a manifold along the bund's back, under the
+ * tanks' outlets, each chemical's line dropping into it (not the
+ * make-up's, which runs to the pool).
+ */
+export const MANIFOLD = {
+  minX: tankX(TANKS[0].id) - 0.05,
+  maxX: tankX(TANKS[TANKS.length - 2].id) + 0.15,
+  z: -6.45,
+  y: Y,
+  od: 0.05,
+} as const;
 type V3 = [number, number, number];
 /** Each link's run, in the hall's frame. */
 export function pipeRuns(): { edge: LinkId; od: number; points: V3[] }[] {
   const runs: { edge: LinkId; od: number; points: V3[] }[] = [];
   for (const t of TANKS) {
     const x = tankX(t.id);
-    if (t.id === "fresh")
+    if (t.id === 'fresh')
       runs.push({
-        edge: "dose.fresh",
+        edge: 'dose.fresh',
         od: 0.06,
         points: [
           [x, 0.16, TANK_Z],
@@ -131,18 +159,21 @@ export function pipeRuns(): { edge: LinkId; od: number; points: V3[] }[] {
         ],
       });
   }
+  // From the manifold's east end, up over the make-up's line, to the pot.
   runs.push({
-    edge: "header",
+    edge: 'header',
     od: 0.04,
     points: [
-      [tankX("hypo"), Y, -6.45],
-      [POT.x - POT.r - 0.1, Y, -6.45],
-      [POT.x - POT.r - 0.1, Y, POT.z],
-      [POT.x - POT.r, Y, POT.z],
+      [MANIFOLD.maxX, Y, MANIFOLD.z],
+      [MANIFOLD.maxX + 0.2, Y, MANIFOLD.z],
+      [MANIFOLD.maxX + 0.2, HEADER_Y, MANIFOLD.z],
+      [POT.x - POT.r - 0.1, HEADER_Y, MANIFOLD.z],
+      [POT.x - POT.r - 0.1, HEADER_Y, POT.z],
+      [POT.x - POT.r, HEADER_Y, POT.z],
     ],
   });
   runs.push({
-    edge: "injection",
+    edge: 'injection',
     od: 0.03,
     points: [
       [POT.x + POT.r, Y, POT.z],
@@ -150,24 +181,26 @@ export function pipeRuns(): { edge: LinkId; od: number; points: V3[] }[] {
     ],
   });
   runs.push({
-    edge: "poolOut",
+    edge: 'poolOut',
     od: 0.11,
     points: [
-      [POOL.x - POOL.w / 2, 0.3, PUMP.z],
-      [PUMP.x + 0.3, 0.3, PUMP.z],
+      [POOL.x - POOL.w / 2, PUMP_SUCTION.y, SUCTION_Z],
+      [PUMP_SUCTION.x, PUMP_SUCTION.y, SUCTION_Z],
+      [PUMP_SUCTION.x, PUMP_SUCTION.y, PUMP_SUCTION.z],
     ],
   });
   runs.push({
-    edge: "poolDischarge",
+    edge: 'poolDischarge',
     od: 0.11,
     points: [
-      [PUMP.x, 0.45, PUMP.z - 0.25],
-      [PUMP.x, 0.45, TEE.z + TEE.r],
-      [TEE.x, Y, TEE.z + TEE.r],
+      [PUMP_DISCHARGE.x, PUMP_DISCHARGE.y, PUMP_DISCHARGE.z],
+      [PUMP_DISCHARGE.x, OVER, PUMP_DISCHARGE.z],
+      [TEE.x, OVER, TEE.z],
+      [TEE.x, Y + TEE.h / 2, TEE.z],
     ],
   });
   runs.push({
-    edge: "poolReturn",
+    edge: 'poolReturn',
     od: 0.11,
     points: [
       [TEE.x, Y, TEE.z],
@@ -175,7 +208,7 @@ export function pipeRuns(): { edge: LinkId; od: number; points: V3[] }[] {
     ],
   });
   runs.push({
-    edge: "sample",
+    edge: 'sample',
     od: 0.015,
     points: [
       [POOL.x + POOL.w / 2, 1.0, READOUT.z],
@@ -184,6 +217,52 @@ export function pipeRuns(): { edge: LinkId; od: number; points: V3[] }[] {
     ],
   });
   return runs;
+}
+
+/**
+ * Where each fitting of the schematic sits on its line, in the hall's
+ * frame, and the way its line runs there: each tank's valve on its
+ * outlet just off the tank, the pump's suction valve on the suction
+ * along the wall, its non-return and discharge valves on the discharge's
+ * run over the pump, the flowmeter on its drop to the tee.
+ */
+export function fittingPlaces(): Record<
+  string,
+  { edge: LinkId; at: V3; along: V3; upright?: boolean }
+> {
+  const places: Record<
+    string,
+    { edge: LinkId; at: V3; along: V3; upright?: boolean }
+  > = {};
+  for (const t of TANKS)
+    places[`${t.id}.v`] = {
+      edge: `dose.${t.id}` as LinkId,
+      at:
+        t.id === 'fresh' ? [tankX(t.id), 0.16, -6.42] : [tankX(t.id), H, -6.36],
+      along: [0, 0, -1],
+    };
+  places['pump.suction'] = {
+    edge: 'poolOut',
+    at: [PUMP_SUCTION.x + 0.24, PUMP_SUCTION.y, SUCTION_Z],
+    along: [-1, 0, 0],
+  };
+  places['pump.nrv'] = {
+    edge: 'poolDischarge',
+    at: [PUMP_DISCHARGE.x, OVER, PUMP_DISCHARGE.z - 0.22],
+    along: [0, 0, -1],
+  };
+  places['pump.discharge'] = {
+    edge: 'poolDischarge',
+    at: [PUMP_DISCHARGE.x, OVER, PUMP_DISCHARGE.z - 0.55],
+    along: [0, 0, -1],
+  };
+  places['flow'] = {
+    edge: 'poolDischarge',
+    at: [TEE.x, 0.98, TEE.z],
+    along: [0, -1, 0],
+    upright: true,
+  };
+  return places;
 }
 
 /** Every footprint on the floor, in the exhibit's frame, for the walker and the test (the entrance panel hangs on the wall). */
@@ -225,12 +304,12 @@ export function placedFootprints() {
 }
 
 type Shape =
-  | { kind: "box"; min: V3; max: V3 }
-  | { kind: "cyl"; x: number; z: number; r: number; y0: number; y1: number };
-const box = (min: V3, max: V3): Shape => ({ kind: "box", min, max });
+  | { kind: 'box'; min: V3; max: V3 }
+  | { kind: 'cyl'; x: number; z: number; r: number; y0: number; y1: number };
+const box = (min: V3, max: V3): Shape => ({ kind: 'box', min, max });
 /** Each node a pipe meets, its solid as drawn, in the exhibit's frame. */
 export function nodeShape(node: string): Shape {
-  if (node.startsWith("tank.")) {
+  if (node.startsWith('tank.')) {
     const x = tankX(node.slice(5) as TankId);
     return box(
       [x - 0.22, BUND.h, TANK_Z - 0.22],
@@ -238,33 +317,33 @@ export function nodeShape(node: string): Shape {
     );
   }
   switch (node) {
-    case "header":
+    case 'header':
       return box(
-        [tankX(TANKS[0].id) - 0.02, Y - 0.02, -6.47],
-        [POT.x, Y + 0.02, POT.z],
+        [MANIFOLD.minX, Y - MANIFOLD.od / 2, MANIFOLD.z - MANIFOLD.od / 2],
+        [MANIFOLD.maxX, Y + MANIFOLD.od / 2, MANIFOLD.z + MANIFOLD.od / 2],
       );
-    case "pot":
-      return { kind: "cyl", x: POT.x, z: POT.z, r: POT.r, y0: 0, y1: POT.h };
-    case "injection":
+    case 'pot':
+      return { kind: 'cyl', x: POT.x, z: POT.z, r: POT.r, y0: 0, y1: POT.h };
+    case 'injection':
       return {
-        kind: "cyl",
+        kind: 'cyl',
         x: TEE.x,
         z: TEE.z,
         r: TEE.r,
         y0: Y - TEE.h / 2,
         y1: Y + TEE.h / 2,
       };
-    case "pump":
+    case 'pump':
       return box(
         [PUMP.x - PUMP_FOOT.hw, 0, PUMP.z - PUMP_FOOT.hd],
         [PUMP.x + PUMP_FOOT.hw, PUMP_FOOT.h, PUMP.z + PUMP_FOOT.hd],
       );
-    case "pool":
+    case 'pool':
       return box(
         [POOL.x - POOL.w / 2, 0, POOL.z - POOL.d / 2],
         [POOL.x + POOL.w / 2, POOL.h, POOL.z + POOL.d / 2],
       );
-    case "analyser":
+    case 'analyser':
       return box(
         [EAST - 0.17, READOUT.y - READOUT.h / 2, READOUT.z - READOUT.w / 2],
         [EAST, READOUT.y + READOUT.h / 2, READOUT.z + READOUT.w / 2],
@@ -275,7 +354,7 @@ export function nodeShape(node: string): Shape {
 
 /** How far a point is from a node's solid (0 inside it). */
 export function distanceTo(shape: Shape, p: V3): number {
-  if (shape.kind === "box") {
+  if (shape.kind === 'box') {
     const d = [0, 1, 2].map((k) =>
       Math.max(shape.min[k] - p[k], 0, p[k] - shape.max[k]),
     );

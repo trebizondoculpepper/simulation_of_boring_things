@@ -57,6 +57,7 @@ const SCHEMATICS: Partial<Record<MuseumHallId, HallSchematic>> = {
   museum4: {
     expansion: M4.hall4Expansion,
     links: M4.LINKS,
+    instruments: M4.INSTRUMENTS,
     tags: M4.TAGS,
   },
   museum6: {
