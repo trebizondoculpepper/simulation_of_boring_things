@@ -53,7 +53,10 @@ import type {
   Hall4Readings,
 } from '../../../../game/plant/museum-4-lab';
 import {
+  BALANCE_TANK,
   BEAM,
+  BEAM_LECTERN,
+  BEAM_SCALE,
   CARDS_BOARD,
   DESK,
   EAST,
@@ -70,6 +73,8 @@ import {
   PUMP,
   READOUT,
   RESET,
+  SOUTH,
+  LAB_TIME,
   RESET_LECTERN_BACK,
   TANK_Z,
   TANK_LIFT,
@@ -88,7 +93,7 @@ import {
   hall4Reading,
 } from '../../logic/museum-4-mimic';
 import {
-  BEAM_PLAQUE,
+  beamPlacard,
   RESET_SIGN,
   hall4Placards,
 } from '../../logic/museum-4-placards';
@@ -568,9 +573,11 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     ),
   );
   const labTime = new Group();
-  turnTo(labTime, PRINTER.x, 2.0, PRINTER.z - 0.1, FACE_SOUTH);
+  // On the archways' wall, centred between them, flush, below the hall's
+  // title (the owner, 2026-10-31).
+  turnTo(labTime, LAB_TIME.x, LAB_TIME.y, SOUTH - 0.025, Math.PI);
+  labTime.userData.onWall = 'LAB TIME display';
   t.box(labTime, t.paint('#1b2328', 0.5), 0.6, 0.22, 0.05, 0, 0, 0);
-  t.box(labTime, t.paint('#3d4a45', 0.6), 0.05, 0.6, 0.05, 0, -0.4, 0);
   const timeDigits = createSevenSegment(kit, 5, { digitHeight: 0.1 });
   timeDigits.group.position.set(0, 0.0, 0.027);
   labTime.add(timeDigits.group);
@@ -658,7 +665,25 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     name: 'Ideal pool',
     ports: [],
   });
-  turnTo(pool.group, POOL.x, 0, POOL.z, FACE_WEST);
+  turnTo(pool.group, POOL.x, 0, POOL.z, FACE_SOUTH);
+  // Its balancing tank (the model's pool includes its 30 m³), an ideal
+  // vessel of its own, bound to the pool.
+  const balanceTank = createIdealVessel(kit, {
+    w: BALANCE_TANK.w,
+    d: BALANCE_TANK.d,
+    h: BALANCE_TANK.h,
+    water: BALANCE_TANK.h - 0.2,
+    name: 'Ideal balance tank',
+    ports: [],
+  });
+  turnTo(balanceTank.group, BALANCE_TANK.x, 0, BALANCE_TANK.z, FACE_SOUTH);
+  balanceTank.show(['BALANCE TANK'.padEnd(16), '30m3'.padEnd(16)]);
+  object.add(
+    markComponent(still(balanceTank.group), {
+      name: `${TAGS['pool']} ideal pool's balancing tank (30 m³)`,
+      model: { node: 'pool' },
+    }),
+  );
   object.add(
     markComponent(still(pool.group), {
       name: `${TAGS['pool']} ideal pool (25 × 12.5 m, 470 m³, with its 30 m³ tank)`,
@@ -710,8 +735,27 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   });
 
   // ---- The Balance Beam ----
-  const beam = createBalanceBeam(kit, BEAM_PLAQUE);
-  turnTo(beam.group, BEAM.x, 0, BEAM.z, FACE_WEST);
+  const beam = createBalanceBeam(kit, null);
+  // Hung flush on the left wall, facing into the hall.
+  turnTo(beam.group, BEAM.x, BEAM.y, BEAM.z, Math.PI / 2);
+  beam.group.scale.set(BEAM_SCALE.x, BEAM_SCALE.y, BEAM_SCALE.z);
+  // A backboard between its back panel and the wall, so it hangs flush.
+  t.box(
+    beam.group,
+    t.paint('#2b3438', 0.5, 0.3),
+    1.9,
+    1.05,
+    0.06,
+    0,
+    0.525,
+    -0.22,
+  );
+  {
+    const lectern = createLectern(kit, beamPlacard());
+    turnTo(lectern, BEAM_LECTERN.x, 0, BEAM_LECTERN.z, BEAM_LECTERN.yaw);
+    object.add(still(lectern));
+  }
+  beam.group.userData.onWall = 'Balance Beam';
   object.add(
     instrument(
       beam.group,

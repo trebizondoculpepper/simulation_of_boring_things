@@ -103,6 +103,22 @@ export const BEAM_PLAQUE = {
   caution: 'pH and free chlorine take precedence over other factors (PWTAG).',
 } as const;
 
+/**
+ * The Balance Beam's own lectern, before it on the floor (the owner,
+ * 2026-10-31): its plaque's words, taken off the beam.
+ */
+export function beamPlacard(): Placard {
+  return {
+    of: 'beam',
+    icon: 'meter',
+    headline: BEAM_PLAQUE.headline,
+    title: `Balance Beam · ${TAGS['beam']}`,
+    body: BEAM_PLAQUE.body,
+    fact: BEAM_PLAQUE.caution,
+    tryIt: 'Dose acid or soda ash at the desk and watch the beam tip.',
+  };
+}
+
 export function hall4Entrance() {
   const k = hall4Facts();
   return {

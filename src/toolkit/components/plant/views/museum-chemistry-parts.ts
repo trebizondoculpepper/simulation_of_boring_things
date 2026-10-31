@@ -599,7 +599,8 @@ export function createReadoutBoard(
  */
 export function createBalanceBeam(
   kit: PanelKit,
-  plaque: { headline: string; body: string; caution: string },
+  /** Its plaque on its back panel, or none when its words stand on a lectern of their own. */
+  plaque: { headline: string; body: string; caution: string } | null,
 ) {
   const t = tools(kit);
   const group = new Group();
@@ -697,32 +698,34 @@ export function createBalanceBeam(
       );
   });
   t.box(group, dark, 1.9, 0.18, 0.06, 0, 0.15, 0.22);
-  const plaqueFace = t.printed(
-    1.8,
-    0.3,
-    (c, w, h) => {
-      c.fillStyle = '#f6f4ec';
-      c.fillRect(0, 0, w, h);
-      c.fillStyle = '#16232b';
-      c.font = `bold ${h * 0.14}px Arial`;
-      c.fillText(plaque.headline.toUpperCase(), w * 0.02, h * 0.16);
-      c.font = `${h * 0.075}px Arial`;
-      const words = `${plaque.body} ${plaque.caution}`.split(' ');
-      let line = '';
-      let y = h * 0.32;
-      for (const word of words) {
-        if (c.measureText(`${line} ${word}`).width > w * 0.96 && line) {
-          c.fillText(line, w * 0.02, y);
-          y += h * 0.1;
-          line = word;
-        } else line = line ? `${line} ${word}` : word;
-      }
-      c.fillText(line, w * 0.02, y);
-    },
-    1024,
-  );
-  plaqueFace.mesh.position.set(0, 1.25, -0.105);
-  group.add(plaqueFace.mesh);
+  if (plaque) {
+    const plaqueFace = t.printed(
+      1.8,
+      0.3,
+      (c, w, h) => {
+        c.fillStyle = '#f6f4ec';
+        c.fillRect(0, 0, w, h);
+        c.fillStyle = '#16232b';
+        c.font = `bold ${h * 0.14}px Arial`;
+        c.fillText(plaque.headline.toUpperCase(), w * 0.02, h * 0.16);
+        c.font = `${h * 0.075}px Arial`;
+        const words = `${plaque.body} ${plaque.caution}`.split(' ');
+        let line = '';
+        let y = h * 0.32;
+        for (const word of words) {
+          if (c.measureText(`${line} ${word}`).width > w * 0.96 && line) {
+            c.fillText(line, w * 0.02, y);
+            y += h * 0.1;
+            line = word;
+          } else line = line ? `${line} ${word}` : word;
+        }
+        c.fillText(line, w * 0.02, y);
+      },
+      1024,
+    );
+    plaqueFace.mesh.position.set(0, 1.25, -0.105);
+    group.add(plaqueFace.mesh);
+  }
   let tilt = 0;
   return {
     group,

@@ -115,11 +115,26 @@ export const PRINTER = { x: DESK.x + 1.6, z: DESK.z } as const;
 /** The teleprinter on its own stand, as drawn: its footprint about `PRINTER`. */
 export const PRINTER_FOOT = { hw: 0.33, minZ: -0.06, maxZ: 0.5 } as const;
 /**
- * The ideal pool against the west wall as the hall stands (EAST here),
- * its long side (`w`) along the wall, facing into the hall.
+ * The ideal pool (the owner, 2026-10-31: "where a visitor at the desk can
+ * see the effect of dosing"): ahead and to the right of the desk, beside
+ * the tanks' stand, its long side (`w`) along x and its display facing
+ * the desk; the readout board on the right wall just beyond its corner.
  */
-export const POOL = { x: 6.4, z: -2.0, w: 3.4, d: 2.4, h: 1.3 } as const;
-const POOL_FRONT = POOL.x - POOL.d / 2;
+export const POOL = { x: 5.6, z: -4.3, w: 3.4, d: 2.4, h: 1.3 } as const;
+/**
+ * Its balancing tank, the model's pool's 30 m³ (drawn as an ideal vessel,
+ * bound to the pool), behind the pool's back-left corner; the pump beyond
+ * it in the far right corner, the injection tee between the pump and the
+ * pool, and the dosing pot at the east end of the manifold strip: the
+ * loop pool → tank → pump → tee → pool, and the header to the pot, short.
+ */
+export const BALANCE_TANK = {
+  x: 4.5,
+  z: -6.2,
+  w: 1.0,
+  d: 0.8,
+  h: 1.2,
+} as const;
 /**
  * The pump M4-P1, with its valves and flowmeter as a unit, in the far
  * right corner (the owner, 2026-10-31): the back wall's east end here,
@@ -148,26 +163,45 @@ export const PUMP_DISCHARGE = {
 const PLUMBED_SUCTION = { x: 4.4, y: 0.68, z: 0.4 } as const;
 const PLUMBED_DISCHARGE = { x: 3.97, y: 1.26, z: 0.28 } as const;
 /** The dosing pot, in front of the header's end, and the tee by the pool. */
-export const POT = { x: 5.6, z: 0.85, r: 0.2, h: 0.8 } as const;
-export const TEE = { x: 5.6, z: 0.0, r: 0.07, h: 0.16 } as const;
+export const POT = { x: 3.7, z: -6.35, r: 0.2, h: 0.8 } as const;
+export const TEE = { x: 5.2, z: -5.65, r: 0.07, h: 0.16 } as const;
 /** The readout board on the west wall, south of the pool as the hall stands. */
 /**
- * The readout board and the Balance Beam side by side, as a group centred
- * on the hall's west wall (EAST here: on the right of a visitor arriving
- * from Hall 3 and facing the tanks), the owner, 2026-10-31. The board
- * hangs above the pool's rim; the beam stands beside the pool.
+ * The analyser's readout board alone, centred on the hall's west wall (EAST
+ * here: on the right of a visitor arriving from Hall 3 and facing the
+ * tanks), above the pool's rim; the Balance Beam hung opposite it, flush
+ * on the hall's east wall (WEST here, the left), centred to match (the
+ * owner, 2026-10-31). The pool is on the right wall, so nothing meets.
  */
-const GROUP_GAP = 0.05;
-const BEAM_W = 1.9;
-const READOUT_W = 2.96;
-const GROUP_W = READOUT_W + GROUP_GAP + BEAM_W;
-export const READOUT = {
-  z: -GROUP_W / 2 + READOUT_W / 2,
-  y: 2.35,
-  h: 1.5,
-  w: READOUT_W,
+export const READOUT = { z: 0, y: 2.35, h: 1.5, w: 2.96 } as const;
+/**
+ * The Balance Beam hung as the readout board's match across the hall (the
+ * owner, 2026-10-31): scaled to the board's width and height (its own
+ * 1.9 × 1.05 m without its plaque), at the board's height, its foot shelf's
+ * back to the wall; its words on a lectern of its own before it.
+ */
+export const BEAM_SCALE = {
+  x: READOUT.w / 1.9,
+  y: READOUT.h / 1.05,
+  z: READOUT.h / 1.05,
 } as const;
-export const BEAM = { x: EAST - 0.25, z: GROUP_W / 2 - BEAM_W / 2 } as const;
+export const BEAM = {
+  x: WEST + 0.25 * BEAM_SCALE.z,
+  z: READOUT.z,
+  y: READOUT.y - READOUT.h / 2,
+} as const;
+/** The beam's lectern, before it, facing the visitor looking at the beam. */
+export const BEAM_LECTERN = {
+  x: WEST + 0.5 * BEAM_SCALE.z + 0.6,
+  z: READOUT.z,
+  yaw: Math.PI / 2,
+} as const;
+/**
+ * The LAB TIME display on the archways' wall (SOUTH here, the hall's north
+ * wall), centred between the archways, under the hall's title vinyl (from
+ * 2.6 m) and clear of the sounder and the arches' bulkheads.
+ */
+export const LAB_TIME = { x: 0, y: 2.2 } as const;
 export const CARDS_BOARD = { x: -5.0, y: 2.3 } as const;
 /**
  * RESET, in the middle of the north wall as the hall stands, flush to it,
@@ -187,8 +221,8 @@ export const LECTERN_FOOT = { hw: 0.47, hd: 0.21 } as const;
 export const LECTERNS: Record<number, { x: number; z: number; yaw: number }> = {
   1: { x: DESK.x + 2.6, z: DESK.z + 0.1, yaw: 0 },
   2: { x: BUND.minX - 0.65, z: TANK_Z + 0.9, yaw: 0 },
-  3: { x: POOL_FRONT - 0.9, z: POOL.z, yaw: -Math.PI / 2 },
-  4: { x: EAST - 0.9, z: 0.2, yaw: -Math.PI / 2 },
+  3: { x: POOL.x, z: POOL.z + POOL.d / 2 + 0.6, yaw: 0 },
+  4: { x: EAST - 1.2, z: READOUT.z + 2.0, yaw: -Math.PI / 2 },
   5: { x: CARDS_BOARD.x, z: NORTH + 1.3, yaw: 0 },
 };
 /**
@@ -392,8 +426,16 @@ export function footprints() {
     },
     r(POT.x, POT.z, POT.r, POT.r),
     r(PUMP.x, PUMP.z, PUMP_FOOT.hw, PUMP_FOOT.hd),
-    r(POOL.x, POOL.z, POOL.d / 2, POOL.w / 2),
-    r(BEAM.x, BEAM.z, 0.25, 0.95),
+    r(POOL.x, POOL.z, POOL.w / 2, POOL.d / 2),
+    r(BALANCE_TANK.x, BALANCE_TANK.z, BALANCE_TANK.w / 2, BALANCE_TANK.d / 2),
+    // Hung on the wall, its foot shelf out over the floor.
+    {
+      minX: WEST,
+      maxX: WEST + 0.5 * BEAM_SCALE.z,
+      minZ: BEAM.z - (1.9 / 2) * BEAM_SCALE.x,
+      maxZ: BEAM.z + (1.9 / 2) * BEAM_SCALE.x,
+    },
+    lecternFoot(BEAM_LECTERN),
     r(RESET.x, RESET.z - 0.17, 0.5, 0.45),
     ...(LECTERNS_PARKED ? [] : Object.values(LECTERNS).map(lecternFoot)),
   ];
@@ -446,8 +488,8 @@ export function nodeShape(node: string): Shape {
       );
     case 'pool':
       return box(
-        [POOL.x - POOL.d / 2, 0, POOL.z - POOL.w / 2],
-        [POOL.x + POOL.d / 2, POOL.h, POOL.z + POOL.w / 2],
+        [POOL.x - POOL.w / 2, 0, POOL.z - POOL.d / 2],
+        [POOL.x + POOL.w / 2, POOL.h, POOL.z + POOL.d / 2],
       );
     case 'analyser':
       return box(

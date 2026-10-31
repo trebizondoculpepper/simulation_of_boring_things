@@ -70,15 +70,10 @@ describe('the museum’s safety and services layer', () => {
             arrowTo(facing, exit.at.x - f.x, exit.at.z - f.z),
           );
         if (id === 'museum2') expect(f.arrow, id).not.toBe('up');
+        // Its face into the hall from the way out's wall (Hall 4,
+        // 2026-10-31: they had faced along the hall's axis, across it).
         const n = [Math.sin(f.yaw), Math.cos(f.yaw)];
-        const ax = hallAxes(id).along;
-        const o = hallOrigin(id);
-        const exitAlong = (exit.at.x - o.x) * ax[0] + (exit.at.z - o.z) * ax[1];
-        const signAlong = (f.x - o.x) * ax[0] + (f.z - o.z) * ax[1];
-        const toward = Math.sign(exitAlong - signAlong);
-        expect(n[0] * ax[0] * toward + n[1] * ax[1] * toward).toBeLessThan(
-          -0.9,
-        );
+        expect(n[0] * exit.into[0] + n[1] * exit.into[1]).toBeGreaterThan(0.9);
       }
       if (id !== 'museum0')
         expect(layer.filter((f) => f.kind === 'exit-hanging').length).toBe(2);
@@ -163,6 +158,36 @@ describe('the museum’s safety and services layer', () => {
           solids.some((f) => overlaps(f, along[0] * s, along[1] * s, 0.2)),
           `${id} along ${s}`,
         ).toBe(false);
+    }
+  });
+});
+
+describe('hanging exit signs', () => {
+  it('face their readers and point towards the way out (Hall 4, 2026-10-31)', () => {
+    for (const id of ALL_SAFETY_ROOMS) {
+      const exit = exitArch(id);
+      if (!exit) continue;
+      for (const f of safetyLayer(id)) {
+        if (f.kind !== 'exit-hanging') continue;
+        // Its reader faces its face: against its normal.
+        const fx = -Math.sin(f.yaw);
+        const fz = -Math.cos(f.yaw);
+        const dx = exit.at.x - f.x;
+        const dz = exit.at.z - f.z;
+        // The way out is ahead of the reader, not behind the sign.
+        expect(
+          dx * fx + dz * fz,
+          `${id} reader faces the way out`,
+        ).toBeGreaterThan(0);
+        const rx = -fz;
+        const rz = fx;
+        const a = f.arrow!;
+        const up = a.startsWith('up') ? 1 : 0;
+        const side = a.endsWith('right') ? 1 : a.endsWith('left') ? -1 : 0;
+        const ax = up * fx + side * rx;
+        const az = up * fz + side * rz;
+        expect(ax * dx + az * dz, `${id} arrow ${a}`).toBeGreaterThan(0);
+      }
     }
   });
 });

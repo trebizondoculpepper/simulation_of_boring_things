@@ -414,17 +414,18 @@ export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
     );
   }
   // Along an exhibit hall: signs hung from the street side's track at
-  // 3.0 m, a quarter and three quarters along, each facing those walking
-  // towards the way out, arrow straight on (BS 5499-4); their backs plain.
+  // 3.0 m, a quarter and three quarters along, each facing into the hall
+  // (away from the way out's wall), read by those walking out towards that
+  // wall; arrow towards the way out as they see it (BS 5499-4, `arrowTo`);
+  // their backs plain. (Hall 4, 2026-10-31: its way out is in a side wall,
+  // across the hall's long axis, and its signs had faced along that axis,
+  // their backs to most of the hall.)
   if (!welcome && exit) {
     const along = ax.along;
     const across = ax.across;
-    const exitAlong =
-      (exit.at.x - o.x) * along[0] + (exit.at.z - o.z) * along[1];
-    const exitAcross =
-      (exit.at.x - o.x) * across[0] + (exit.at.z - o.z) * across[1];
+    // Those walking out face out of the hall through the way out's wall.
+    const walkingOut = [-exit.into[0], -exit.into[1]] as const;
     for (const s of [-ax.length / 4, ax.length / 4]) {
-      const toward = Math.sign(exitAlong - s) || 1;
       // The street side's track: the courtyard side has the panels.
       const c = -(ax.width / 4 + 1);
       out.push({
@@ -433,18 +434,15 @@ export function safetyLayer(id: MuseumHallId): SafetyFitting[] {
         x: o.x + along[0] * s + across[0] * c,
         y: 3.0,
         z: o.z + along[1] * s + across[1] * c,
-        // Its face away from the way out, towards those coming.
-        yaw: Math.atan2(-along[0] * toward, -along[1] * toward),
-        // Straight on to a way out in the middle of the hall's end; to
-        // one off in a corner (a corner hall's, layout C), towards it.
-        arrow:
-          Math.abs(exitAcross) < ax.width / 4
-            ? 'up'
-            : arrowTo(
-                [along[0] * toward, along[1] * toward],
-                exit.at.x - (o.x + along[0] * s + across[0] * c),
-                exit.at.z - (o.z + along[1] * s + across[1] * c),
-              ),
+        // Its face into the hall, towards those coming.
+        yaw: Math.atan2(exit.into[0], exit.into[1]),
+        // Towards the way out as they see it: straight on when it is
+        // ahead, up and aside when off to one side, aside when beside.
+        arrow: arrowTo(
+          walkingOut,
+          exit.at.x - (o.x + along[0] * s + across[0] * c),
+          exit.at.z - (o.z + along[1] * s + across[1] * c),
+        ),
       });
     }
   }

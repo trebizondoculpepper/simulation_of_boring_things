@@ -96,13 +96,19 @@ Choose a card on the desk (◄ ►), press START, put the water right and keep i
 10. HARD WATER. WHITE CRUST ON THE HEATER: SCALING. GOAL: BALANCE -0.5 TO +0.5, HARDNESS 300 OR LESS
 11. SULPHATE. A SEASON OF DRY ACID: SULPHATE OVER THE GROUT LIMIT. GOAL: SULPHATE UNDER 360, PH 7.0-7.4
 
-## The Balance Beam’s plaque
+## The Balance Beam’s lectern
 
-Headline: THE BALANCE INDEX
+On a lectern before the Balance Beam (moved off the beam itself, 2026-10-31).
+
+Headline: The balance index
+
+Title: Balance Beam · M4-BB1
 
 Body: Langelier’s index puts pH, hardness, alkalinity, temperature and TDS into one number. Below −0.5 the water is aggressive and eats grout and concrete; above +0.5 it scales the plant. Raising pH by 0.1 raises it by 0.1; doubling hardness or alkalinity raises it by 0.3. The same water at 37 °C is about 0.17 higher: warm water scales sooner.
 
-Caution: pH and free chlorine take precedence over other factors (PWTAG).
+Fact: pH and free chlorine take precedence over other factors (PWTAG).
+
+Try it: Dose acid or soda ash at the desk and watch the beam tip.
 
 ## The readout board
 
