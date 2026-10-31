@@ -64,7 +64,8 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
   - [x] The Frutiger Aero widget kit and the three screens, tried in dev57 (2026-10-31).
   - [x] The console installed in Hall 4 in place of the desk (2026-10-31).
   - [x] Frutiger Aero interface sounds for the console gathered: 37 from Kenney's Interface Sounds (CC0) in `resources/sound/effects/frutiger-aero/`, named by button and moment, credited, with `notes.md` on their use (2026-10-31, `433dca51`).
-  - [ ] Play them: pass Hall 4's console its `sound` hook, add hooks for START, RESET's question, the level switch, the list scrolling, the hold starting and breaking, won and lost (`notes.md`); choose the won and lost sounds, perhaps longer ones from the Freesound shortlist, and convert from Ogg if Safari must play them.
+  - [x] Play them: pass Hall 4's console its `sound` hook, add hooks for START, RESET's question, the level switch, the list scrolling, the hold starting and breaking, won and lost (`notes.md`) (2026-10-31, 3266e128; the list's arrows tick, the owner's choice; Ogg kept, modern Safari plays it).
+  - [ ] Perhaps longer won and lost sounds from the Freesound shortlist (`notes.md`).
   - [ ] Record the cards' narration clips (briefing, clue, explanation) and fill `CARD_NARRATION`; confirm the draft bands against PWTAG; re-plumb Hall 4 (deferred by the owner) so DOSE uses the real dosing path and the layout and binding tests pass again.
 
 - [x] **High-contrast aiming reticle** (the owner, 2026-10-29; done 2026-10-29, `aae85cee`): a slightly larger hollow light ring with a dark outer edge, retained on amber and green target feedback, and a dark outline on the red rejection cross.
