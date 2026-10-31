@@ -1,4 +1,10 @@
 import type { World } from '../world';
+import {
+  TRIO_WINDOWS,
+  TRIO_WINDOW_TEXT,
+  trioWater,
+  trioWindows,
+} from './aqualis-annunciator';
 import type { PoolId } from './pools';
 import { serviceAvailable } from './services';
 import { loungeFlowsOf } from './lounge-valves';
@@ -45,6 +51,11 @@ export const LOUNGE_ALARMS = [
   'ph',
   'day-tank-low',
   'power-fail',
+  // Its Dr Aqualis Trio's (mission 114, `aqualis-annunciator.ts`), the
+  // board grown from 16 windows to 24, two of them spare ways.
+  ...TRIO_WINDOWS.pool_01,
+  'spare-1',
+  'spare-2',
 ] as const;
 export type LoungeAlarmId = (typeof LOUNGE_ALARMS)[number];
 
@@ -66,6 +77,9 @@ export const LOUNGE_ALARM_TEXT: Record<LoungeAlarmId, string> = {
   ph: 'pH OUT OF\nRANGE',
   'day-tank-low': 'DAY TANK\nLOW',
   'power-fail': 'ROOM POWER\nFAIL',
+  ...TRIO_WINDOW_TEXT,
+  'spare-1': '',
+  'spare-2': '',
 };
 
 /** The balance tank's low alarm, a share of its float level's volume. */
@@ -131,12 +145,16 @@ export function loungeAlarms(world: World): LoungeAlarmId[] {
   if (circulating && !uvLampOn(world, 'pool_01')) alarms.push('uv-fail');
   const gas = world.gas.plant_pool_01.state;
   if (gas.a1 || gas.a2) alarms.push('ozone');
-  if (water.freeChlorine < CHLORINE.low || water.freeChlorine > CHLORINE.high)
+  // Its chlorine and pH as its Trio's analyser reads them (decision 10): a
+  // frozen sample hides the drift, as on real plant.
+  const read = trioWater(world.aqualis, 'pool_01');
+  if (read.freeChlorine < CHLORINE.low || read.freeChlorine > CHLORINE.high)
     alarms.push('chlorine');
-  if (water.ph < PH.low || water.ph > PH.high) alarms.push('ph');
+  if (read.ph < PH.low || read.ph > PH.high) alarms.push('ph');
   const low = dayTankLowAt(world, 'pool_01');
   if (low) alarms.push('day-tank-low');
   if (!powered) alarms.push('power-fail');
+  alarms.push(...trioWindows(world.aqualis, 'pool_01'));
   return alarms;
 }
 

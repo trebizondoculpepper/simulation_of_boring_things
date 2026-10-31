@@ -1,4 +1,10 @@
 import type { World } from '../world';
+import {
+  TRIO_WINDOWS,
+  TRIO_WINDOW_TEXT,
+  trioWater,
+  trioWindows,
+} from './aqualis-annunciator';
 import { serviceAvailable } from './services';
 import { dayTankLowAt } from './lounge-annunciator';
 import { plantReadingOf } from '../../toolkit/gallery/logic/world-reading';
@@ -40,8 +46,12 @@ export const OLYMPIC_ALARMS = [
   'hall-air-fail',
   'ozone',
   'power-fail',
-  // A spare way, blank, as boards were bought with (the main board's too).
+  // Its Dr Aqualis Trio's (mission 114, `aqualis-annunciator.ts`): its
+  // CONTROLLER FAULT in the old spare way, the board grown from 24 windows
+  // to 30, two of them spare ways (as boards were bought with).
+  ...TRIO_WINDOWS.pool_02,
   'spare',
+  'spare-2',
 ] as const;
 export type OlympicAlarmId = (typeof OLYMPIC_ALARMS)[number];
 
@@ -63,15 +73,20 @@ export const OLYMPIC_ALARM_TEXT: Record<OlympicAlarmId, string> = {
   'cl-low': 'CHLORINE\nLOW',
   'cl-high': 'CHLORINE\nHIGH',
   ph: 'pH OUT OF\nRANGE',
-  'dosing-inhibit': 'DOSING\nINHIBITED',
   'day-tank-low': 'DAY TANK\nLOW',
   'pool-temp-low': 'POOL TEMP\nLOW',
   'rh-high': 'HALL RH\nHIGH',
   'hall-air-fail': 'HALL AIR\nPLANT FAIL',
   ozone: 'OZONE\nIN AIR',
   'power-fail': 'ROOM POWER\nFAIL',
+  ...TRIO_WINDOW_TEXT,
   spare: '',
+  'spare-2': '',
 };
+
+/** Free chlorine's band, mg/l, and pH's, as the main board's (`world-reading.ts`). */
+const CHLORINE = { low: 1.0, high: 3 };
+const PH = { low: 7.0, high: 7.8 };
 
 /** The main board's windows this board repeats, by its own ids. */
 const FROM_MAIN: Partial<Record<OlympicAlarmId, AlarmId>> = {
@@ -86,10 +101,6 @@ const FROM_MAIN: Partial<Record<OlympicAlarmId, AlarmId>> = {
   'f5-dp': 'f5-dp',
   'wot-not-auto': 'wot-not-auto',
   'uv-fail': 'uv-fail',
-  'cl-low': 'cl-low',
-  'cl-high': 'cl-high',
-  ph: 'ph-range',
-  'dosing-inhibit': 'dosing-inhibit',
   'pool-temp-low': 'pool-temp-low',
   'rh-high': 'rh-high',
   'hall-air-fail': 'ahu-fault',
@@ -102,12 +113,20 @@ export function olympicAlarms(world: World): OlympicAlarmId[] {
   const a = world.motors.starters['P-101A'];
   const b = world.motors.starters['P-101B'];
   const gas = world.gas.plant_pool_02.state;
+  const read = trioWater(world.aqualis, 'pool_02');
+  const trio = trioWindows(world.aqualis, 'pool_02');
   const own: Partial<Record<OlympicAlarmId, boolean>> = {
     'circ-tripped': water.tripped,
     'no-auto': a.mode === 'off' && b.mode === 'off',
     'day-tank-low': dayTankLowAt(world, 'pool_02'),
     ozone: gas.a1 || gas.a2,
     'power-fail': !serviceAvailable(world.plant, 'plant_pool_02', 'power'),
+    // Its water as its Trio's analyser reads it (decision 10), and its
+    // Trio's inhibit and alarms (mission 114).
+    'cl-low': read.freeChlorine < CHLORINE.low,
+    'cl-high': read.freeChlorine > CHLORINE.high,
+    ph: read.ph < PH.low || read.ph > PH.high,
+    ...Object.fromEntries(trio.map((w) => [w, true])),
   };
   return OLYMPIC_ALARMS.filter((id) => {
     const from = FROM_MAIN[id];
