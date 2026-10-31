@@ -27,7 +27,8 @@ describe('the Lidoluxe Wash-O-Tron', () => {
   });
 
   it('waits for room in the pit before starting a wash', () => {
-    let w = act(allDue(newWorld()), { act: 'run' });
+    // Its programme is in AUTO from the start.
+    let w = allDue(newWorld());
     w = { ...w, wetHall: { ...w.wetHall, backwashTank: 80 } };
     w = advance(w, 5, 1);
     expect(w.washOTron.washing).toBe(null);
@@ -37,14 +38,15 @@ describe('the Lidoluxe Wash-O-Tron', () => {
   it('will not wash while too few filters are left in service', () => {
     let w = act(newWorld(), { act: 'mode', filter: 0, mode: 'isolate' });
     w = advance(w, 30, 1);
-    w = act(allDue(w), { act: 'run' });
+    w = allDue(w);
     w = advance(w, 5, 1);
     expect(w.washOTron.washing).toBe(null);
     expect(w.washOTron.waiting).toBe('FILTER UNAVAILABLE');
   });
 
   it('holds its programme with a valve fault when a valve is worked by hand mid-wash', () => {
-    let w = act(allDue(newWorld()), { act: 'run' });
+    // Its programme is in AUTO from the start.
+    let w = allDue(newWorld());
     w = advance(w, 60, 1);
     const n = w.washOTron.washing!;
     expect(n).not.toBe(null);
@@ -79,5 +81,28 @@ describe('the Lidoluxe Wash-O-Tron', () => {
     w = act(w, { act: 'adjust', by: 1 });
     w = act(w, { act: 'enter' });
     expect(w.washOTron.setpoints.backwash).toBe(310);
+  });
+
+  it('starts with its programme in AUTO', () => {
+    expect(newWorld().washOTron.running).toBe(true);
+  });
+
+  it('washes a filter in AUTO forced to BACKWASH by hand without taking it out of AUTO', () => {
+    let w = act(newWorld(), { act: 'mode', filter: 2, mode: 'backwash' });
+    expect(w.washOTron.filters[2].auto).toBe(true);
+    expect(w.washOTron.washNow).toBe(2);
+    w = advance(w, 60, 1);
+    expect(w.washOTron.washing).toBe(2);
+    expect(w.washOTron.step).toBe('backwash');
+    // Through SETTLE and RINSE on its own timers, back to FILTER, still in AUTO.
+    w = advance(w, 900, 1);
+    expect(w.washOTron.washing).toBe(null);
+    expect(w.washOTron.filters[2].mode).toBe('filter');
+    expect(w.washOTron.filters[2].auto).toBe(true);
+  });
+
+  it('still takes a filter out of AUTO when another state is chosen by hand', () => {
+    const w = act(newWorld(), { act: 'mode', filter: 1, mode: 'isolate' });
+    expect(w.washOTron.filters[1].auto).toBe(false);
   });
 });

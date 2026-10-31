@@ -4,6 +4,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ## [Unreleased]
 
+- The Olympic's Wash-O-Tron starts with its programme in AUTO; BACKWASH pressed on a filter in AUTO forces its wash without taking it out of AUTO, the programme taking it through SETTLE and RINSE back to FILTER. Plant Room 1's annunciator, PL1-CP3, is moved to the west of its door.
 - The Dr Aqualis Trio's First Aid tab: formed stool, diarrhoea (hyperchlorination), breakpoint shock, bring chlorine down and a dosing pause, each confirmed, shown in an amber banner on every page while it runs, and ended by its own rule or STOP; dev58's scenario board gains two faecal incidents, which Dr Aqualis reports until the right programme is started. Its sample pump whirrs, louder with the door open, and stops with its power off or its knob at OFF.
 - Knobs bound to plain values now turn: dev58's selectors (the Trio's, the dosing units', the speed, supply and watchdog switches) had stayed put. The Trio's HAND OFF AUTO and POWER knobs are inside its lower door, which opens with the quarter-turn catch other cabinets use; its upper door has no handle. It beeps at POST and plays a short original piezo jingle as its application starts.
 - The Dr Aqualis Trio has its own power switch near the top of its lower door, on from the start, in series with dev58's cabinet supply; and a piezo: a blue screen gives one failure beep, a glitch beeps like a PC/XT's keyboard buffer full. Its screen tilts up 30°, the HAND OFF AUTO lettering fits its plate, and the bezel carries no name.

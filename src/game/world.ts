@@ -499,7 +499,8 @@ export function newWorld(): World {
     boilerGas: newBoilerGas(),
     music: newZoneMusic(),
     fireAlarm: newFireAlarm(),
-    washOTron: newWashOTron(),
+    // Its programme in AUTO from the start (the owner, 2026-10-31).
+    washOTron: { ...newWashOTron(), running: true },
     intake: newSiteIntake(),
     controlRoomMode: 'old',
     bridgeThemeHeard: false,

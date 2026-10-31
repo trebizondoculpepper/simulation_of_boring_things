@@ -59,7 +59,7 @@ describe('OLYMPIC FILTER WASHING (mission 095)', () => {
       expect(t.flow).toBeGreaterThan(100);
       expect(t.progress).toBe(null);
     }
-    expect(programmeView(newWorld()).words).toBe('AUTO OFF');
+    expect(programmeView(newWorld()).words).toBe('AUTO · IDLE');
   });
 
   it('CLEAN NOW washes the filter at once: the Wash-O-Tron’s WASH NOW, the programme started, its dirt washed out', () => {
@@ -108,12 +108,14 @@ describe('OLYMPIC FILTER WASHING (mission 095)', () => {
   });
 
   it('RUN switches the programme; HOLD is refused while it is off', () => {
+    // In AUTO from the start: RUN turns it off, HOLD is then refused.
     let w = newWorld();
-    expect(press(w, holdProgramme(w)).refused).toMatch(/OFF/);
-    w = press(w, runProgramme(w)).world;
     expect(w.washOTron.running).toBe(true);
     w = press(w, runProgramme(w)).world;
     expect(w.washOTron.running).toBe(false);
+    expect(press(w, holdProgramme(w)).refused).toMatch(/OFF/);
+    w = press(w, runProgramme(w)).world;
+    expect(w.washOTron.running).toBe(true);
   });
 
   it('refuses a filter locked out, or out of service, as local control only; its LOCKOUT stays local', () => {

@@ -60,8 +60,14 @@ describe('the bathers and the halls', () => {
 
 describe('the mains water off', () => {
   it('runs the break tank down, trips the booster set, then the pools’ tanks run down until their pumps trip', () => {
-    // Two days' normal running, to midday.
-    let w = advance(newWorld(), 36 * 3600, 10);
+    // Two days' normal running, to midday, the Olympic's Wash-O-Tron off
+    // (it starts in AUTO): this is the Olympic never backwashed.
+    let w = applyAction(newWorld(), {
+      type: 'wash-o-tron',
+      action: { act: 'run' },
+    });
+    expect(w.washOTron.running).toBe(false);
+    w = advance(w, 36 * 3600, 10);
     expect(w.wetHall.boosterTripped).toBe(false);
     expect(w.wetHall.meter).toBeGreaterThan(2);
     w = applyAction(w, { type: 'plant/source', utility: 'water', on: false });

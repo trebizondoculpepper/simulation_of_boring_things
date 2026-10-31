@@ -232,7 +232,19 @@ export function actOnWashOTron(
     case 'mode': {
       const f = s.filters[a.filter];
       if (!f || f.lockout) return s;
-      // A state chosen by hand takes the filter out of the programme.
+      // BACKWASH pressed on a filter in AUTO, with the programme running,
+      // forces its wash without taking it out of AUTO (the owner,
+      // 2026-10-31): the programme washes it next, BACKWASH → SETTLE →
+      // RINSE → FILTER on its own timers, then carries on as before.
+      if (a.mode === 'backwash' && f.auto && s.running) {
+        if (s.washing === a.filter) return s;
+        return {
+          ...s,
+          washNow: a.filter,
+          events: log(s, time, `F${a.filter + 1} WASH FORCED`),
+        };
+      }
+      // Any other state chosen by hand takes the filter out of the programme.
       const out = s.washing === a.filter;
       return {
         ...s,

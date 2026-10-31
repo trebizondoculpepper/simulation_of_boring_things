@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { advance, newWorld } from '../world';
 import { OLYMPIC_DIRT_REF, olympicBed } from './olympic-battery';
-import { act, allDue } from './wash-o-tron.test-support';
+import { allDue } from './wash-o-tron.test-support';
 
 describe('the Lidoluxe Wash-O-Tron', () => {
   it('washes due filters in turn in AUTO, one at a time, each to clean, the pit never spilling', () => {
-    let w = act(allDue(newWorld()), { act: 'run' });
+    // Its programme is in AUTO from the start.
+    let w = allDue(newWorld());
     const washed = new Set<number>();
     let most = 0;
     for (let t = 0; t < 3 * 3600; t += 10) {
