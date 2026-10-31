@@ -153,8 +153,8 @@ import type { HallExhibit } from './exhibits';
  * hall's session. Real time only. In the hall's frame, metres.
  */
 
-/** The panel wall: the street (east) wall's face. */
-const WALL = INTERIOR.maxX - 0.04;
+/** The panel wall: the street (east) wall's face; everything on it hangs flush (the audit, 2026-10-31: it hung 40 mm off). */
+const WALL = INTERIOR.maxX;
 const FACE_WEST = -Math.PI / 2;
 /** The clock's middle: its 0.75 m face's top under 2.5 m, below the hall's title band (2.6 to 4.6 m). */
 const CLOCK = { y: 2.1 } as const;

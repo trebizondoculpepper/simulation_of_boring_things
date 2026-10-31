@@ -168,7 +168,7 @@ const STATIONS: Record<
   },
 };
 
-/** Each pump's shape in its own frame: suction toward +x (yaw 0), except the end-suction views (toward −x, turned round). */
+/** Each pump's shape in its own frame: suction toward +x (yaw 0), except the end-suction views (suction toward −x, turned a quarter so they face the room). */
 interface PumpShape {
   yaw: number;
   suction: Port;
@@ -188,7 +188,11 @@ const shapeOf = (p: HallPump): PumpShape =>
         box: { min: [-0.25, 0, -0.22], max: [0.25, DOSING_STAND + 0.3, 0.22] },
       }
     : {
-        yaw: Math.PI,
+        // Turned so its front (its gauges, nameplate and handles, the
+        // view's +z) faces out from its wall into the room (the facing
+        // rule); its axial suction then points along the wall, fed round
+        // from the trough's outlet beside it (`SIDE_FEED`).
+        yaw: -Math.PI / 2,
         suction: { at: [-1.0, 0.68, 0], out: [-1, 0, 0] },
         discharge: { at: [-0.57, 1.26, 0.12], out: [0, 1, 0] },
         box: { min: [-0.95, 0, -0.4], max: [0.95, 1.2, 0.4] },
@@ -226,6 +230,15 @@ function placePumps(): Record<PumpNo, MachinePlace> {
 }
 
 const PUMP_PLACES = placePumps();
+
+/** How far along its wall an end-suction pump's trough outlet stands from its suction port, the way the suction points, m. */
+export const SIDE_FEED = 0.75;
+function sideFeed(no: PumpNo): number {
+  const st = STATIONS[no];
+  const out = turn(SHAPES[no].suction.out, PUMP_PLACES[no].yaw);
+  const along = st.side === 'west' ? out[2] : out[0];
+  return Math.sign(along) * SIDE_FEED;
+}
 
 /** The reservoir's three lengths: middle, yaw (its +x toward its wall) and length. */
 export const TROUGHS: readonly {
@@ -268,7 +281,13 @@ export const PORTS: Record<MachineId, Record<string, Port>> = {
   source: Object.fromEntries(
     PUMPS.map((p) => {
       const st = STATIONS[p.no];
-      const [x, z] = onWall(st.side, st.u, TROUGH.gap + TROUGH.d);
+      // An end-suction pump's suction points along the wall: its outlet
+      // stands beside it, the way its suction points, so the line turns once.
+      const [x, z] = onWall(
+        st.side,
+        st.u + (p.family === 'centrifugal' ? sideFeed(p.no) : 0),
+        TROUGH.gap + TROUGH.d,
+      );
       const [tx, tz] = TOWARD[st.side];
       return [
         `out-${p.no}`,
@@ -510,7 +529,11 @@ export function standOf(no: PumpNo): {
       : st.side === 'north'
         ? b.max[2] - interior.minZ
         : interior.maxZ - b.min[2];
-  const [x, z] = onWall(st.side, st.u, reach + 0.55);
+  // Before the pump's middle along its wall (an end-suction pump's body
+  // stands to one side of its suction port).
+  const mid =
+    st.side === 'west' ? (b.min[2] + b.max[2]) / 2 : (b.min[0] + b.max[0]) / 2;
+  const [x, z] = onWall(st.side, mid, reach + 0.55);
   return {
     x: round(x),
     z: round(z),
