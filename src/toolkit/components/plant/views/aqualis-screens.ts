@@ -317,6 +317,11 @@ function drawSettings(ctx: Ctx, m: DisplayModel) {
       tint: 'green',
       size: 17,
     });
+    drawGlossyButton(ctx, SETTINGS.restart, '⟳  Restart', {
+      state: press(m, 'restart'),
+      tint: 'grey',
+      size: 17,
+    });
     drawText(
       ctx,
       'Doses are worked out from these: enter them as the pool is built.',
@@ -384,4 +389,31 @@ function drawSettings(ctx: Ctx, m: DisplayModel) {
       size: 24,
     });
   }
+}
+
+/**
+ * The Trio's mark on its boot's splash and permission dialog: a glossy
+ * blue water drop `size` tall, centred on (x, y).
+ */
+export function drawTrioMark(ctx: Ctx, x: number, y: number, size: number) {
+  const k = size / 140;
+  ctx.save();
+  ctx.translate(x, y - 14 * k);
+  ctx.scale(k, k);
+  const drop = ctx.createRadialGradient(-12, 10, 4, 0, 18, 60);
+  drop.addColorStop(0, '#e9f7ff');
+  drop.addColorStop(0.35, '#5fc3ff');
+  drop.addColorStop(1, '#0b6fc0');
+  ctx.fillStyle = drop;
+  ctx.beginPath();
+  ctx.moveTo(0, -55);
+  ctx.bezierCurveTo(30, -10, 48, 15, 48, 35);
+  ctx.arc(0, 35, 48, 0, Math.PI, false);
+  ctx.bezierCurveTo(-48, 15, -30, -10, 0, -55);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  ctx.beginPath();
+  ctx.ellipse(-18, 22, 8, 14, -0.4, 0, 2 * Math.PI);
+  ctx.fill();
+  ctx.restore();
 }

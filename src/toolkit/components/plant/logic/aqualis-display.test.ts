@@ -207,6 +207,29 @@ describe('the Aqualis display', () => {
     expect(s.page).toBe('pumps');
   });
 
+  it('restarts the cabinet from Settings › Pool dynamics, beside the demonstration', () => {
+    const s: DisplayState = { ...newDisplay(), page: 'settings' };
+    const regions = displayRegions(s, inputs());
+    const restart = regions.find((r) => r.id === 'restart')!;
+    const demo = regions.find((r) => r.id === 'demo')!;
+    expect(restart).toBeTruthy();
+    // Beside it, on the same row, not overlapping.
+    expect(restart.rect.y).toBe(demo.rect.y);
+    expect(restart.rect.x).toBeGreaterThanOrEqual(demo.rect.x + demo.rect.w);
+    const id = hitDisplay(
+      s,
+      inputs(),
+      restart.rect.x + restart.rect.w / 2,
+      restart.rect.y + restart.rect.h / 2,
+    );
+    expect(id).toBe('restart');
+    const r = pressDisplay(s, inputs(), id!);
+    expect(r.effect).toEqual({ kind: 'restart' });
+    // Not on the targets tab.
+    const targets = displayRegions({ ...s, tab: 'targets' }, inputs());
+    expect(targets.some((x) => x.id === 'restart')).toBe(false);
+  });
+
   it('redraws the demonstration only when its scene changes', () => {
     let s = pressDisplay(newDisplay(), inputs(), 'demo').state;
     const a = displayModel(s, inputs()).key;

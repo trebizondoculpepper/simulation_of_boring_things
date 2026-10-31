@@ -63,10 +63,20 @@ import type { LiveExhibit, PlantExhibit } from '../rooms/plant/exhibit';
 import type { TestFitting } from '../rooms/test-boards';
 import { createCircularChartRecorder } from '../../components/industrial-control/views/period-instruments';
 import { createChartRecorder } from '../../components/industrial-control/views/cabinet-fittings';
+import { createAqualisCabinet } from '../../components/plant/views/aqualis-cabinet';
 import {
-  createAqualisCabinet,
-  drawBootScreen,
-} from '../../components/plant/views/aqualis-cabinet';
+  createBootDisplay,
+  drawBootPicture,
+} from '../../components/core/views/boot-screens';
+import {
+  BOOT_FAMILIES,
+  bootFrame,
+  bootScript,
+  bootUploads,
+} from '../../components/core/logic/boot-sequence';
+import type { BootFamily } from '../../components/core/logic/boot-sequence';
+import { TRIO_BOOT_APP } from '../../components/plant/logic/aqualis-display';
+import { drawTrioMark } from '../../components/plant/views/aqualis-screens';
 import { createWashOTron } from '../../components/plant/views/wash-o-tron';
 import { filterValves } from '../../../game/plant/wash-o-tron-world';
 import { WET_HALL_PLANT } from '../../../game/plant/wet-hall';
@@ -374,6 +384,7 @@ async function candidates(usage: Map<string, Usage>): Promise<Candidate[]> {
     room: 'dev58',
     build: (kit) => {
       const cab = createAqualisCabinet(kit, { screenTouch: () => {} });
+      const boot = bootScript('gui', { app: TRIO_BOOT_APP });
       const o = cab.overlay;
       o.visible(true);
       let t = 0;
@@ -385,7 +396,13 @@ async function candidates(usage: Map<string, Usage>): Promise<Candidate[]> {
           if (!clockStopped.value) t += d;
           if (Math.floor(t / 2) !== second) {
             second = Math.floor(t / 2);
-            drawBootScreen(cab.context, (second % 10) / 10);
+            drawBootPicture(
+              cab.context,
+              bootFrame(boot, (second * 4) % boot.total),
+              640,
+              480,
+              { appMark: drawTrioMark },
+            );
             cab.screenChanged();
             cab.setLeds({
               power: true,
@@ -417,6 +434,55 @@ async function candidates(usage: Map<string, Usage>): Promise<Candidate[]> {
       };
     },
   });
+  // Boot sequences (the owner, 2026-10-31): each family's screen as dev58
+  // shows it (the Trio's 640 × 480 colour LCD, the wall board's two
+  // monitors and its OLED), its still picture uploaded whole at each change
+  // and its live element on an inset of its own; measured from just before
+  // the boot's busiest second and a half, so the running phase sees its worst.
+  const BOOT_PX: Record<BootFamily, { w: number; h: number }> = {
+    gui: { w: 640, h: 480 },
+    unix: { w: 480, h: 300 },
+    dos: { w: 480, h: 300 },
+    firmware: { w: 128, h: 64 },
+  };
+  for (const family of BOOT_FAMILIES) {
+    const id = `part:boot-screen:${family}`;
+    usage.set(id, { count: 1, busy: 0, rooms: ['dev58'] });
+    list.push({
+      id,
+      label: `Boot sequence, ${family} (${BOOT_PX[family].w} × ${BOOT_PX[family].h})`,
+      source: 'part',
+      room: 'dev58',
+      build: () => {
+        const px = BOOT_PX[family];
+        const app = family === 'gui' ? TRIO_BOOT_APP : null;
+        const script = bootScript(family, { app });
+        const ups = bootUploads(script, px.w, px.h);
+        let from = 0;
+        let most = -1;
+        for (const u of ups) {
+          const sum = ups
+            .filter((v) => v.t >= u.t && v.t < u.t + 1.5)
+            .reduce((a, v) => a + v.texels, 0);
+          if (sum > most) [most, from] = [sum, u.t];
+        }
+        const display = createBootDisplay({
+          family,
+          px,
+          metres: family === 'firmware' ? 0.16 : 0.42,
+          app,
+          draw: { appMark: drawTrioMark },
+          // The warm-up (0.3 s) and the idle phase (the clock stopped) first.
+          from: Math.max(0, from - 0.35),
+        });
+        return {
+          object: display.group,
+          update: (d) => display.update(clockStopped.value ? 0 : d),
+          dispose: () => display.dispose(),
+        };
+      },
+    });
+  }
   // The development rooms' exhibits the rooms do not already use.
   const usedModels = new Set(
     [...first.keys()]

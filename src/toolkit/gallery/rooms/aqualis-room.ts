@@ -46,6 +46,7 @@ import { advise, alarms } from '../../../game/plant/aqualis-advisor';
 import type { LedState } from '../../components/plant/logic/aqualis-cabinet';
 import {
   DOCTOR,
+  TRIO_BOOT_APP,
   displayModel,
   hitDisplay,
   newDisplay,
@@ -58,7 +59,20 @@ import type {
 } from '../../components/plant/logic/aqualis-display';
 import { drAqualisPose } from '../../components/plant/logic/dr-aqualis';
 import type { DrAqualisFrame } from '../../components/plant/logic/dr-aqualis';
-import { drawAqualisScreen } from '../../components/plant/views/aqualis-screens';
+import {
+  drawAqualisScreen,
+  drawTrioMark,
+} from '../../components/plant/views/aqualis-screens';
+import {
+  bootFrame,
+  bootScript,
+} from '../../components/core/logic/boot-sequence';
+import type {
+  BootFrame,
+  BootScript,
+} from '../../components/core/logic/boot-sequence';
+import { drawBootPicture } from '../../components/core/views/boot-screens';
+import type { BootDrawOptions } from '../../components/core/views/boot-screens';
 import {
   drawDrAqualis,
   drawSpeechBubble,
@@ -72,12 +86,27 @@ import {
  * on the chemistry's 10 s tick, the advisor gives Dr Aqualis his advice and
  * the cabinet its alarms, and the display model draws the screen, redrawn
  * only when its page's key (or, on his page, his pose) changes.
+ *
+ * The cabinet's computer boots (`core/logic/boot-sequence.ts`, the gui
+ * family, its application the Trio's software) when the room loads, when
+ * its supply comes back (after a power cut, so its OS offers its recovery
+ * menu) and when Restart is pressed on Settings › Pool dynamics. While it
+ * is off or booting its software is not running: the screen shows the boot
+ * (or nothing) and takes no touches, Dr Aqualis is hidden, and the
+ * controller is not stepped, so the host sends the dosing units zero
+ * demands (the rig and the sampler run on, and the knob still turns). The
+ * software starts afresh: a new controller (its integral lost, as a real
+ * reboot loses its memory) and a new display, its settings kept (they are
+ * the cabinet's stored configuration).
  */
 
 /** The world step the sampler and controller take, s (the rig's tick). */
 const TICK = 10;
 /** The most ticks a frame may take (1000× at a slow frame). */
 const MOST_TICKS = 400;
+
+/** How the Trio's boot screens draw its mark. */
+export const TRIO_BOOT_DRAW: BootDrawOptions = { appMark: drawTrioMark };
 
 /** The time-speed knob's settings: world seconds per real second. */
 export const SPEEDS = [1, 10, 100, 1000] as const;
@@ -125,10 +154,30 @@ export interface AqualisRoomHost {
   drawDoctor(c: CanvasRenderingContext2D, w: number, h: number): boolean;
   /** A touch on the cabinet's screen, in its pixels. */
   screenTouch(x: number, y: number): void;
+  /** Whether the cabinet has its supply. */
+  powered(): boolean;
+  /** Switch its supply: back on, it boots, as after a power cut. */
+  setPower(on: boolean): void;
+  /** Whether it is booting (its software not yet running). */
+  booting(): boolean;
+  /** Boot it again, as Restart does (an orderly restart). */
+  restart(): void;
+  /** What its boot shows now, or null when it is not booting. */
+  bootFrame(): BootFrame | null;
+}
+
+export interface AqualisHostOptions {
+  /** Boot when the room loads (`&boot=skip` leaves it running). */
+  boot?: boolean;
+  /** Its first boot begun this many seconds ago (`&boot=20`, to look at a later moment). */
+  bootAt?: number;
+  /** The machine's seed: its boots' small differences. */
+  seed?: number;
 }
 
 export function createAqualisRoomHost(
   scenario: RigScenarioId = 'good',
+  options: AqualisHostOptions = {},
 ): AqualisRoomHost {
   let rig = newRig(scenario);
   let speed = 1;
@@ -152,6 +201,26 @@ export function createAqualisRoomHost(
   let doctorDrawn = '';
   let owed = 0;
   let clock = 0;
+  let powered = true;
+  /** Seconds into its boot, or null when its software runs. */
+  let bootT: number | null = null;
+  let boots = 0;
+  const seed = options.seed ?? 58;
+  let boot: BootScript = bootScript('gui', { seed, app: TRIO_BOOT_APP });
+  const running = () => powered && bootT === null;
+  const NO_DEMAND: Record<ChannelId, number> = {
+    hypochlorite: 0,
+    acid: 0,
+    co2: 0,
+  };
+
+  /** The controller's step on the sample now (dt 0: its view, nothing integrated). */
+  const controlNow = (dt: number) =>
+    stepController(
+      control,
+      { readings, sample, selector: sel, ports: rigPorts(rig), settings, hand },
+      dt,
+    );
 
   /** One chemistry tick of the cabinet: sample, control, advise. */
   const tick = () => {
@@ -159,11 +228,12 @@ export function createAqualisRoomHost(
     sampler = s.state;
     readings = s.readings;
     sample = s.status;
-    const c = stepController(
-      control,
-      { readings, sample, selector: sel, ports: rigPorts(rig), settings, hand },
-      TICK,
-    );
+    if (!running()) {
+      // Its software is not running: nothing asked of the dosing units.
+      rig = stepRig(rig, NO_DEMAND, TICK);
+      return;
+    }
+    const c = controlNow(TICK);
     control = c.state;
     out = c.out;
     advice = advise(readings, settings, out.channels, rig.water);
@@ -171,6 +241,39 @@ export function createAqualisRoomHost(
     rig = stepRig(rig, out.demands, TICK);
   };
   tick();
+
+  /** Boot again: after a power cut (`unclean`) or a restart. */
+  const startBoot = (unclean: boolean) => {
+    boots++;
+    boot = bootScript('gui', {
+      seed: seed + boots * 7919,
+      app: TRIO_BOOT_APP,
+      unclean,
+    });
+    bootT = 0;
+    drawn = '';
+    doctorDrawn = '';
+    alarmsOn = [];
+    advice = [];
+    control = newController();
+    display = newDisplay();
+  };
+  /** Its software running: its first view of the plant, then its first page. */
+  const booted = () => {
+    bootT = null;
+    drawn = '';
+    const c = controlNow(0);
+    control = c.state;
+    out = c.out;
+    advice = advise(readings, settings, out.channels, rig.water);
+    alarmsOn = alarms(readings, sample, out.channels, settings, sel);
+    display = newDisplay();
+  };
+  if (options.boot !== false) {
+    // Its first boot, as the room loads: a clean one, the first of its seed.
+    boot = bootScript('gui', { seed, app: TRIO_BOOT_APP });
+    bootT = Math.max(0, options.bootAt ?? 0);
+  }
 
   const inputs = (): DisplayInputs => ({
     readings,
@@ -218,9 +321,10 @@ export function createAqualisRoomHost(
     flowM3h: () => rigFlow(rig),
     pumpRunning: () => rig.pump.running,
     leds: () => ({
-      power: true,
-      dosing: Object.values(rig.devices).some((d) => d.delivering > 0),
-      alarm: alarmsOn.length > 0 || !valveOpen,
+      power: powered,
+      dosing:
+        powered && Object.values(rig.devices).some((d) => d.delivering > 0),
+      alarm: running() && (alarmsOn.length > 0 || !valveOpen),
     }),
     step(realDt) {
       owed += realDt * SPEEDS[speed];
@@ -230,11 +334,26 @@ export function createAqualisRoomHost(
         tick();
       }
       if (n >= MOST_TICKS) owed = 0;
-      // The screen runs on real time: its cycle and Dr Aqualis.
+      // The screen runs on real time: its boot, its cycle and Dr Aqualis.
       clock += realDt;
-      display = tickDisplay(display, realDt);
+      if (powered && bootT !== null) {
+        bootT += realDt;
+        if (bootT >= boot.total) booted();
+        return;
+      }
+      if (powered) display = tickDisplay(display, realDt);
     },
     drawScreen(c) {
+      // Off, its backlight is out (the cabinet's `setPower`): nothing to draw.
+      if (!powered) return false;
+      if (bootT !== null) {
+        const f = bootFrame(boot, bootT);
+        const key = `boot:${f.pictureKey}`;
+        if (key === drawn) return false;
+        drawn = key;
+        drawBootPicture(c, f, SCREEN.w, SCREEN.h, TRIO_BOOT_DRAW);
+        return true;
+      }
       const m = displayModel(display, inputs());
       const faults = defectsAt(clock, SCREEN.w, SCREEN.h);
       const key = m.key + defectsKey(faults);
@@ -252,7 +371,8 @@ export function createAqualisRoomHost(
       drawDefects(c, faults);
       return true;
     },
-    doctorShown: () => displayModel(display, inputs()).page === 'doctor',
+    doctorShown: () =>
+      running() && displayModel(display, inputs()).page === 'doctor',
     drawDoctor(c, w, h) {
       const a = displayModel(display, inputs()).doctor.advice;
       const box = DOCTOR.him;
@@ -267,6 +387,8 @@ export function createAqualisRoomHost(
       return true;
     },
     screenTouch(x, y) {
+      // Off or booting, its software takes no touches.
+      if (!running()) return;
       const ins = inputs();
       const id = hitDisplay(display, ins, x, y);
       if (!id) return;
@@ -275,6 +397,21 @@ export function createAqualisRoomHost(
       if (r.effect?.kind === 'settings') settings = r.effect.settings;
       if (r.effect?.kind === 'hand')
         hand = { ...hand, [r.effect.channel]: r.effect.demand };
+      if (r.effect?.kind === 'restart') startBoot(false);
     },
+    powered: () => powered,
+    setPower(on) {
+      if (on === powered) return;
+      powered = on;
+      drawn = '';
+      if (on) startBoot(true);
+      else bootT = null;
+    },
+    booting: () => powered && bootT !== null,
+    restart() {
+      if (powered) startBoot(false);
+    },
+    bootFrame: () =>
+      powered && bootT !== null ? bootFrame(boot, bootT) : null,
   };
 }

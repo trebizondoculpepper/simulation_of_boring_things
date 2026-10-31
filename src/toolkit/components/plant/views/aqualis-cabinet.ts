@@ -8,8 +8,11 @@ import {
 import type { Object3D, Vector2 } from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { PanelKit } from '../../core/views/eighties-controls';
-import { tools, SANS } from '../../core/views/fitting-tools';
+import { tools } from '../../core/views/fitting-tools';
 import { createCanvasTexture } from '../../core/views/screens';
+import { createBootInset } from '../../core/views/boot-screens';
+import type { BootDrawOptions } from '../../core/views/boot-screens';
+import type { BootFrame } from '../../core/logic/boot-sequence';
 import { setLcdBacklight } from '../../core/views/display-reach';
 import { createBrandBadge } from '../../core/views/brand-badge';
 import { createPs1Material } from '../../core/parts/ps1-material';
@@ -77,65 +80,6 @@ export interface CabinetHost {
 
 /** The screen's brightness: its white is this grey, under the bloom threshold (as the console's). */
 const SCREEN_LEVEL = 0xb8b8b8;
-
-/** The placeholder the screen shows until its host draws: the period's boot screen. */
-export function drawBootScreen(
-  c: CanvasRenderingContext2D,
-  progress = 0.6,
-  model: CabinetModel = 'trio',
-) {
-  const { w, h } = SCREEN;
-  const g = c.createLinearGradient(0, 0, 0, h);
-  g.addColorStop(0, '#0d3f7a');
-  g.addColorStop(0.55, '#1a76c4');
-  g.addColorStop(1, '#0a2d5c');
-  c.fillStyle = g;
-  c.fillRect(0, 0, w, h);
-  // An Aero sheen across the top.
-  const sheen = c.createLinearGradient(0, 0, 0, h * 0.45);
-  sheen.addColorStop(0, 'rgba(255,255,255,0.28)');
-  sheen.addColorStop(1, 'rgba(255,255,255,0)');
-  c.fillStyle = sheen;
-  c.fillRect(0, 0, w, h * 0.45);
-  // The water drop.
-  c.save();
-  c.translate(w / 2, 150);
-  const drop = c.createRadialGradient(-12, 10, 4, 0, 18, 60);
-  drop.addColorStop(0, '#e9f7ff');
-  drop.addColorStop(0.35, '#5fc3ff');
-  drop.addColorStop(1, '#0b6fc0');
-  c.fillStyle = drop;
-  c.beginPath();
-  c.moveTo(0, -55);
-  c.bezierCurveTo(30, -10, 48, 15, 48, 35);
-  c.arc(0, 35, 48, 0, Math.PI, false);
-  c.bezierCurveTo(-48, 15, -30, -10, 0, -55);
-  c.fill();
-  c.restore();
-  c.fillStyle = '#ffffff';
-  c.textAlign = 'center';
-  c.textBaseline = 'middle';
-  c.font = `bold 46px ${SANS}`;
-  c.fillText(CABINET_MODELS[model].name, w / 2, 270);
-  c.font = `20px ${SANS}`;
-  c.fillStyle = '#cfe7ff';
-  c.fillText('Water quality controller  ·  v2.4', w / 2, 312);
-  // The progress bar.
-  const bw = 360;
-  const bx = (w - bw) / 2;
-  c.fillStyle = 'rgba(0,0,0,0.35)';
-  c.fillRect(bx, 360, bw, 16);
-  const bar = c.createLinearGradient(0, 360, 0, 376);
-  bar.addColorStop(0, '#b8f3a0');
-  bar.addColorStop(1, '#3fae2a');
-  c.fillStyle = bar;
-  c.fillRect(bx + 2, 362, (bw - 4) * Math.max(0, Math.min(1, progress)), 12);
-  c.font = `16px ${SANS}`;
-  c.fillStyle = '#cfe7ff';
-  c.fillText('Starting analyser…', w / 2, 400);
-  c.textAlign = 'right';
-  c.fillText('© 2003 Aqualis Interactive', w - 16, h - 18);
-}
 
 /** The handwriting the developer's note is in: whatever of these the browser has. */
 const HAND =
@@ -711,6 +655,17 @@ export function createAqualisCabinet(
   overlayMesh.visible = false;
   face.add(overlayMesh);
   over.context.clearRect(0, 0, OVERLAY.w, OVERLAY.h);
+  // Its boot's live element (a memory count, the marquee, a spinner, the
+  // splash's bar) on a small canvas of its own over the screen, so the
+  // boot uploads the whole screen only when its still picture changes.
+  const bootInset = createBootInset({
+    px: SCREEN,
+    size: { w: S.w, h: S.h },
+    kind: 'lcd',
+    level: SCREEN_LEVEL,
+    maxHz: 10,
+  });
+  screen.add(bootInset.mesh);
   // The software's name under the screen, the maker's badge above it.
   t.label(
     face,
@@ -866,7 +821,9 @@ export function createAqualisCabinet(
     note.visible = shown;
   };
 
-  drawBootScreen(context, 0.6, model);
+  // Black until its host draws (its boot, as a rule).
+  context.fillStyle = '#000000';
+  context.fillRect(0, 0, SCREEN.w, SCREEN.h);
   texture.needsUpdate = true;
 
   const useOf = (object: Object3D) => {
@@ -898,7 +855,7 @@ export function createAqualisCabinet(
     group,
     /** The meshes that take touches and turns: the screen and its overlay, the knob, the sample valve's lever, the lower door. */
     touchables,
-    /** The screen's 2D context, 800 × 480, for the host to draw into. */
+    /** The screen's 2D context, `SCREEN` (640 × 480), for the host to draw into. */
     context,
     /** The screen's mesh. */
     screen,
@@ -921,10 +878,18 @@ export function createAqualisCabinet(
       powered = on;
       setLcdBacklight(material, on);
       setLcdBacklight(overMaterial, on);
+      bootInset.setPower(on);
       overlayMesh.visible = on && overlayWanted;
       if (on && screenWaiting) texture.needsUpdate = true;
       if (on && overlayWaiting) over.texture.needsUpdate = true;
       screenWaiting = overlayWaiting = false;
+    },
+    /**
+     * Show a boot's live element over the screen (its still picture is
+     * drawn into `context` as any other), or none: whether it uploaded.
+     */
+    showBoot(frame: BootFrame | null, opts?: BootDrawOptions) {
+      return bootInset.show(frame, opts);
     },
     /** A use on `object` (the knob turned `direction`, a screen touch at `uv`): whether it did anything. */
     touch(object: Object3D, uv?: Vector2, direction = 1) {
@@ -1041,6 +1006,7 @@ export function createAqualisCabinet(
     },
     dispose() {
       parts.dispose();
+      bootInset.dispose();
     },
   };
 }

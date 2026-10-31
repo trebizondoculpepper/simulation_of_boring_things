@@ -15,6 +15,7 @@ import {
   demoReadings,
   demoScene,
 } from './aqualis-demo';
+import type { BootApp } from '../../core/logic/boot-sequence';
 import type {
   Advice,
   Alarm,
@@ -41,6 +42,24 @@ import type {
  * drawing is `views/aqualis-screens.ts`, which draws a page when its
  * model's `key` changes.
  */
+
+/**
+ * The Trio's software as its boot starts it (`core/logic/boot-sequence.ts`,
+ * the gui family): the last step of the cabinet's boot is its splash.
+ */
+export const TRIO_BOOT_APP: BootApp = {
+  name: 'Dr Aqualis Trio',
+  maker: 'Aqualis Interactive',
+  subtitle: 'Water quality controller  ·  v2.4',
+  messages: [
+    'Starting the sampler…',
+    'Calibrating the probes…',
+    'Warming the stethoscope…',
+    'Reading the water…',
+    'Loading the doctor…',
+  ],
+  seconds: 5.5,
+};
 
 export type Page = 'pumps' | 'water' | 'doctor' | 'settings';
 export const CYCLED: readonly Page[] = ['pumps', 'water', 'doctor'];
@@ -123,7 +142,9 @@ export interface DisplayInputs {
 /** What a press asks of the cabinet beyond the display's own state. */
 export type DisplayEffect =
   | { kind: 'settings'; settings: AqualisSettings }
-  | { kind: 'hand'; channel: ChannelId; demand: number };
+  | { kind: 'hand'; channel: ChannelId; demand: number }
+  /** Restart the cabinet's computer: it boots again (Settings › Pool dynamics). */
+  | { kind: 'restart' };
 
 // ---- Time ------------------------------------------------------------------------------
 
@@ -244,6 +265,8 @@ export const SETTINGS = {
   rowH: 34,
   /** The demonstration's button, on the Pool dynamics tab. */
   demo: { x: 16, y: 372, w: 230, h: 46 } as Rect,
+  /** Restart, beside it: the computer boots again. */
+  restart: { x: 258, y: 372, w: 170, h: 46 } as Rect,
 };
 
 /** Every region the page now answers. */
@@ -294,7 +317,11 @@ export function displayRegions(
           { id: `dyn+:${key}`, rect: d.plus },
         );
       });
-    if (s.tab === 'dynamics') regions.push({ id: 'demo', rect: SETTINGS.demo });
+    if (s.tab === 'dynamics')
+      regions.push(
+        { id: 'demo', rect: SETTINGS.demo },
+        { id: 'restart', rect: SETTINGS.restart },
+      );
     else {
       regions.push(
         { id: 'row-', rect: SETTINGS.up },
@@ -375,6 +402,8 @@ export function pressDisplay(
   const settings = inputs.settings;
   if (verb === 'demo') {
     state = { ...state, demo: 0 };
+  } else if (verb === 'restart') {
+    effect = { kind: 'restart' };
   } else if (verb === 'demo-exit') {
     state = {
       ...state,
