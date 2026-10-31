@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1008" height="1008"><rect width="100%" height="100%" fill="#fff"/>
+<line x1="50.4" y1="92.4" x2="957.6" y2="92.4" stroke="#222" stroke-width="2"/>
+<line x1="50.4" y1="117.6" x2="957.6" y2="117.6" stroke="#222" stroke-width="2"/>
+<line x1="50.4" y1="890.4" x2="92.4" y2="890.4" stroke="#222" stroke-width="2"/>
+<line x1="243.6" y1="890.4" x2="957.6" y2="890.4" stroke="#222" stroke-width="2"/>
+<line x1="50.4" y1="915.6" x2="92.4" y2="915.6" stroke="#222" stroke-width="2"/>
+<line x1="243.6" y1="915.6" x2="957.6" y2="915.6" stroke="#222" stroke-width="2"/>
+<line x1="92.4" y1="890.4" x2="92.4" y2="915.6" stroke="#1a9e5c" stroke-width="2"/>
+<line x1="243.6" y1="890.4" x2="243.6" y2="915.6" stroke="#1a9e5c" stroke-width="2"/>
+<line x1="50.4" y1="92.4" x2="50.4" y2="915.6" stroke="#222" stroke-width="2"/>
+<line x1="75.6" y1="92.4" x2="75.6" y2="915.6" stroke="#222" stroke-width="2"/>
+<line x1="932.4" y1="92.4" x2="932.4" y2="134.4" stroke="#222" stroke-width="2"/>
+<line x1="932.4" y1="285.6" x2="932.4" y2="915.6" stroke="#222" stroke-width="2"/>
+<line x1="957.6" y1="92.4" x2="957.6" y2="134.4" stroke="#222" stroke-width="2"/>
+<line x1="957.6" y1="285.6" x2="957.6" y2="915.6" stroke="#222" stroke-width="2"/>
+<line x1="932.4" y1="134.4" x2="957.6" y2="134.4" stroke="#1a9e5c" stroke-width="2"/>
+<line x1="932.4" y1="285.6" x2="957.6" y2="285.6" stroke="#1a9e5c" stroke-width="2"/>
+<rect x="627.1" y="144.3" width="26.5" height="26.5" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="627.1" y="141.3" font-size="9" font-family="Helvetica" fill="#333">1 Lime mortar and lime putty (From about 1840 to about 1900)</text>
+<rect x="629.8" y="195.3" width="21.0" height="21.0" fill="none" stroke="#8e44ad" stroke-width="1.5"/>
+<text x="629.8" y="192.3" font-size="9" font-family="Helvetica" fill="#333">lectern 1</text>
+<rect x="881.4" y="142.2" width="26.5" height="26.5" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="881.4" y="139.2" font-size="9" font-family="Helvetica" fill="#333">2 Early Portland cement grout (From about 1850 to about 1950)</text>
+<rect x="848.1" y="177.1" width="21.0" height="21.0" fill="none" stroke="#8e44ad" stroke-width="1.5"/>
+<text x="848.1" y="174.1" font-size="9" font-family="Helvetica" fill="#333">lectern 2</text>
+<rect x="881.4" y="352.4" width="26.5" height="26.5" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="881.4" y="349.4" font-size="9" font-family="Helvetica" fill="#333">3 Sanded cement grout (The twentieth century to today)</text>
+<rect x="835.8" y="355.1" width="21.0" height="21.0" fill="none" stroke="#8e44ad" stroke-width="1.5"/>
+<text x="835.8" y="352.1" font-size="9" font-family="Helvetica" fill="#333">lectern 3</text>
+<rect x="881.4" y="629.2" width="26.5" height="26.5" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="881.4" y="626.2" font-size="9" font-family="Helvetica" fill="#333">4 Unsanded cement grout (The twentieth century to today)</text>
+<rect x="835.8" y="631.9" width="21.0" height="21.0" fill="none" stroke="#8e44ad" stroke-width="1.5"/>
+<text x="835.8" y="628.9" font-size="9" font-family="Helvetica" fill="#333">lectern 4</text>
+<rect x="881.4" y="839.4" width="26.5" height="26.5" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="881.4" y="836.4" font-size="9" font-family="Helvetica" fill="#333">5 Coloured cement grout (The 1970s)</text>
+<rect x="848.1" y="809.9" width="21.0" height="21.0" fill="none" stroke="#8e44ad" stroke-width="1.5"/>
+<text x="848.1" y="806.9" font-size="9" font-family="Helvetica" fill="#333">lectern 5</text>
+<rect x="613.2" y="839.4" width="26.5" height="26.5" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="613.2" y="836.4" font-size="9" font-family="Helvetica" fill="#333">6 Latex- and polymer-modified cement grout (From about the 1960s to today)</text>
+<rect x="615.9" y="793.8" width="21.0" height="21.0" fill="none" stroke="#8e44ad" stroke-width="1.5"/>
+<text x="615.9" y="790.8" font-size="9" font-family="Helvetica" fill="#333">lectern 6</text>
+<rect x="368.4" y="839.4" width="26.5" height="26.5" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="368.4" y="836.4" font-size="9" font-family="Helvetica" fill="#333">7 Furan resin grout (From the 1940s)</text>
+<rect x="371.1" y="793.8" width="21.0" height="21.0" fill="none" stroke="#8e44ad" stroke-width="1.5"/>
+<text x="371.1" y="790.8" font-size="9" font-family="Helvetica" fill="#333">lectern 7</text>
+<rect x="100.2" y="839.4" width="26.5" height="26.5" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="100.2" y="836.4" font-size="9" font-family="Helvetica" fill="#333">8 Epoxy grout (From the 1940s; in pools from about the 1960s)</text>
+<rect x="138.9" y="809.9" width="21.0" height="21.0" fill="none" stroke="#8e44ad" stroke-width="1.5"/>
+<text x="138.9" y="806.9" font-size="9" font-family="Helvetica" fill="#333">lectern 8</text>
+<rect x="100.2" y="675.3" width="26.5" height="26.5" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="100.2" y="672.3" font-size="9" font-family="Helvetica" fill="#333">9 Improved cement grout, CG2WA (Today)</text>
+<rect x="151.2" y="678.0" width="21.0" height="21.0" fill="none" stroke="#8e44ad" stroke-width="1.5"/>
+<text x="151.2" y="675.0" font-size="9" font-family="Helvetica" fill="#333">lectern 9</text>
+<rect x="100.2" y="142.2" width="26.5" height="26.5" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+<text x="100.2" y="139.2" font-size="9" font-family="Helvetica" fill="#333">10 Coda: the movement joint (Wherever a pool must move)</text>
+<rect x="138.9" y="177.1" width="21.0" height="21.0" fill="none" stroke="#8e44ad" stroke-width="1.5"/>
+<text x="138.9" y="174.1" font-size="9" font-family="Helvetica" fill="#333">lectern 10</text>
+<rect x="99.8" y="327.6" width="18.9" height="67.2" fill="none" stroke="#a0522d" stroke-width="1.5"/>
+<text x="99.8" y="324.6" font-size="9" font-family="Helvetica" fill="#333">BENCH</text>
+<rect x="336.0" y="887.9" width="336.0" height="2.5" fill="none" stroke="#16a085" stroke-width="1.5"/>
+<text x="336.0" y="884.9" font-size="9" font-family="Helvetica" fill="#333">Title: no substance more important to a pool than grout</text>
+<rect x="929.9" y="468.3" width="2.5" height="71.4" fill="none" stroke="#16a085" stroke-width="1.5"/>
+<text x="929.9" y="465.3" font-size="9" font-family="Helvetica" fill="#333">INTRODUCTION</text>
+<rect x="75.6" y="342.3" width="2.5" height="37.8" fill="none" stroke="#16a085" stroke-width="1.5"/>
+<text x="75.6" y="339.3" font-size="9" font-family="Helvetica" fill="#333">CLOSING_CARD</text>
+<text x="75.6" y="50.4" font-size="13" font-family="Helvetica" fill="#333">HALL 7 - GROUT (black box) - north up, 1 unit = 1 m, the hall's middle at 0,0</text>
+<text x="134.4" y="852.6" font-size="10" font-family="Helvetica" fill="#333">way on to Hall 8</text>
+<text x="861.0" y="210.0" font-size="10" font-family="Helvetica" fill="#333">way in from Hall 6</text>
+</svg>
