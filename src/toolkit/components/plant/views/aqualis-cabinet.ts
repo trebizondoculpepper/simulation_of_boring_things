@@ -97,21 +97,11 @@ export interface CabinetHost {
 }
 
 /**
- * The sample pump's sound: the dosing room's peristaltic pump's geared
- * whirr (`PERISTALTIC_PUMP`), a third as loud, a small pump behind a door.
+ * The sample pump's whirr's level, a share of the dosing room's peristaltic
+ * pump's (`PERISTALTIC_PUMP`): faint behind the shut door, and 20 dB
+ * louder with it open (the owner, 2026-10-31).
  */
-const SAMPLE_PUMP_SOUND: LoopRecipe = (context, out) => {
-  const quiet = context.createGain();
-  quiet.gain.value = 0.35;
-  quiet.connect(out);
-  const sources = PERISTALTIC_PUMP(context, quiet);
-  return [
-    ...sources,
-    {
-      stop: () => quiet.disconnect(),
-    },
-  ];
-};
+const SAMPLE_PUMP_LEVEL = { shut: 0.12, open: 1.2 } as const;
 
 /** The screen's brightness: its white is this grey, under the bloom threshold (as the console's). */
 const SCREEN_LEVEL = 0xb8b8b8;
@@ -945,6 +935,27 @@ export function createAqualisCabinet(
   /** Whether its sample pump's whirr is held, and the owner it is held by. */
   let pumpHeard = false;
   const samplePumpSound = {};
+  /** Its whirr's own gain while held, to turn up as the door opens, and the level it was last set to. */
+  let pumpGain: GainNode | null = null;
+  let pumpLevel = -1;
+  const samplePumpRecipe: LoopRecipe = (context, out) => {
+    const gain = context.createGain();
+    gain.gain.value = doorOpen()
+      ? SAMPLE_PUMP_LEVEL.open
+      : SAMPLE_PUMP_LEVEL.shut;
+    pumpLevel = gain.gain.value;
+    gain.connect(out);
+    pumpGain = gain;
+    return [
+      ...PERISTALTIC_PUMP(context, gain),
+      {
+        stop: () => {
+          gain.disconnect();
+          if (pumpGain === gain) pumpGain = null;
+        },
+      },
+    ];
+  };
   /** The lower door: open or shut (its catch's state), and where its swing is. */
   const doorOpen = () => doorState.peek();
   let doorAngle = 0;
@@ -1158,14 +1169,25 @@ export function createAqualisCabinet(
       // Its sample pump turns only with its power on and its own switch on
       // (the owner, 2026-10-31), whatever the room asks.
       const flowing = powered && mainOn.peek() && valveOpen ? sampleFlow : 0;
-      // Its sample pump's quiet whirr, while it turns (the owner, 2026-10-31).
+      // Its sample pump's whirr, while it turns, louder with the door open.
       const whirring = flowing > 0;
       if (whirring !== pumpHeard) {
         pumpHeard = whirring;
         partAudio.hold(
           samplePumpSound,
-          whirring ? SAMPLE_PUMP_SOUND : null,
+          whirring ? samplePumpRecipe : null,
           group,
+        );
+      }
+      const level = doorOpen()
+        ? SAMPLE_PUMP_LEVEL.open
+        : SAMPLE_PUMP_LEVEL.shut;
+      if (pumpGain && pumpLevel !== level) {
+        pumpLevel = level;
+        pumpGain.gain.setTargetAtTime(
+          level,
+          pumpGain.context.currentTime,
+          0.15,
         );
       }
       const swing = doorOpen() ? DOOR_OPEN : 0;
