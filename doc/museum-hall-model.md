@@ -39,7 +39,7 @@ Every plant hall has a schematic, expanded by the plumber, with tags derived fro
 
 | Hall    | Own simulation | Drawn from the model                                                                                                                     | Verdict |
 | ------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| museum1 | yes            | machines, valves and pipes mostly; 72 owners unbound (pipe plates, labels, panel parts); 10 model components undrawn (its instruments)   | partly  |
+| museum1 | yes            | all bound: machines, valves, pipes and their markings, P2's station, every gauge and thermometer, the flow switch, thermostat, gas burn display (M1-EC1), losses board (M1-QB1) and mimic (M1-MP1) | yes     |
 | museum2 | yes            | all bound: machines, valves, pipes and their markings, every instrument, the mimic panel (M2-MP1)                                        | yes     |
 | museum3 | yes            | as Hall 1; 63 unbound (the DC1 controllers and their keys, the chemistry board); 13 undrawn (sample fittings, instruments)               | partly  |
 | museum4 | yes            | all bound: tanks and their solenoid valves, the dosing header, pot, pump and its valves and flowmeter, pipes, analyser, the desk (M4-DS1), mimic (M4-MP1), teleprinter (M4-TP1) and Balance Beam (M4-BB1) | yes     |

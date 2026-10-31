@@ -347,7 +347,10 @@ export type InstrumentKind =
   | 'pressure'
   | 'temperature'
   | 'flow-switch'
-  | 'thermostat';
+  | 'thermostat'
+  | 'gas-burn'
+  | 'losses-board'
+  | 'mimic';
 
 export interface Instrument {
   id: string;
@@ -361,7 +364,12 @@ export interface Instrument {
   unit: string;
 }
 
-/** The gauges, thermometers, the flow switch and the thermostat, in tag order. */
+/**
+ * The gauges, thermometers, the flow switch and the thermostat, in tag
+ * order; then the hall's own instruments on its walls and stand: the gas
+ * burn display, the losses board (the museum's model of the heat balance,
+ * with its SWIMMERS dial) and the mimic panel that repeats the plant.
+ */
 export const INSTRUMENTS: readonly Instrument[] = [
   {
     id: 'poolPump.suction.pi',
@@ -433,6 +441,12 @@ export const INSTRUMENTS: readonly Instrument[] = [
     edge: 'poolOut',
     unit: '°C',
   },
+  // The gas burn display on the east wall: the boiler's gas rate and its kW.
+  { id: 'cost', kind: 'gas-burn', role: 'gas burn', unit: 'kW' },
+  // The losses board by the pool: four meters (QI1-QI4) and the SWIMMERS dial.
+  { id: 'losses', kind: 'losses-board', role: 'heat losses', unit: 'kW' },
+  // The mimic panel on the east wall, coded MP as the plant rooms' are.
+  { id: 'mimic', kind: 'mimic', role: 'mimic panel', unit: '' },
 ];
 
 // ---- Tags, derived -------------------------------------------------------------
@@ -447,6 +461,9 @@ const LETTERS: Record<InstrumentKind, string> = {
   temperature: 'TI',
   'flow-switch': 'FS',
   thermostat: 'TC',
+  'gas-burn': 'EC',
+  'losses-board': 'QB',
+  mimic: 'MP',
 };
 
 /**
@@ -478,8 +495,7 @@ export const TAGS: Readonly<Record<string, string>> = (() => {
     tags[i.id] = `${ROOM_CODE}-${letters}${next(letters)}`;
   }
   for (const n of NODES) tags[n.id] = machineTag(n.id);
-  // The museum's own instruments, beside the plant: the cost display and the losses board.
-  tags['cost'] = `${ROOM_CODE}-EC1`;
+  // The losses board's four meters, each printed with its own tag.
   for (const [k, id] of [
     'evaporation',
     'convection',

@@ -189,6 +189,13 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       model,
       ...(status ? { status } : {}),
     });
+  /** An instrument of the model, drawn by `thing`, bound to it by its id. */
+  const instrument = (
+    thing: Object3D,
+    id: string,
+    name: string,
+    status?: () => string | undefined,
+  ) => describe(thing, id, name, { node: id }, status);
   const atMachine = (o: Object3D, id: MachineId) =>
     turnTo(o, PLACES[id].x, 0, PLACES[id].z, PLACES[id].yaw);
   const solids: { minX: number; maxX: number; minZ: number; maxZ: number }[] = [
@@ -326,6 +333,18 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   );
 
   const pump = createEndSuctionPump(kit);
+  instrument(
+    pump.gauges.suction.group,
+    'poolPump.suction.pi',
+    'pool pump suction compound gauge',
+    () => `reads ${pump.gauges.suction.value.toFixed(2)} bar`,
+  );
+  instrument(
+    pump.gauges.discharge.group,
+    'poolPump.discharge.pi',
+    'pool pump discharge pressure gauge',
+    () => `reads ${pump.gauges.discharge.value.toFixed(2)} bar`,
+  );
   object.add(
     describe(
       still(atMachine(pump, 'poolPump')),
@@ -353,7 +372,12 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     resetTrip: () => act({ type: 'trip-reset' }),
   });
   turnTo(station.group, -3.1, 0, -2.6, FACE_EAST);
-  object.add(station.group);
+  object.add(
+    markComponent(station.group, {
+      name: `${TAGS.poolPump} pool pump local control station`,
+      model: { node: 'poolPump' },
+    }),
+  );
   take(station.parts);
   updates.push(station.update);
   footprint(-3.1, -2.6, 0.2);
@@ -408,11 +432,12 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   bigUnit.position.set(0, -0.2, 0.052);
   big.add(bigUnit);
   object.add(
-    markComponent(big, {
-      name: `${TAGS['pool.ti']} pool temperature display`,
-      model: { node: 'pool' },
-      status: () => `shows ${state().poolC.toFixed(1)} °C`,
-    }),
+    instrument(
+      big,
+      'pool.ti',
+      'pool temperature display',
+      () => `shows ${state().poolC.toFixed(1)} °C`,
+    ),
   );
   let bigShown = '';
   updates.push(() => {
@@ -459,14 +484,21 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     });
     object.add(pipe);
     const service = SERVICE[line.edge];
+    // Its plates and flow arrows are its own: bound to its link.
     if (service)
       object.add(
-        markPipe(kit, line.points, {
-          radius: line.od / 2 + (line.pipe === 'lagged-heating' ? 0.025 : 0),
-          service,
-          text: LINK_NAMES[line.edge].toUpperCase(),
-          flow: 1,
-        }),
+        markComponent(
+          markPipe(kit, line.points, {
+            radius: line.od / 2 + (line.pipe === 'lagged-heating' ? 0.025 : 0),
+            service,
+            text: LINK_NAMES[line.edge].toUpperCase(),
+            flow: 1,
+          }),
+          {
+            name: `${LINK_NAMES[line.edge]} pipe markings`,
+            model: { link: line.edge },
+          },
+        ),
       );
   }
   for (const id of ['flowTee', 'returnTee'] as const) {
@@ -649,10 +681,12 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       });
       dial.group.position.set(0, od / 2 + 0.13, 0);
       holder.add(dial.group);
-      markComponent(holder, {
-        name: `${tag} gas pressure gauge`,
-        status: () => `reads ${dial.value.toFixed(0)} mbar`,
-      });
+      instrument(
+        holder,
+        item.id,
+        'gas pressure gauge',
+        () => `reads ${dial.value.toFixed(0)} mbar`,
+      );
       updates.push((delta) => {
         dial.set(readings.gasMbar);
         dial.update(delta);
@@ -670,10 +704,12 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
         });
         dial.group.position.set(0, od / 2 + 0.025 + 0.11, 0);
         holder.add(dial.group);
-        markComponent(holder, {
-          name: `${tag} thermometer`,
-          status: () => `reads ${dial.value.toFixed(0)} °C`,
-        });
+        instrument(
+          holder,
+          item.id,
+          'thermometer',
+          () => `reads ${dial.value.toFixed(0)} °C`,
+        );
         updates.push((delta) => {
           dial.set(read());
           dial.update(delta);
@@ -681,10 +717,12 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       } else {
         const tt = createDigitalThermometer(kit, { tag: short, pipeOd: od });
         holder.add(tt.group);
-        markComponent(holder, {
-          name: `${tag} thermometer`,
-          status: () => `shows ${read().toFixed(1)} °C`,
-        });
+        instrument(
+          holder,
+          item.id,
+          'thermometer',
+          () => `shows ${read().toFixed(1)} °C`,
+        );
         // A reading a second, as the real head samples (2026-10-29).
         let due = 0;
         updates.push((delta) => {
@@ -722,10 +760,9 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       led.object.position.set(0, 0, 0.036);
       led.object.scale.setScalar(0.6);
       head.add(led.object);
-      markComponent(holder, {
-        name: `${tag} flow switch`,
-        status: () => (made.value ? 'its lamp lit' : 'its lamp out'),
-      });
+      instrument(holder, item.id, 'flow switch', () =>
+        made.value ? 'its lamp lit' : 'its lamp out',
+      );
       updates.push(() => {
         if (made.value !== readings.flowSwitch)
           made.value = readings.flowSwitch;
@@ -757,11 +794,11 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       box.position.set(item.at[0], item.at[1] + od / 2 + 0.47, item.at[2]);
       box.rotation.y = FACE_EAST;
       object.add(box);
-      markComponent(box, {
-        name: `${tag} pool thermostat`,
-        status: () =>
-          `dial at ${state().tcSet} °C, CALL lamp ${state().calling ? 'lit' : 'out'}`,
-      });
+      const tcStatus = () =>
+        `dial at ${state().tcSet} °C, CALL lamp ${state().calling ? 'lit' : 'out'}`;
+      instrument(box, item.id, 'pool thermostat', tcStatus);
+      // Its stem on the pipe is the thermostat's too.
+      instrument(holder, item.id, 'pool thermostat stem', tcStatus);
       take(tc.parts);
       updates.push(tc.update);
     }
@@ -789,7 +826,11 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     },
   });
   turnTo(board.group, EAST, 1.5, -1.0, FACE_WEST);
-  object.add(board.group);
+  // The mimic panel is in the model (M1-MP1), its lamps, readouts and
+  // buttons bound through it.
+  object.add(
+    instrument(board.group, 'mimic', 'mimic panel (Penfold Controls)'),
+  );
   take(board.parts);
 
   const clock = createPoolClock(kit, { dia: 0.75 });
@@ -797,6 +838,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   object.add(
     markComponent(clock.group, {
       name: 'Pool clock, showing the hall’s time',
+      // The exhibit's clock, not plant: it shows the simulation's time.
+      decorative: true,
       status: () => `shows ${hallClockText(session.clock).slice(0, 5)}`,
     }),
   );
@@ -814,6 +857,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   object.add(
     markComponent(timeBox, {
       name: 'Plant time display',
+      // The exhibit's own time readout, not plant (as the clock).
+      decorative: true,
       status: () =>
         `shows ${hallClockText(session.clock)} at TIME ×${session.clock.speed}`,
     }),
@@ -884,7 +929,13 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     lit: () => state().sinceReset < 2.5,
   });
   turnTo(resetButton.group, EAST - 0.45, 0, 3.45, FACE_WEST);
-  object.add(resetButton.group);
+  // The exhibit's RESET: it restarts the simulation, it works no plant.
+  object.add(
+    markComponent(resetButton.group, {
+      name: 'RESET SIMULATION pedestal',
+      decorative: true,
+    }),
+  );
   take(resetButton.parts);
   updates.push(resetButton.update);
   footprint(EAST - 0.45, 3.45, 0.25);
@@ -895,11 +946,13 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   });
   turnTo(cost.group, EAST, 1.55, -4.6, FACE_WEST);
   object.add(
-    markComponent(cost.group, {
-      name: `${TAGS['cost']} gas burn display`,
-      status: () =>
+    instrument(
+      cost.group,
+      'cost',
+      'gas burn display',
+      () =>
         `shows ${readings.gasFlow.toFixed(1)} m³/h; needle at ${readings.gasKW.toFixed(0)} kW`,
-    }),
+    ),
   );
   updates.push((delta) => cost.show(readings.gasKW, readings.gasFlow, delta));
 
@@ -964,11 +1017,13 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   losses.group.position.set(0, 1.35, 0);
   lossStand.add(losses.group);
   object.add(
-    markComponent(lossStand, {
-      name: 'Losses board (the museum’s model of the heat balance, no real plant measures these)',
-      status: () =>
+    instrument(
+      lossStand,
+      'losses',
+      'losses board (the museum’s model of the heat balance, no real plant measures these)',
+      () =>
         `needles at ${readings.losses.evaporation.toFixed(0)}, ${readings.losses.convection.toFixed(0)}, ${readings.losses.ground.toFixed(0)} and ${readings.losses.total.toFixed(0)} kW; SWIMMERS at ${state().swimmers.toUpperCase()}`,
-    }),
+    ),
   );
   take(losses.parts);
   updates.push((delta) =>

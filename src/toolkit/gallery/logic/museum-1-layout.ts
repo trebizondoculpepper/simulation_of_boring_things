@@ -296,7 +296,9 @@ const instrumentKind = (i: Instrument): Spaced =>
     ? 'thermometer'
     : i.kind === 'pressure'
       ? 'gauge'
-      : i.kind;
+      : // Only instruments set into a line are spaced: the wall's and the
+        // stand's (the gas burn display, losses board, mimic) have no edge.
+        (i.kind as 'flow-switch' | 'thermostat');
 
 /** The instruments on a line, and at which end each goes: by the machine whose water it reads. */
 const INSTRUMENT_END: Record<string, 'source' | 'target'> = {

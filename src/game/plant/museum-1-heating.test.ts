@@ -43,10 +43,13 @@ describe('Hall 1’s schematic', () => {
     expect(TAGS['hx.primary.heat']).toBe('M1-HM1');
     expect(TAGS['poolDischarge.meter']).toBe('M1-FT1');
     expect(INSTRUMENTS.map((i) => TAGS[i.id].slice(3)).sort()).toEqual([
+      'EC1',
       'FS1',
+      'MP1',
       'PI1',
       'PI2',
       'PI3',
+      'QB1',
       'TC1',
       'TI1',
       'TI2',

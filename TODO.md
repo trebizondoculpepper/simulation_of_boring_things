@@ -267,7 +267,7 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 ## Wiring the plant rooms' machines to the world
 
 - [ ] **Museum plant halls bound to their own models** ([doc](doc/museum-hall-model.md), the owner, 2026-10-30): `museum-bindings.test.ts` fails for each until it is in line; mark display items decorative, bind every control, gauge and plate to the hall's model, draw every instrument and fitting.
-  - [ ] museum1: 72 owners unbound (pipe plates, labels, panel parts), 10 instruments undrawn.
+  - [x] (2026-10-31) museum1: bound in full, the binding test passing: pipe markings to their links, P2's local station to the pool pump, the pump's gauges, the gas gauge, the thermometers, the pool's big display, the flow switch and the thermostat (with its stem) to their instruments; the gas burn display (M1-EC1), the losses board (M1-QB1) and the mimic panel (M1-MP1) added to the model as instruments, their parts bound through them; the clock, the plant time display and the RESET pedestal decorative (the exhibit's, not plant).
   - [x] (2026-10-31) museum2: bound in full, the binding test passing: pipe markings to their links, the pump station to P1, every gauge, display and analyser to its instrument, the mimic panel added to the model as M2-MP1 with its parts bound through it; the clock, the plant time display and the RESET pedestal decorative (the exhibit's, not plant).
   - [ ] museum3: 63 unbound (the DC1 controllers, the chemistry board), 13 undrawn (sample fittings, instruments).
   - [x] museum4: 37 unbound (the challenge desk), 15 undrawn (the header, the tanks' valves). Done (2026-10-31): bound in full, the binding test passes.
