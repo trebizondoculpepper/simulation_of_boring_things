@@ -715,7 +715,11 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
     scene,
     canvas,
     camera,
-    objects: cfg.self === 'engineers_office' ? machines.group : undefined,
+    // The scene, not the machines' group: carrying works in world
+    // coordinates, and the machines sit in `rooms`, scaled to the metre, so
+    // a box held under them was carried nine times too far off, out of
+    // sight. Only the office's things may be picked up (`allowPickup`).
+    objects: cfg.self === 'engineers_office' ? scene : undefined,
     allowPickup: (object) =>
       cfg.self === 'engineers_office' && machines.canRemove(object),
     heldAction(object, _portable, x, y) {

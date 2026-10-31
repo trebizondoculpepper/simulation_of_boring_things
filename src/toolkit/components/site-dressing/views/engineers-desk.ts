@@ -36,8 +36,50 @@ import {
 /** The desk's size as the room lays it out, metres: width, depth, height to its top. */
 export const DESK = { w: 1.6, d: 0.8, h: 0.73 } as const;
 
-/** The PC's carton beside the desk's open end, turned a quarter: its middle, width and depth, metres. */
-const CARTON = { x: -1.12, z: -0.08, w: 0.62, d: 0.52 } as const;
+/**
+ * The PC's carton beside the desk's open end, turned a quarter and a
+ * little more (`yaw`, radians): its middle, width and depth, metres, in
+ * the desk's frame. It fills the gap between the desk's end, the wall
+ * and the stores cupboard with a few centimetres to spare on each side
+ * (`engineers-desk.test.ts`), so nothing clips through it.
+ */
+const CARTON = { x: -1.1, z: -0.065, w: 0.58, d: 0.48, h: 0.5, yaw: 0.02 };
+/** Its flaps' lean, outward positive, on its desk, cupboard, wall and room sides: only the room's splays. */
+const CARTON_FLAPS = [-0.06, -0.05, -0.06, 0.42] as const;
+/** How far the room side's splayed flap reaches beyond the carton, metres. */
+const CARTON_FLAP_REACH =
+  (Math.min(CARTON.w, CARTON.d) / 2) * Math.sin(CARTON_FLAPS[3]);
+
+/** The PC's empty carton, beside the desk, in the desk's frame. */
+export function createDeskCarton(kit: PanelKit) {
+  const carton = createPcCarton(
+    kit,
+    CARTON.w,
+    CARTON.h,
+    CARTON.d,
+    CARTON_FLAPS,
+  );
+  carton.position.set(CARTON.x, 0, CARTON.z);
+  carton.rotation.y = Math.PI / 2 + CARTON.yaw;
+  // Beside the desk, not on it: outside its footprint, a solid of its own.
+  carton.userData.beside = true;
+  return carton;
+}
+
+/** The carton's footprint to walk round, in the desk's frame: its sides turned, its splayed flap, and 2 cm. */
+export function deskCartonFootprint() {
+  const c = Math.cos(CARTON.yaw);
+  const s = Math.abs(Math.sin(CARTON.yaw));
+  // Turned a quarter, its width runs along the desk's z, its depth along x.
+  const halfX = (CARTON.d * c + CARTON.w * s) / 2;
+  const halfZ = (CARTON.w * c + CARTON.d * s) / 2;
+  return {
+    minX: CARTON.x - halfX - 0.02,
+    maxX: CARTON.x + halfX + 0.02,
+    minZ: CARTON.z - halfZ - 0.02,
+    maxZ: CARTON.z + halfZ + CARTON_FLAP_REACH + 0.02,
+  };
+}
 
 /**
  * The wall shelf over the desk (`office-wall-shelf.ts`): its middle along
@@ -275,17 +317,7 @@ export function createEngineersDesk(
   // ever goes back, and used as a bin. It stands on the floor between the
   // desk, the wall and the cupboard, so its flaps on those sides stand up,
   // leaning a little in, and only its flap to the room splays out.
-  const carton = createPcCarton(
-    kit,
-    CARTON.w,
-    0.5,
-    CARTON.d,
-    [-0.06, -0.05, -0.06, 0.42],
-  );
-  carton.position.set(CARTON.x, 0, CARTON.z);
-  carton.rotation.y = Math.PI / 2 + 0.04;
-  // Beside the desk, not on it: outside its footprint, a solid of its own.
-  carton.userData.beside = true;
+  const carton = createDeskCarton(kit);
   group.add(carton);
 
   // The boxed software: three on the shelf, spines out, and a fourth
@@ -444,12 +476,7 @@ export function createEngineersDesk(
     handling,
     /** What stands on the floor beyond the desk's footprint, in the desk's frame: the carton, and the chair's base. */
     footprints: [
-      {
-        minX: CARTON.x - CARTON.d / 2 - 0.02,
-        maxX: CARTON.x + CARTON.d / 2 + 0.02,
-        minZ: CARTON.z - CARTON.w / 2 - 0.02,
-        maxZ: CARTON.z + CARTON.w / 2 + 0.02,
-      },
+      deskCartonFootprint(),
       { minX: -0.45, maxX: 0.15, minZ: 0.45, maxZ: 1.0 },
     ],
     update: (delta: number) => pc.update(delta),
