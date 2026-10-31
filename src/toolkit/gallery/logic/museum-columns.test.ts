@@ -96,9 +96,7 @@ describe('the museum’s columns kept clear (the owner, 2026-10-30)', () => {
               `${h.id} line through a column at ${(f.minX + f.maxX) / 2}, ${(f.minZ + f.maxZ) / 2}`,
             ).toBe(false);
     });
-  // Hall 1's machines join when its plant is set out again (its gas main
-  // and pool stand against columns: the audit, 2026-10-30).
-  for (const h of halls.filter((x) => x.id !== 'museum1'))
+  for (const h of halls)
     it(`stands no machine of ${h.id} within ${COLUMN_CLEARANCE} m of a column`, () => {
       const zones = clear(h.id);
       for (const m of h.machines) {

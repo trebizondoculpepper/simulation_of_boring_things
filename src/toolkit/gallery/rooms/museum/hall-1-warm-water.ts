@@ -81,6 +81,8 @@ import {
   PORTS,
   POOL_SHAPE,
   plumbHall1,
+  STANDS,
+  turnedHalfRound,
 } from '../../logic/museum-1-layout';
 import type { PlacedItem } from '../../logic/museum-1-layout';
 import { HALL_TITLE, hallInterior, hallOrigin } from '../../logic/museum-plan';
@@ -1000,11 +1002,14 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     footprint(at.x, at.z, 0.2);
   }
 
+  // Turned half round, along the east wall (layout C, `STANDS`).
+  object.rotation.y = STANDS.turn;
+  const placed = solids.map(turnedHalfRound);
   return {
     object,
     parts,
     status: () => (state().poolPump ? 'circulating' : 'stopped'),
-    solids: () => solids,
+    solids: () => placed,
     reset,
     update(delta) {
       session = runSession(HALL1_MODEL, session, delta);

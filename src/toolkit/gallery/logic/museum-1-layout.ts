@@ -63,6 +63,22 @@ export const VISITOR_FLOOR = {
   maxZ: interior.maxZ,
 } as const;
 
+/**
+ * Layout C (112): both archways are now at the hall's west end, where the
+ * plant stood along the street wall, so the whole exhibit stands turned
+ * half round about the hall's middle (`STANDS`): the plant along the east
+ * wall, the walk down the west side from archway to archway. Everything
+ * here is as laid out; the exhibit turns it, and its routes with it.
+ */
+export const STANDS = { turn: Math.PI } as const;
+
+/** A footprint as the exhibit stands, turned half round (`STANDS`). */
+export const turnedHalfRound = <
+  F extends { minX: number; maxX: number; minZ: number; maxZ: number },
+>(
+  f: F,
+): F => ({ ...f, minX: -f.maxX, maxX: -f.minX, minZ: -f.maxZ, maxZ: -f.minZ });
+
 /** The flue's terminal: through the roof deck, m. */
 export const ROOF = 9.5;
 
@@ -83,7 +99,7 @@ const studTop = SOURCE_SHAPE.height + SOURCE_SHAPE.stud;
 
 /** Each machine's place, south (gas) to north (pool). */
 export const PLACES: Record<MachineId, MachinePlace> = {
-  gasMain: { x: -4.4, z: 6.1, yaw: 0 },
+  gasMain: { x: -5.0, z: 6.1, yaw: 0 },
   boiler: { x: -5.4, z: 4.0, yaw: Math.PI / 2 },
   atmosphere: { x: -5.4, z: 4.0, yaw: Math.PI / 2 },
   pressurisation: { x: -7.15, z: 5.7, yaw: Math.PI / 2 },
@@ -92,7 +108,7 @@ export const PLACES: Record<MachineId, MachinePlace> = {
   returnTee: { x: -4.2, z: 1.9, yaw: 0 },
   hx: { x: -5.0, z: 0.9, yaw: Math.PI },
   poolPump: { x: -4.8, z: -1.9, yaw: -Math.PI / 2 },
-  pool: { x: -5.3, z: -5.3, yaw: 0 },
+  pool: { x: -6.15, z: -5.3, yaw: 0 },
 };
 
 export interface Port {
