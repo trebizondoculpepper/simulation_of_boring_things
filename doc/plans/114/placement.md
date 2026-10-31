@@ -324,7 +324,26 @@ The migration seeds each sampler's cell, and the controller's chlorine integral,
 - **The Trio has no mains port** in `aqualis-cabinet.ts` yet.
 - **Mission 105's controllers:** they were designed for exactly these two rooms (the Chlorella CX-7 for the Olympic, the DC-1 pair for the Lounge) and are not yet installed. The Trio would take their places.
 
-## Questions for the owner, one at a time
+## Decisions (2026-10-31)
+
+The owner answered the first two questions, and for the rest asked for whatever is most normal, taking the plan's recommendations: "Whatever is most normal is preferable … if it's something that's a little bit abnormal, it could just be a weird glitch in this system's design on purpose." Each is a change to the graph first, then a re-plumb; any of them can be overruled.
+
+1. **The Lounge's Trio** goes where the annunciator used to be: on the south wall just east of the door (on the left, facing the door from inside). The owner.
+2. **The Lounge's sample tapping** moves to the pump discharge main, before the filters and any dosing point, as is normal (and the brief asks). The owner, on the recommendation.
+3. **Each sample return** goes to its balance tank (the Olympic's through the west wall into the tank hall), the normal practice, so the sample never short-circuits the pumps.
+4. **The Olympic's sample tapping** moves to the common discharge manifold, so it never depends on one pump's valves.
+5. **The CO₂ channel** is blanked off: its gland plugged, its port unlinked, NOT CONNECTED on the screen until CO₂ dosing exists.
+6. **Tags** stay PL1-CP2 and PL2-CP2, the kind `dosing-controller`; only the asset ids are new (a machine replaced, its place in the plant the same).
+7. **The sample points** are PL1-SP1 and PL2-SP1.
+8. **Both Trios start in AUTO.** The Lounge's plant is the more manual of the two in general, but its automatic dosing has always been automatic.
+9. **The annunciators grow** (the Lounge's to 24 windows, the Olympic's to 30), with CONTROLLER FAULT and SAMPLE FLOW LOW among the new windows.
+10. **The annunciators' chlorine and pH windows read the Trio's analyser**, as real plant does: a frozen sample then hides the drift, which is the failure the sampling bypass was always meant to allow.
+11. **The Trios supersede mission 105's CX-7 and DC-1 pair in these two rooms**; those stay in dev44 and the museum halls.
+12. **The Jacuzzi and the Footbath get no Aqualis cabinet**; their packaged cabinets keep their own dosing.
+13. **The targets** stay at the tuned 1.3 mg/l (the Trio's default) for now, so the pools run as they do; PWTAG's 1.2 is a one-number change in its settings.
+14. **Saves are migrated** (`WORLD_VERSION` bumped, a migration), not thrown away.
+
+## The questions as first asked (answered above)
 
 1. ~~In the Lounge, should the Trio stand on the south wall just east of the door (recommended), or in PL1-CP2's place on the east wall?~~ Answered (the owner, 2026-10-31): where the annunciator used to be, on the south wall just east of the door (on the left, facing the door from inside).
 2. Should the Lounge's sample tapping move from the filtered main (where prompt 089 put it) to the pump discharge main, before the filters, as the brief says?
