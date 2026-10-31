@@ -56,6 +56,8 @@ export const PIEZO_LOOP_CYCLES = {
   warning: 1,
   /** A warble, 62.5 ms at the pitch and 62.5 ms at 0.84 of it: an alarm until silenced. */
   alarm: 0.25,
+  /** Eleven 70 ms beeps a second: a PC/XT's keyboard buffer full, a crashed computer's beeping. */
+  'buffer-full': 1,
 } as const;
 export type PiezoLoopMeaning = keyof typeof PIEZO_LOOP_CYCLES;
 export const PIEZO_LOOPS = Object.keys(
@@ -98,6 +100,7 @@ export const PIEZO_LEVELS: Record<PiezoMeaning, number> = {
   'priority-medium': 0.22,
   alarm: 0.24,
   'priority-high': 0.26,
+  'buffer-full': 0.2,
 };
 
 /** A device's own sounder: its pitch and the room it stands in, set where it is built. */

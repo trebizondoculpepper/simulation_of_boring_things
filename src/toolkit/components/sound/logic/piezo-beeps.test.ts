@@ -50,7 +50,7 @@ describe('the piezo beep library', () => {
     const names = every().map(({ meaning, pitch, room }) =>
       piezoFile(meaning, pitch, room),
     );
-    expect(names).toHaveLength(13 * 3 * 3);
+    expect(names).toHaveLength(14 * 3 * 3);
     expect(new Set(names).size).toBe(names.length);
     for (const name of names)
       expect(name).toMatch(

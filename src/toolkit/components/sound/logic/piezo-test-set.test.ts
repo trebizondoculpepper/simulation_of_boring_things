@@ -11,7 +11,7 @@ describe('the piezo test set', () => {
     });
     expect(piezoSetting(2, PIEZO_MEANINGS.length - 1, 2)).toEqual({
       pitch: 'high',
-      meaning: 'alarm',
+      meaning: 'buffer-full',
       room: 'large',
     });
     expect(piezoSetting(9, 99, -1).room).toBe('dry');

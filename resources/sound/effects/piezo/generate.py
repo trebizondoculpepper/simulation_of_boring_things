@@ -119,6 +119,10 @@ CADENCES: dict[str, Cadence] = {
     "countdown": Cadence(_train([0.0], 0.06), cycle=1.0, use="An entry or exit delay, a timed action running"),
     "hurry": Cadence(_train([0.0, 0.25, 0.5, 0.75], 0.06), cycle=1.0, use="The last seconds of a countdown"),
     "warning": Cadence(_train([0.0, 0.5], 0.25), cycle=1.0, use="A condition needing attention, until acknowledged"),
+    # A PC/XT's keyboard buffer full (the owner, 2026-10-31, for the Dr
+    # Aqualis Trio's glitch): a short beep for every key repeat at the
+    # typematic rate, about eleven a second, with only short gaps between.
+    "buffer-full": Cadence(_train([i / 11 for i in range(11)], 0.07), cycle=1.0, use="A key held too long, the keyboard buffer full: a crashed computer's beeping"),
     "alarm": Cadence(
         tuple((i * 0.0625, 0.0625, 1.0 if i % 2 == 0 else WARBLE) for i in range(4)),
         cycle=0.25,

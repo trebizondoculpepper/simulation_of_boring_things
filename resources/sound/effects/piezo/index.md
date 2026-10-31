@@ -22,21 +22,22 @@ A two-tone cadence's second tone is the pitch times 0.84.
 
 ## Meanings
 
-| Meaning           | Cadence                                                                      | For                                                            |
-| ----------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `entry`           | 1 beep of 35 ms at 0 ms                                                      | A key pressed, a card presented                                |
-| `confirm`         | 2 beeps of 70 ms at 0, 120 ms                                                | A value stored, a command accepted, a card read and accepted   |
-| `done`            | 1 beep of 300 ms at 0 ms                                                     | A longer action finished, an arming or a mode change completed |
-| `error`           | 3 beeps of 90 ms at 0, 150, 300 ms                                           | A key not allowed now, a limit reached                         |
-| `deny`            | 1 beep of 550 ms at 0 ms                                                     | A wrong code, a card refused, LOCAL CONTROL ONLY               |
-| `ready`           | 1 beep of 150 ms at 50 ms                                                    | A controller coming online after its self-test                 |
-| `fault`           | 3 beeps of 150 ms at 0, 300, 600 ms                                          | A controller's fault on power-up or in running                 |
-| `priority-high`   | 10 beeps of 100 ms at 0, 175, 350, 700, 875, 1475, 1650, 1825, 2175, 2350 ms | A grave alarm, repeated by the caller                          |
-| `priority-medium` | 3 beeps of 200 ms at 0, 350, 700 ms                                          | A caution, repeated by the caller                              |
-| `countdown`       | 1 beep of 60 ms at 0 ms, a 1 s loop                                          | An entry or exit delay, a timed action running                 |
-| `hurry`           | 4 beeps of 60 ms at 0, 250, 500, 750 ms, a 1 s loop                          | The last seconds of a countdown                                |
-| `warning`         | 2 beeps of 250 ms at 0, 500 ms, a 1 s loop                                   | A condition needing attention, until acknowledged              |
-| `alarm`           | 4 beeps of 62.5 ms at 0, 62.5 (x0.84), 125, 187.5 (x0.84) ms, a 0.25 s loop  | An alarm sounding until silenced                               |
+| Meaning           | Cadence                                                                                                                        | For                                                                         |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| `entry`           | 1 beep of 35 ms at 0 ms                                                                                                        | A key pressed, a card presented                                             |
+| `confirm`         | 2 beeps of 70 ms at 0, 120 ms                                                                                                  | A value stored, a command accepted, a card read and accepted                |
+| `done`            | 1 beep of 300 ms at 0 ms                                                                                                       | A longer action finished, an arming or a mode change completed              |
+| `error`           | 3 beeps of 90 ms at 0, 150, 300 ms                                                                                             | A key not allowed now, a limit reached                                      |
+| `deny`            | 1 beep of 550 ms at 0 ms                                                                                                       | A wrong code, a card refused, LOCAL CONTROL ONLY                            |
+| `ready`           | 1 beep of 150 ms at 50 ms                                                                                                      | A controller coming online after its self-test                              |
+| `fault`           | 3 beeps of 150 ms at 0, 300, 600 ms                                                                                            | A controller's fault on power-up or in running                              |
+| `priority-high`   | 10 beeps of 100 ms at 0, 175, 350, 700, 875, 1475, 1650, 1825, 2175, 2350 ms                                                   | A grave alarm, repeated by the caller                                       |
+| `priority-medium` | 3 beeps of 200 ms at 0, 350, 700 ms                                                                                            | A caution, repeated by the caller                                           |
+| `countdown`       | 1 beep of 60 ms at 0 ms, a 1 s loop                                                                                            | An entry or exit delay, a timed action running                              |
+| `hurry`           | 4 beeps of 60 ms at 0, 250, 500, 750 ms, a 1 s loop                                                                            | The last seconds of a countdown                                             |
+| `warning`         | 2 beeps of 250 ms at 0, 500 ms, a 1 s loop                                                                                     | A condition needing attention, until acknowledged                           |
+| `buffer-full`     | 11 beeps of 70 ms at 0, 90.909, 181.818, 272.727, 363.636, 454.545, 545.455, 636.364, 727.273, 818.182, 909.091 ms, a 1 s loop | A key held too long, the keyboard buffer full: a crashed computer's beeping |
+| `alarm`           | 4 beeps of 62.5 ms at 0, 62.5 (x0.84), 125, 187.5 (x0.84) ms, a 0.25 s loop                                                    | An alarm sounding until silenced                                            |
 
 ## Rooms
 
@@ -158,6 +159,15 @@ A two-tone cadence's second tone is the pitch times 0.84.
 | [piezo_warning_high_dry.mp3](piezo_warning_high_dry.mp3)                     | warning         | high  | dry   | 1.00    | 1 s    | -7.68       | -7.38     |
 | [piezo_warning_high_small.mp3](piezo_warning_high_small.mp3)                 | warning         | high  | small | 1.00    | 1 s    | -7.68       | -7.90     |
 | [piezo_warning_high_large.mp3](piezo_warning_high_large.mp3)                 | warning         | high  | large | 1.00    | 1 s    | -7.68       | -5.41     |
+| [piezo_buffer-full_low_dry.mp3](piezo_buffer-full_low_dry.mp3)               | buffer-full     | low   | dry   | 1.00    | 1 s    | -7.68       | -4.79     |
+| [piezo_buffer-full_low_small.mp3](piezo_buffer-full_low_small.mp3)           | buffer-full     | low   | small | 1.00    | 1 s    | -7.68       | -4.57     |
+| [piezo_buffer-full_low_large.mp3](piezo_buffer-full_low_large.mp3)           | buffer-full     | low   | large | 1.00    | 1 s    | -7.68       | -4.66     |
+| [piezo_buffer-full_mid_dry.mp3](piezo_buffer-full_mid_dry.mp3)               | buffer-full     | mid   | dry   | 1.00    | 1 s    | -7.68       | -4.45     |
+| [piezo_buffer-full_mid_small.mp3](piezo_buffer-full_mid_small.mp3)           | buffer-full     | mid   | small | 1.00    | 1 s    | -7.68       | -3.98     |
+| [piezo_buffer-full_mid_large.mp3](piezo_buffer-full_mid_large.mp3)           | buffer-full     | mid   | large | 1.00    | 1 s    | -7.68       | -5.00     |
+| [piezo_buffer-full_high_dry.mp3](piezo_buffer-full_high_dry.mp3)             | buffer-full     | high  | dry   | 1.00    | 1 s    | -7.68       | -7.39     |
+| [piezo_buffer-full_high_small.mp3](piezo_buffer-full_high_small.mp3)         | buffer-full     | high  | small | 1.00    | 1 s    | -7.68       | -7.49     |
+| [piezo_buffer-full_high_large.mp3](piezo_buffer-full_high_large.mp3)         | buffer-full     | high  | large | 1.00    | 1 s    | -7.68       | -7.81     |
 | [piezo_alarm_low_dry.mp3](piezo_alarm_low_dry.mp3)                           | alarm           | low   | dry   | 0.25    | 0.25 s | -7.68       | -2.98     |
 | [piezo_alarm_low_small.mp3](piezo_alarm_low_small.mp3)                       | alarm           | low   | small | 0.25    | 0.25 s | -7.68       | -2.56     |
 | [piezo_alarm_low_large.mp3](piezo_alarm_low_large.mp3)                       | alarm           | low   | large | 0.25    | 0.25 s | -7.68       | -1.07     |
