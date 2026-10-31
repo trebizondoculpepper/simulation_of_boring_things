@@ -326,7 +326,7 @@ The migration seeds each sampler's cell, and the controller's chlorine integral,
 
 ## Questions for the owner, one at a time
 
-1. In the Lounge, should the Trio stand on the south wall just east of the door (recommended), or in PL1-CP2's place on the east wall?
+1. ~~In the Lounge, should the Trio stand on the south wall just east of the door (recommended), or in PL1-CP2's place on the east wall?~~ Answered (the owner, 2026-10-31): where the annunciator used to be, on the south wall just east of the door (on the left, facing the door from inside).
 2. Should the Lounge's sample tapping move from the filtered main (where prompt 089 put it) to the pump discharge main, before the filters, as the brief says?
 3. Should each sample return go to its balance tank (the Olympic's through the west wall into the tank hall), or to the pumps' suction, which is shorter?
 4. Should the Olympic's sample tapping move from pump B's discharge to the common discharge manifold, so it never depends on one pump's valves?
