@@ -335,7 +335,7 @@ const TURN_ARROW = (() => {
   return {
     W,
     tail: [...outer, ...inner].join(' '),
-    head: [p(8, 0), p(-1.5, 5.8), p(-1.5, -5.8)].join(' '),
+    head: [p(6, 0), p(-1, 4.2), p(-1, -4.2)].join(' '),
     // The tail's fade runs from its start to its head, left to right.
     fadeFrom: (cx + r * Math.cos(from)).toFixed(2),
     fadeTo: ex.toFixed(2),
@@ -356,8 +356,8 @@ function turnArrow(direction: -1 | 1, possible: boolean, label?: string) {
     `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">` +
     `<defs><linearGradient id="${fade}" gradientUnits="userSpaceOnUse" x1="${fadeFrom}" y1="0" x2="${fadeTo}" y2="0">` +
     `<stop offset="0" stop-color="${colour}" stop-opacity="0.15"/><stop offset="1" stop-color="${colour}" stop-opacity="1"/></linearGradient></defs>` +
-    `<g${flip}><polygon points="${tail}" fill="url(#${fade})" stroke="${CUE_EDGE}" stroke-opacity="0.6" stroke-width="1.2" stroke-linejoin="round"/>` +
-    `<polygon points="${head}" fill="${colour}" stroke="${CUE_EDGE}" stroke-width="1.6" stroke-linejoin="round"/></g>` +
+    `<g${flip}><polygon points="${tail}" fill="url(#${fade})" stroke="${CUE_EDGE}" stroke-opacity="0.6" stroke-width="0.5" stroke-linejoin="round"/>` +
+    `<polygon points="${head}" fill="${colour}" stroke="${CUE_EDGE}" stroke-width="0.5" stroke-linejoin="round"/></g>` +
     `${text}</svg>`
   );
 }
