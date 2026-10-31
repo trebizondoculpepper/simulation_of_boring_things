@@ -5,6 +5,7 @@ import type { Level } from './museum-4-challenge';
 import { readWater } from './museum-4-lab';
 import { DOSES, SIZES, doseWords } from './museum-4-doses';
 import { fuzzCases } from './museum-4-solver';
+import { doseKey, partials } from './museum-4-challenge.test-support';
 
 const LEVELS: readonly Level[] = ['journeyman', 'pro'];
 
@@ -45,6 +46,28 @@ describe("Hall 4's first set of challenge cards", () => {
           }
         });
 
+      it('wins with no proper part of its stored solutions, unless declared close', () => {
+        // Each subset of a stored solution, and each dose shrunk by one or
+        // more sizes, must lose; one step smaller may win only where the
+        // card declares it in alsoWins (the owner, 2026-10-31).
+        const sorted = (ds: readonly { tank: string; size: number }[]) =>
+          doseKey(
+            [...ds].sort((a, b) =>
+              a.tank + a.size < b.tank + b.size ? -1 : 1,
+            ) as never,
+          );
+        for (const level of LEVELS) {
+          const declared = new Set(
+            (card.alsoWins?.[level] ?? []).map((w) => sorted(w.doses)),
+          );
+          const won = partials(card.solutions[level])
+            .filter((p) => replay(card, level, p.doses).outcome === 'won')
+            .filter((p) => !(p.steps === 1 && declared.has(sorted(p.doses))))
+            .map((p) => `${level}: ${doseKey(p.doses)}`);
+          expect(won).toEqual([]);
+        }
+      });
+
       it('has two genuinely different routes', () => {
         const j = card.solutions.journeyman;
         expect(j.length).toBeLessThan(card.solutions.pro.length);
@@ -64,12 +87,21 @@ describe("Hall 4's first set of challenge cards", () => {
         expect(card.briefing.journeyman).toContain('Journeyman');
         expect(card.briefing.pro).toContain('Pool Pro');
         expect(card.briefing.pro).toContain('every other reading');
-        const named = card.solutions.pro.map((d) => doseWords(d.tank, d.size));
-        for (const n of named) expect(card.explanation).toContain(n);
-        const used = new Set(card.solutions.pro.map((d) => d.tank));
-        for (const d of DOSES)
-          if (!used.has(d.tank))
-            expect(lower(card.explanation)).not.toContain(d.name);
+        for (const level of ['journeyman', 'pro'] as const) {
+          const words = card.explanation[level];
+          const doses = card.solutions[level];
+          for (const d of doses)
+            expect(words).toContain(doseWords(d.tank, d.size));
+          const used = new Set(doses.map((d) => d.tank));
+          for (const d of DOSES)
+            if (!used.has(d.tank)) expect(lower(words)).not.toContain(d.name);
+        }
+        expect(card.explanation.journeyman).toMatch(/^Yes: /);
+        expect(card.explanation.journeyman).toContain(' worked because ');
+        expect(card.explanation.journeyman).toContain(
+          'But a better solution would',
+        );
+        expect(card.explanation.pro).toMatch(/^The best answer was /);
         expect(lower(card.clue)).toContain(lower(card.concept));
         for (const size of SIZES)
           expect(lower(card.clue)).not.toMatch(

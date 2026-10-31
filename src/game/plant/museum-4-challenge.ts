@@ -108,8 +108,19 @@ export interface ChallengeCard {
   clue: string;
   /** The chemistry concept the card turns on, which the clue must name. */
   concept: string;
-  /** Narrated on a win: the ideal solution and why it works. */
-  explanation: string;
+  /**
+   * Narrated on a win, at the level played: that level's stored solution
+   * and why it works (a Journeyman's may say what a Pool Pro does beyond
+   * it, naming no other chemical).
+   */
+  explanation: Record<Level, string>;
+  /**
+   * Other routes that win at a level and are chemically sound, each with
+   * its reason (the partial-solution tests accept a winner close to one).
+   */
+  alsoWins?: Partial<
+    Record<Level, readonly { doses: readonly Dose[]; reason: string }[]>
+  >;
   /** How far this card's bands were relaxed and why, or null if not at all. */
   relaxed: string | null;
 }
@@ -225,7 +236,7 @@ export const cardWords = (
   card: ChallengeCard,
   kind: NarrationKind,
   level: Level,
-) => (kind === 'briefing' ? card.briefing[level] : card[kind]);
+) => (kind === 'clue' ? card.clue : card[kind][level]);
 
 /** The readings a level must bring into band on `card`. */
 export const required = (card: ChallengeCard, level: Level) =>
@@ -272,7 +283,13 @@ function judge(g: Hall4Game): Hall4Game {
   const t = g.lab.seconds;
   const ok =
     outOfBand(readWater(water(g.lab)), required(g.card, g.level)).length === 0;
-  const heldSince = ok ? (g.heldSince ?? t) : null;
+  // The hour's hold must begin within the settling time of the last dose
+  // (or the start): water the lab's slow drift brings into range hours
+  // later, a dose still in hand, was not put right by the visitor and does
+  // not win (the owner's bug report, 2026-10-31: one Medium bicarbonate
+  // won "Stinging eyes" as the pH crept up over half a lab day).
+  const fresh = t - g.lastDose <= SETTLE;
+  const heldSince = ok ? (g.heldSince ?? (fresh ? t : null)) : null;
   if (heldSince !== null && t - heldSince >= HOLD)
     return narrate(
       { ...g, heldSince, outcome: 'won', shown: 0 },

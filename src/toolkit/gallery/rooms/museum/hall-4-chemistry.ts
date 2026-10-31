@@ -125,13 +125,10 @@ const FACE_SOUTH = 0;
 const FACE_WEST = -Math.PI / 2;
 
 /**
- * TEMPORARY, for the owner's review of the second layout (2026-10-31):
- * the hall's pipework (the header, the dosing lines, the pump's suction
- * and discharge, the injection line, the make-up's spout and the sample
- * line) is left out of the scene until the hall is re-plumbed for the
- * new positions. Set false again when `pipeRuns` is re-laid.
+ * Whether the hall's pipework is left out of the scene, as it was for the
+ * owner's review of the second layout (2026-10-31). Re-plumbed since.
  */
-const PIPES_DEFERRED = true;
+const PIPES_DEFERRED = false;
 
 /** Real seconds a dosed tank's valve and lamps show open after DOSE. */
 const DOSE_SHOWN = 1.5;
@@ -861,8 +858,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
           (n.kind === 'explanation' ? CELEBRATION_SECONDS.won : 0);
         narrate(
           CARD_NARRATION[game.card.id]?.[
-            n.kind === 'briefing' && game.level === 'pro'
-              ? 'briefingPro'
+            n.kind !== 'clue' && game.level === 'pro'
+              ? (`${n.kind}Pro` as const)
               : n.kind
           ] ?? '',
         );

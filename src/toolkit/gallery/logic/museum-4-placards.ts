@@ -120,15 +120,24 @@ export function beamPlacard(): Placard {
 
 /**
  * Each challenge card's narration clips, by card and narration (briefing,
- * clue, explanation; mission 113): none recorded yet (an empty id), their
+ * clue, explanation, each briefing and explanation at both levels; mission 113): none recorded yet (an empty id), their
  * words in `doc/scripts/museum/museum-narration.txt` for recording.
  */
 export const CARD_NARRATION: Readonly<
-  Record<string, Record<NarrationKind | 'briefingPro', string>>
+  Record<
+    string,
+    Record<NarrationKind | 'briefingPro' | 'explanationPro', string>
+  >
 > = Object.fromEntries(
   CHALLENGES.map((c) => [
     c.id,
-    { briefing: '', briefingPro: '', clue: '', explanation: '' },
+    {
+      briefing: '',
+      briefingPro: '',
+      clue: '',
+      explanation: '',
+      explanationPro: '',
+    },
   ]),
 );
 
@@ -140,7 +149,8 @@ export function cardNarrationScript() {
       ['briefing (Journeyman)', c.briefing.journeyman],
       ['briefing (Pool Pro)', c.briefing.pro],
       ['clue', c.clue],
-      ['explanation', c.explanation],
+      ['explanation (Journeyman)', c.explanation.journeyman],
+      ['explanation (Pool Pro)', c.explanation.pro],
     ] as const;
     words.forEach(([kind, text], n) =>
       lines.push(

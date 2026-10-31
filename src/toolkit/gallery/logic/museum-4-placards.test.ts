@@ -36,6 +36,7 @@ describe('Hall 4’s card narrations', () => {
         'briefingPro',
         'clue',
         'explanation',
+        'explanationPro',
       ]);
   });
   it('are in the narration script for recording, word for word', () => {

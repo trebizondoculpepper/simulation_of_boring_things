@@ -123,3 +123,17 @@ describe("Hall 4's challenge engine", () => {
     expect(labClock(3600)).toBe('1:00');
   });
 });
+
+describe('the slow drift', () => {
+  it('does not win Stinging eyes at Journeyman on one Medium bicarbonate, stepped as the hall steps', () => {
+    const eyes = CHALLENGES.find((c) => c.id === 'acid-overdose')!;
+    // The owner's game: one Medium dose, a dose still in hand, then a real
+    // minute's wait while the pH creeps up as CO₂ leaves the water.
+    const g = realFor(
+      doseGame(startCard(newGame(), eyes, 'journeyman'), 'bicarbonate', 2),
+      60,
+    );
+    expect(g.outcome).toBe('playing');
+    expect(g.heldSince).toBeNull();
+  });
+});

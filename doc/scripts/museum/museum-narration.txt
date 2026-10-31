@@ -40,7 +40,9 @@ HALL 4: THE CHALLENGE CARDS
 
 7b3. The acid pump failed, clue: Every acid lowers the pH, but most acids also eat the alkalinity, the water's buffer, and the buffer here is already thin. One way down leaves the buffer alone.
 
-7b4. The acid pump failed, explanation: The ideal answer was Medium carbon dioxide, then Large sodium bicarbonate. Carbon dioxide brings the pH down without touching the alkalinity, and the bicarbonate rebuilds the buffer so the pH stays put. A Journeyman stops at the pH; a Pool Pro fixes the buffer too.
+7b4. The acid pump failed, explanation (Journeyman): Yes: Medium hydrochloric acid worked because the acid brings the pH down into range, so the chlorine works properly again. But a better solution would bring the pH down without eating the alkalinity, and rebuild the buffer, so the pH stays put.
+
+7b5. The acid pump failed, explanation (Pool Pro): The best answer was Medium carbon dioxide, then Large sodium bicarbonate. Carbon dioxide brings the pH down without touching the alkalinity, where a mineral acid would eat a buffer that is already low; the bicarbonate then rebuilds that buffer while hardly moving the pH, so the pH stays put.
 
 7c1. The pH will not hold, briefing (Journeyman): Every dose sends the pH swinging, because the alkalinity has fallen to 48 mg/l. As a Journeyman, fix the fault: bring the alkalinity back to 80 to 200 mg/l.
 
@@ -48,7 +50,9 @@ HALL 4: THE CHALLENGE CARDS
 
 7c3. The pH will not hold, clue: Alkalinity is the water's buffer: it soaks up acid and base so the pH holds still. Raise the buffer, not the pH. Then look at the balance: soft water eats grout even when the pH is right.
 
-7c4. The pH will not hold, explanation: The ideal answer was Huge sodium bicarbonate and Large calcium chloride. Bicarbonate raises the alkalinity while hardly moving the pH, so the buffer is back; the calcium brings the hardness and the balance index into range, so the water stops eating the grout.
+7c4. The pH will not hold, explanation (Journeyman): Yes: Huge sodium bicarbonate worked because it raises the alkalinity while hardly moving the pH, so the buffer is back and the pH holds. But a better solution would also raise the hardness, bringing the balance index into range, so the water stops eating the grout.
+
+7c5. The pH will not hold, explanation (Pool Pro): The best answer was Huge sodium bicarbonate and Large calcium chloride. Bicarbonate raises the alkalinity while hardly moving the pH, where a stronger alkali would push the pH over; calcium chloride raises the hardness and nothing else, bringing the balance index into range, so the water stops eating the grout.
 
 7d1. Stinging eyes, briefing (Journeyman): The acid pump stuck on overnight. The pH is 6.9, stinging eyes, and the pool is closed. As a Journeyman, fix the fault: bring the pH back to 7.2 to 7.6.
 
@@ -56,7 +60,9 @@ HALL 4: THE CHALLENGE CARDS
 
 7d3. Stinging eyes, clue: The acid ate the alkalinity as well as dropping the pH. Rebuild the buffer and the pH comes up with it. And look at the free chlorine: the night's acid has left it low.
 
-7d4. Stinging eyes, explanation: The ideal answer was Medium sodium hypochlorite and Huge sodium bicarbonate. The bicarbonate rebuilds the alkalinity the acid ate, and the pH rises with it and holds; the hypochlorite restores the free chlorine. A Journeyman puts the pH right; a Pool Pro makes the water safe to swim in too.
+7d4. Stinging eyes, explanation (Journeyman): Yes: Huge sodium bicarbonate worked because it rebuilds the alkalinity the acid ate, and the pH rises with it and holds. But a better solution would also restore the free chlorine the acid left low, so the water is safe to swim in, not just comfortable.
+
+7d5. Stinging eyes, explanation (Pool Pro): The best answer was Medium sodium hypochlorite and Huge sodium bicarbonate. The bicarbonate rebuilds the alkalinity the acid ate, so the pH rises with it and holds, rather than jumping up and drifting back as it would with a stronger alkali; the hypochlorite restores the free chlorine, and being a little alkaline itself it helps the pH along.
 
 7e1. White crust on the heater, briefing (Journeyman): Scale is building on the heater. The water is hard, alkaline and its pH 7.8, so its balance index is far above zero: it is laying down calcium. As a Journeyman, fix the fault: bring the balance back to −0.5 to +0.5.
 
@@ -64,7 +70,9 @@ HALL 4: THE CHALLENGE CARDS
 
 7e3. White crust on the heater, clue: The balance index adds up pH, hardness, alkalinity and temperature. Of those, the pH moves fastest: bring it down and the balance follows. Then check the free chlorine, which has been low all along.
 
-7e4. White crust on the heater, explanation: The ideal answer was Medium sodium hypochlorite and Large hydrochloric acid. The acid brings the pH and some alkalinity down, which brings the balance index into range so the scaling stops; the hypochlorite restores the free chlorine.
+7e4. White crust on the heater, explanation (Journeyman): Yes: Large hydrochloric acid worked because it brings the pH and some alkalinity down, which brings the balance index into range, so the scaling stops. But a better solution would also restore the free chlorine, which has been low all along.
+
+7e5. White crust on the heater, explanation (Pool Pro): The best answer was Medium sodium hypochlorite and Large hydrochloric acid. The acid brings down both the pH and some of the alkalinity, the two parts of the balance index that are too high, so the scaling stops, where a gentler acid would leave the alkalinity behind; the hypochlorite restores the free chlorine, and the acid soaks up the little it raises the pH.
 
 7f1. Too much chlorine, briefing (Journeyman): The chlorine controller stuck on overnight, and the free chlorine is 4.7 mg/l. As a Journeyman, fix the fault: bring the free chlorine back to 1.0 to 2.0 mg/l so the pool can reopen.
 
@@ -72,7 +80,9 @@ HALL 4: THE CHALLENGE CARDS
 
 7f3. Too much chlorine, clue: A dechlorinator takes chlorine away fast, but it is a side effect, not the chlorine, that catches people out: the pH rises afterwards. Too little and the pool stays shut; too much and you will need to chlorinate again.
 
-7f4. Too much chlorine, explanation: The ideal answer was Large sodium thiosulphate, Medium hydrochloric acid and Huge fresh water. The thiosulphate takes the excess chlorine away; the acid brings down the pH it raised; the fresh water brings back the alkalinity and the balance. A Journeyman reopens the pool; a Pool Pro leaves it balanced.
+7f4. Too much chlorine, explanation (Journeyman): Yes: Large sodium thiosulphate worked because it takes the excess chlorine away, so the pool can reopen. But a better solution would also bring down the pH the chlorine raised, and restore the alkalinity and the balance.
+
+7f5. Too much chlorine, explanation (Pool Pro): The best answer was Large sodium thiosulphate, Medium hydrochloric acid and Huge fresh water. The thiosulphate takes the excess chlorine away far faster than waiting for it to burn off; the acid brings down the pH the chlorine raised; and the fresh water brings back the alkalinity and the balance, which no single chemical could put right without upsetting something else.
 
 7g1. The chlorine smell, briefing (Journeyman): The UV failed in a busy week. The hall smells of chlorine and swimmers have red eyes: that smell is combined chlorine, chloramines, not too much chlorine. As a Journeyman, fix the fault: bring combined chlorine under 1.0 mg/l and under half the free.
 
@@ -80,7 +90,9 @@ HALL 4: THE CHALLENGE CARDS
 
 7g3. The chlorine smell, clue: Combined chlorine is chlorine already used up on what swimmers brought in. Some of it will not burn off: the cure for what has built up is dilution. Keep a little free chlorine working while you do it.
 
-7g4. The chlorine smell, explanation: The ideal answer was Tiny sodium hypochlorite, Huge sodium bicarbonate and Huge fresh water. The fresh water dilutes the combined chlorine away, the small top-up of hypochlorite keeps the free chlorine working, and the bicarbonate puts back the alkalinity the busy week used up.
+7g4. The chlorine smell, explanation (Journeyman): Yes: Tiny sodium hypochlorite and Huge fresh water worked because the fresh water dilutes the combined chlorine away, and the small top-up of hypochlorite keeps the free chlorine working. But a better solution would also put back the alkalinity the busy week used up.
+
+7g5. The chlorine smell, explanation (Pool Pro): The best answer was Tiny sodium hypochlorite, Huge sodium bicarbonate and Huge fresh water. Dilution is the sure cure for combined chlorine that has built up, as some of it will not burn off however much chlorine goes in; the small top-up of hypochlorite keeps the free chlorine working without a shock dose; and the bicarbonate puts back the alkalinity the busy week used up.
 
 7h1. Eating the grout, briefing (Journeyman): The pool was refilled from soft mains water. Its calcium hardness is 50 mg/l and it is eating the grout. As a Journeyman, fix the fault: bring calcium hardness to 100 or more and the balance to −0.5 to +0.5.
 
@@ -88,7 +100,9 @@ HALL 4: THE CHALLENGE CARDS
 
 7h3. Eating the grout, clue: Aggressive water wants calcium: give it some and it stops taking it from the grout. But the balance index also needs alkalinity, and this water has almost none. Fix the buffer as well as the hardness.
 
-7h4. Eating the grout, explanation: The ideal answer was Huge sodium bicarbonate, Large calcium chloride and Huge fresh water. The calcium chloride raises the hardness, the bicarbonate rebuilds the alkalinity, and together they bring the balance index into range; the fresh water evens out the pH and the rest.
+7h4. Eating the grout, explanation (Journeyman): Yes: Large soda ash and Huge calcium chloride worked because the calcium chloride raises the hardness and the soda ash lifts the pH and the alkalinity, so together they bring the balance index into range and the water stops eating the grout. But a better solution would rebuild the alkalinity without pushing the pH up, and leave every other reading right as well.
+
+7h5. Eating the grout, explanation (Pool Pro): The best answer was Huge sodium bicarbonate, Large calcium chloride and Huge fresh water. The calcium chloride raises the hardness; the bicarbonate rebuilds the alkalinity without overshooting the pH, as a stronger alkali would; together they bring the balance index into range, and the fresh water evens out the pH and the rest.
 
 7i1. Faecal incident: The Floater, briefing (Journeyman): A floater in the shallow end. The pool has been cleared and the offending article netted out by a lifeguard who did not sign up for this. A formed stool needs no superchlorination, but the free chlorine is only 0.5 mg/l and the pH 7.8, so what chlorine there is works poorly. As a Journeyman, fix the fault: bring the free chlorine up to 1.0 to 2.0 mg/l and the pH to 7.2 to 7.6, and let it circulate before the pool reopens.
 
@@ -96,7 +110,9 @@ HALL 4: THE CHALLENGE CARDS
 
 7i3. Faecal incident: The Floater, clue: Chlorine kills as hypochlorous acid, and the higher the pH, the less of it there is. More chlorine alone is not enough: bring the pH down too. But most acids eat the buffer, and the buffer here is already thin.
 
-7i4. Faecal incident: The Floater, explanation: The ideal answer was Medium sodium hypochlorite, Medium carbon dioxide and Large sodium bicarbonate. The hypochlorite lifts the free chlorine towards the top of its range, as the guidance asks after a formed stool; the carbon dioxide brings the pH down, so more of that chlorine is the strong hypochlorous acid, without eating the alkalinity; the bicarbonate rebuilds the buffer. No superchlorination: that is for the runny kind.
+7i4. Faecal incident: The Floater, explanation (Journeyman): Yes: Medium sodium hypochlorite and Medium hydrochloric acid worked because the hypochlorite lifts the free chlorine towards the top of its range, as the guidance asks after a formed stool, and the acid brings the pH down, so more of that chlorine is the strong hypochlorous acid. But a better solution would lower the pH without eating the thin buffer, and rebuild it. No superchlorination: that is for the runny kind.
+
+7i5. Faecal incident: The Floater, explanation (Pool Pro): The best answer was Medium sodium hypochlorite, Medium carbon dioxide and Large sodium bicarbonate. The hypochlorite lifts the free chlorine towards the top of its range, as the guidance asks after a formed stool; carbon dioxide brings the pH down, so more of that chlorine is the strong hypochlorous acid, without eating the alkalinity as a mineral acid would; the bicarbonate rebuilds the thin buffer. No superchlorination: that is for the runny kind.
 
 HALL 5: A DAY IN THE LIFE
 
