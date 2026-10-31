@@ -406,27 +406,25 @@ export const TAGS: Readonly<Record<string, string>> = (() => {
   for (const n of NODES) tags[n.id] = machineTag(n.id);
   METERS.forEach((m, k) => (tags[`meter.${m}`] = `${ROOM_CODE}-AI${k + 1}`));
   tags['desk'] = `${ROOM_CODE}-DS1`;
-  tags['printer'] = `${ROOM_CODE}-TP1`;
-  tags['labTime'] = `${ROOM_CODE}-KI1`;
   tags['beam'] = `${ROOM_CODE}-BB1`;
   tags['mimic'] = `${ROOM_CODE}-MP1`;
   return tags;
 })();
 
 /**
- * The hall's instruments, not set into a line: the dosing desk that works
- * the tanks' valves and sends in swimmers, the mimic panel that repeats
- * them, the teleprinter that logs every dose and reading, and the Balance
- * Beam that weighs the water's balance. Each binds its drawing by its id;
- * its tag is above (DS1, MP1, TP1, BB1).
+ * The hall's instruments, not set into a line: the dosing console that
+ * works the tanks' valves (mission 113: three touch screens and DOSE), the
+ * mimic panel that repeats them, and the Balance Beam that weighs the
+ * water's balance. Each binds its drawing by its id; its tag is above
+ * (DS1, MP1, BB1). The teleprinter (TP1) and LAB TIME (KI1) are gone with
+ * the old desk (the owner, 2026-10-31).
  */
 export const INSTRUMENTS: readonly {
-  id: 'desk' | 'mimic' | 'printer' | 'beam';
+  id: 'desk' | 'mimic' | 'beam';
   role: string;
 }[] = [
-  { id: 'desk', role: 'dosing desk' },
+  { id: 'desk', role: 'dosing console' },
   { id: 'mimic', role: 'mimic panel' },
-  { id: 'printer', role: 'log teleprinter' },
   { id: 'beam', role: 'balance indicator' },
 ];
 
@@ -1208,12 +1206,14 @@ export const HALL4_MODEL = {
 /** The green bands the readout paints (PWTAG, as `doc/prompts/107d-chemistry-lab.md` cites). */
 export const GREEN: Record<MeterId, readonly [number, number] | null> = {
   fc: [1, 2],
-  cc: [0, 0.5],
+  // The challenge engine's bands (mission 113, `museum-4-challenge.ts`
+  // BANDS), so a won card never shows a meter outside green.
+  cc: [0, 1.0],
   tc: null,
-  ph: [7.0, 7.4],
+  ph: [7.2, 7.6],
   hocl: null,
   ta: [80, 200],
-  ch: [80, 200],
+  ch: [100, 1000],
   tds: [0, 1000],
   so4: [0, 360],
   lsi: [-0.5, 0.5],

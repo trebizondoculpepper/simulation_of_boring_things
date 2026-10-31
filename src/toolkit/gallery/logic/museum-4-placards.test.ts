@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { hall4Entrance, hall4Facts, hall4Placards } from './museum-4-placards';
+import {
+  CARD_NARRATION,
+  cardNarrationScript,
+  hall4Entrance,
+  hall4Facts,
+  hall4Placards,
+} from './museum-4-placards';
+import { CHALLENGES } from '../../../game/plant/museum-4-cards';
+import script from '../../../../doc/scripts/museum/museum-narration.txt?raw';
 
 describe('Hall 4’s words', () => {
   it('has five stations, desk to challenges, in the order of the way round', () => {
@@ -17,5 +25,19 @@ describe('Hall 4’s words', () => {
     expect(Math.round(k.resetHocl)).toBe(54);
     expect(hall4Entrance().introduction).toContain('500 tonnes');
     expect(hall4Placards()[1].title).toContain('M4-CT1');
+  });
+});
+
+describe('Hall 4’s card narrations', () => {
+  it('have a clip slot for each card’s briefing, clue and explanation', () => {
+    for (const c of CHALLENGES)
+      expect(Object.keys(CARD_NARRATION[c.id]).sort()).toEqual([
+        'briefing',
+        'clue',
+        'explanation',
+      ]);
+  });
+  it('are in the narration script for recording, word for word', () => {
+    expect(script).toContain(cardNarrationScript());
   });
 });

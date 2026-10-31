@@ -1,5 +1,4 @@
 import {
-  CARDS,
   TANKS,
   TAGS,
   VOLUME,
@@ -9,6 +8,8 @@ import {
 } from '../../../game/plant/museum-4-lab';
 import { RESET_SIGN } from './ideal-pool-plant-placards';
 import type { Placard } from './ideal-pool-plant-placards';
+import { CHALLENGES } from '../../../game/plant/museum-4-cards';
+import type { NarrationKind } from '../../../game/plant/museum-4-challenge';
 
 export { RESET_SIGN };
 
@@ -44,11 +45,10 @@ export function hall4Placards(): Placard[] {
       of: 'desk',
       icon: 'meter',
       headline: 'The station',
-      title: `Dosing desk · ${TAGS['desk']}`,
-      body: `Choose a chemical, dial how much on the thumbwheels, press DOSE. Its valve opens, the dose runs down the header to the dosing pot ${shortTag('pot')} and into the pool’s return. CANCEL stops it. The teleprinter ${shortTag('printer')} writes every dose down against the time.`,
+      title: `Dosing console · ${TAGS['desk']}`,
+      body: `Choose a chemical on the middle screen and a size on the right, Tiny to Huge, each about three times the last; press DOSE. Its valve opens and the whole dose goes in at once, down the header to the dosing pot ${shortTag('pot')} and into the pool’s return. The left screen runs the challenges, and RESET.`,
       fact: 'Here you are the controller: nothing doses itself.',
-      tryIt:
-        'Dose 12.7 litres of acid (CT3) and watch the pH fall to about 7.24.',
+      tryIt: 'Dose a Medium hydrochloric acid and watch the pH fall.',
     },
     {
       station: 2,
@@ -68,10 +68,9 @@ export function hall4Placards(): Placard[] {
       icon: 'pool',
       headline: 'The swimmers',
       title: `Ideal swimmers · ${TAGS['swimmers']}`,
-      body: 'Every swimmer brings sweat and urine. Chlorine reacts with them and is used up, and makes combined chlorine (chloramines): the “chlorine smell” of a pool is really trichloramine. Enough chlorine, about eight times the nitrogen (7.6 in theory), breaks them down: breakpoint.',
+      body: 'Every swimmer brings sweat and urine. Chlorine reacts with them and is used up, and makes combined chlorine (chloramines): the “chlorine smell” of a pool is really trichloramine. Enough chlorine, about eight times the nitrogen (7.6 in theory), breaks them down: breakpoint. Twenty swimmers are always in the pool in free play; each challenge brings its own.',
       fact: 'Urea from swimmers breaks down slowly: half of it lasts about 63 hours.',
-      tryIt:
-        'Press +20 SWIMMERS, then TIME ×600, and watch the free chlorine fall.',
+      tryIt: 'In free play, watch the free chlorine slowly fall as they swim.',
     },
     {
       station: 4,
@@ -89,9 +88,9 @@ export function hall4Placards(): Placard[] {
       icon: 'map',
       headline: 'The challenges',
       title: 'Challenge cards',
-      body: `Pick a card on the CHALLENGE selector and press START. Something is wrong with the water: put it right. Keep the readout in range for an hour of pool time and the log prints PUT RIGHT. ${CARDS.length} cards, from high pH to a faecal incident.`,
+      body: `Pick a card on the console’s left screen, JOURNEYMAN or POOL PRO, and press START. Something is wrong with the water: put it right within par, and keep it in range for an hour of lab time. A Journeyman fixes the card’s target; a Pool Pro leaves every reading in range. ${CHALLENGES.length} cards, easiest first.`,
       fact: 'In practice the pH rises after dechlorination: check it and add acid.',
-      tryIt: 'Try HIGH PH first, then FAECAL at TIME ×3600.',
+      tryIt: `Try “${CHALLENGES[0].title}” first, as a Journeyman.`,
     },
   ];
 }
@@ -120,10 +119,30 @@ export function beamPlacard(): Placard {
 }
 
 /**
- * Each challenge card's narration clip, by card: none recorded yet (an
- * empty id), the hook for TODO.md's clip per scenario.
+ * Each challenge card's narration clips, by card and narration (briefing,
+ * clue, explanation; mission 113): none recorded yet (an empty id), their
+ * words in `doc/scripts/museum/museum-narration.txt` for recording.
  */
-export const CARD_NARRATION: readonly string[] = CARDS.map(() => '');
+export const CARD_NARRATION: Readonly<
+  Record<string, Record<NarrationKind, string>>
+> = Object.fromEntries(
+  CHALLENGES.map((c) => [c.id, { briefing: '', clue: '', explanation: '' }]),
+);
+
+/** The cards' narrations as the recording script sets them out. */
+export function cardNarrationScript() {
+  const lines = ['HALL 4: THE CHALLENGE CARDS', ''];
+  CHALLENGES.forEach((c, k) => {
+    for (const [n, kind] of (
+      ['briefing', 'clue', 'explanation'] as const
+    ).entries())
+      lines.push(
+        `7${'bcdefghij'[k]}${n + 1}. ${c.title}, ${kind}: ${c[kind]}`,
+        '',
+      );
+  });
+  return lines.join('\n');
+}
 
 export function hall4Entrance() {
   const k = hall4Facts();
@@ -137,6 +156,6 @@ export function hall4Entrance() {
       what: p.title.split(' · ')[0],
     })),
     reset:
-      'Can’t break it: the big red RESET SIMULATION button puts everything back to the start.',
+      'Can’t break it: RESET on the console’s left screen puts everything back to the start.',
   };
 }

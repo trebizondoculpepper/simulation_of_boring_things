@@ -1,14 +1,10 @@
-import { Group, Matrix4, Vector3 } from 'three';
+import { Group, Matrix4, Vector2, Vector3 } from 'three';
 import type { Object3D } from 'three';
 import type { PanelKit } from '../../../components/core/views/eighties-controls';
-import { createSevenSegment } from '../../../components/core/views/eighties-controls';
 import { createPartSet } from '../../../components/core/parts/parts';
 import { createPipe } from '../../../components/core/views/pipe-kinds';
 import { mergeTree } from '../../../components/core/views/merge-static';
-import {
-  componentOf,
-  markComponent,
-} from '../../../components/core/views/component-identity';
+import { markComponent } from '../../../components/core/views/component-identity';
 import { tools } from '../../../components/core/views/fitting-tools';
 import { createEndSuctionPump } from '../../../components/plant/views/pumps-plant';
 import {
@@ -19,41 +15,49 @@ import { createSolenoidValve as createDoseSolenoid } from '../../../components/p
 import { createSolenoidValve } from '../../../components/plant/views/solenoid-valve';
 import { createIdealVessel } from '../../../components/plant/views/ideal-vessel';
 import { createMimicBoard } from '../../../components/industrial-control/views/mimic-board';
-import { teleprinterInMetres } from '../../../components/industrial-control/views/teleprinter';
 import {
   createBalanceBeam,
   createChemicalTank,
-  createChallengePanel,
-  createDosingDesk,
-  createTimePanel,
   createReadoutBoard,
 } from '../../../components/plant/views/museum-chemistry-parts';
 import {
-  CARDS,
   DOSE_SECONDS,
   FITTINGS,
   GREEN,
-  HALL4_MODEL,
   LINK_NAMES,
   METERS,
   METER_LABEL,
   METER_PLACES,
   SCALE,
-  SWIMMERS,
   TAGS,
   TANKS,
-  actOnHall4,
   balanceTerms,
-  digitOf,
   meterValue,
   readWater,
   shortTag,
-  vfdLine,
 } from '../../../../game/plant/museum-4-lab';
 import type {
-  Hall4Action,
   Hall4Readings,
+  Hall4State,
 } from '../../../../game/plant/museum-4-lab';
+import { CHALLENGES } from '../../../../game/plant/museum-4-cards';
+import {
+  canDose,
+  doseGame,
+  dosesLeft,
+  newGame,
+  resetGame,
+  scenarioView,
+  startCard,
+  stepGame,
+  toFreePlay,
+} from '../../../../game/plant/museum-4-challenge';
+import type {
+  Hall4Game,
+  NarrationKind,
+} from '../../../../game/plant/museum-4-challenge';
+import { touchPoint } from '../../../controls/input/touch-point';
+import { createDosingConsole } from '../../views/dosing-console';
 import {
   BALANCE_TANK,
   BEAM,
@@ -71,13 +75,10 @@ import {
   NORTH,
   POOL,
   POT,
-  PRINTER,
   PUMP,
   READOUT,
-  RESET,
   SOUTH,
-  LAB_TIME,
-  RESET_LECTERN_BACK,
+  PLAQUE,
   TANK_Z,
   TANK_LIFT,
   BUND,
@@ -97,23 +98,13 @@ import {
 import {
   CARD_NARRATION,
   beamPlacard,
-  RESET_SIGN,
   hall4Placards,
 } from '../../logic/museum-4-placards';
-import {
-  SPEEDS,
-  hallSession,
-  localNow,
-  runSession,
-  setSpeed,
-} from '../../logic/museum-time';
-import type { TimeSpeed } from '../../logic/museum-time';
+import { localNow } from '../../logic/museum-time';
 import {
   createLectern,
-  createResetPedestal,
   createWallPanel,
   heldPumpSound,
-  paintResetSign,
 } from '../../views/museum-exhibit';
 import type { MimicState } from '../../../components/industrial-control/logic/mimic';
 import type { HallExhibit } from './exhibits';
@@ -139,6 +130,11 @@ const FACE_WEST = -Math.PI / 2;
  */
 const PIPES_DEFERRED = true;
 
+/** Real seconds a dosed tank's valve and lamps show open after DOSE. */
+const DOSE_SHOWN = 1.5;
+/** Real seconds a narration's words stay on the scenario screen. */
+const CAPTION_SECONDS = 20;
+
 /**
  * The hook for each challenge card's narration clip (TODO.md: a clip per
  * scenario, played when the challenge starts): no clips yet, so nothing
@@ -155,21 +151,40 @@ const turnTo = (o: Object3D, x: number, y: number, z: number, yaw: number) => {
 };
 
 export function buildHallExhibit(kit: PanelKit): HallExhibit {
-  let session = hallSession(HALL4_MODEL, localNow());
-  let reading: Hall4Readings = readWater(session.state.bench.pool);
-  let mimicState: MimicState = hall4MimicState(session.state);
+  // The hall's game (mission 113): free play or a challenge card, at a
+  // fixed 1,000×, around the lab's own state.
+  let game: Hall4Game = newGame(localNow());
+  let reading: Hall4Readings = readWater(game.lab.bench.pool);
+  let mimicState: MimicState = hall4MimicState(game.lab);
   let mimicDue = 0;
-  let sinceReset = 0;
-  let printedShown = 0;
+  let caption: { kind: NarrationKind; text: string } | null = null;
+  let captionLeft = 0;
+  let seenSeq = 0;
   // The pump's lever valves, worked by hand: shut either and nothing
   // circulates (the flowmeter, the pump's gauges and the mimic say so).
   const pumpValves = { 'pump.suction': true, 'pump.discharge': true };
   const circulating = () =>
     pumpValves['pump.suction'] && pumpValves['pump.discharge'];
-  const state = () => session.state;
-  const act = (a: Hall4Action) => {
-    session = { ...session, state: actOnHall4(session.state, a) };
-    reading = readWater(session.state.bench.pool);
+  /**
+   * The lab as the hall shows it: a dose goes in at once, so its tank's
+   * valve and lamps are shown open for `DOSE_SHOWN` real seconds after
+   * DOSE, as a delivery (four lab seconds are four real milliseconds).
+   */
+  const state = (): Hall4State => {
+    const d = game.lastDosed;
+    return d && d.ago < DOSE_SHOWN
+      ? {
+          ...game.lab,
+          delivering: {
+            tank: d.tank,
+            amount: 0,
+            left: DOSE_SECONDS * (1 - d.ago / DOSE_SHOWN),
+          },
+        }
+      : game.lab;
+  };
+  const changed = () => {
+    reading = readWater(game.lab.bench.pool);
     mimicDue = 0;
   };
 
@@ -199,9 +214,6 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       model: { node: id },
       ...(status ? { status } : {}),
     });
-  /** The exhibit's own controls and readouts, which work no plant. */
-  const exhibitOnly = (o: Object3D) =>
-    markComponent(o, { ...componentOf(o), decorative: true });
 
   // ---- The tanks, on their bund ----
   // The bund is the tanks' concrete plinth and spill wall: structure, not
@@ -495,59 +507,52 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       ),
     );
 
-  // ---- The desk, its mimic, the teleprinter, LAB TIME ----
-  const tankIds = TANKS.map((x) => x.id);
-  const desk = createDosingDesk(kit, {
-    tanks: TANKS.map((x) => ({ code: x.code, short: x.short })),
-    select: (k) => act({ type: 'select', tank: tankIds[k] }),
-    selected: () =>
-      state().selected ? tankIds.indexOf(state().selected!) : null,
-    digit: (d) => digitOf(state().dial, d),
-    wheel: (d, by) => act({ type: 'wheel', digit: d as 0 | 1 | 2 | 3, by }),
-    dose: () => act({ type: 'dose' }),
-    cancel: () => act({ type: 'cancel' }),
-    dosing: () => state().delivering !== null,
-    vfd: () => vfdLine(state()),
-    group: () => act({ type: 'group' }),
-    swimmers: {
-      get value() {
-        return SWIMMERS.indexOf(state().swimmers);
-      },
-      set: (p: number) =>
-        act({
-          type: 'swimmers',
-          swimmers: SWIMMERS[Math.max(0, Math.min(2, p))],
-        }),
+  // ---- The dosing console and the mimic ----
+  // Mission 113: three Aero touch screens and DOSE, in place of the old
+  // desk, front and centre before the tanks (the owner, 2026-10-31).
+  const desk = createDosingConsole(kit, {
+    titles: CHALLENGES.map((c) => c.title),
+    scenario: () => scenarioView(game),
+    caption: () => caption,
+    left: () => (game.card ? dosesLeft(game) : null),
+    ready: () => canDose(game),
+    effect: (e) => {
+      if (e.type === 'start')
+        game = startCard(game, CHALLENGES[e.card], e.level);
+      else if (e.type === 'reset') game = resetGame(game);
+      else if (e.type === 'retry' && game.card)
+        game = startCard(game, game.card, game.level);
+      else game = toFreePlay(game);
+      changed();
     },
-    // The TIME buttons are on the wall under LAB TIME (the owner, 2026-10-31).
-    speeds: [],
-    speed: () => session.clock.speed,
-    setSpeed: () => {},
-    card: () => state().card,
-    // The CHALLENGE controls are on the wall under the cards' poster (the
-    // owner, 2026-10-31).
-    cards: 0,
-    stepCard: () => {},
-    startCard: () => {},
-    cardTitle: () => CARDS[state().card].title,
+    dose: (tank, size) => {
+      if (!canDose(game)) return false;
+      game = doseGame(game, tank, size);
+      changed();
+      return true;
+    },
   });
   turnTo(desk.group, DESK.x, 0, DESK.z, FACE_SOUTH);
   object.add(
     instrument(
       desk.group,
       'desk',
-      'dosing desk (Penfold Controls)',
+      'dosing console (Penfold Controls; ClearDose Studio by Aqualis)',
       () =>
-        `its display reads “${vfdLine(state())}”; CHALLENGE at ${state().card + 1}`,
+        game.card
+          ? `${game.card.title}: ${game.used} of par ${game.card.pars[game.level]} used`
+          : 'free play',
     ),
   );
-  // Its TIME and CHALLENGE buttons are the exhibit's (the simulation's
-  // speed and its challenge cards), not plant: decorative, as RESET is.
-  desk.group.traverse((o) => {
-    if (/^(TIME ×|CHALLENGE )/.test(o.name)) exhibitOnly(o);
-  });
-  for (const [o, use] of desk.parts.uses) parts.uses.set(o, use);
-  take(desk.uses);
+  // Each touchable answers a use with where it was touched (`touchPoint`).
+  for (const o of desk.touchables)
+    parts.uses.set(o, () => {
+      const at = touchPoint(o);
+      desk.touch(
+        o,
+        at && !Number.isNaN(at.u) ? new Vector2(at.u, at.v) : undefined,
+      );
+    });
   updates.push(desk.update);
 
   const board = createMimicBoard(kit, HALL4_MIMIC, {
@@ -573,82 +578,34 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   );
   take(board.parts.uses);
 
-  const printer = teleprinterInMetres('M4-TP1 LAB LOG', 0.95);
-  turnTo(printer.group, PRINTER.x, 0.95, PRINTER.z, FACE_SOUTH);
-  // It stands on its own pedestal, down to the floor.
-  object.add(printer.group);
-  object.add(
-    instrument(
-      printer.group,
-      'printer',
-      'teleprinter, the lab’s log sheet',
-      () => `last printed: ${state().log.at(-1) ?? ''}`,
-    ),
-  );
-  const labTime = new Group();
-  // On the archways' wall, centred between them, flush, below the hall's
-  // title (the owner, 2026-10-31).
-  turnTo(labTime, LAB_TIME.x, LAB_TIME.y, SOUTH - 0.025, Math.PI);
-  labTime.userData.onWall = 'LAB TIME display';
-  // Tall enough for its legend under the digits (it was cut off).
-  t.box(labTime, t.paint('#1b2328', 0.5), 0.6, 0.3, 0.05, 0, 0, 0);
-  const timeDigits = createSevenSegment(kit, 5, { digitHeight: 0.1 });
-  timeDigits.group.position.set(0, 0.03, 0.027);
-  labTime.add(timeDigits.group);
-  t.label(
-    labTime,
-    `LAB TIME ${shortTag('labTime')}`,
-    0,
-    -0.11,
-    0.027,
-    0.025,
-    '#f4f3ee',
-  );
-  object.add(
-    markComponent(labTime, {
-      name: `${TAGS['labTime']} LAB TIME display`,
-      // The exhibit's own clock (the simulation's time), not plant.
-      decorative: true,
-      status: () => `shows ${clockShown} at TIME ×${session.clock.speed}`,
-    }),
-  );
-  // The TIME buttons under it, a small flush panel at reach height:
-  // exhibit controls (the simulation's speed), decorative.
-  const timePanel = createTimePanel(kit, {
-    speeds: SPEEDS,
-    speed: () => session.clock.speed,
-    setSpeed: (s) => {
-      session = { ...session, clock: setSpeed(session.clock, s as TimeSpeed) };
-    },
-    ahead: () => state().seconds - sinceReset,
+  // The 1,000× plaque where LAB TIME hung (mission 113): words, decorative.
+  const plaque = createWallPanel(kit, '1,000× plaque', 1.1, 0.32, (c, w, h) => {
+    c.fillStyle = '#b8955a';
+    c.fillRect(0, 0, w, h);
+    c.strokeStyle = '#6d5124';
+    c.lineWidth = h * 0.04;
+    c.strokeRect(h * 0.04, h * 0.04, w - h * 0.08, h - h * 0.08);
+    c.fillStyle = '#2a1d0a';
+    c.font = `bold ${h * 0.15}px Georgia, serif`;
+    c.textAlign = 'center';
+    c.fillText(
+      'This laboratory runs 1,000 times faster than real life:',
+      w / 2,
+      h * 0.36,
+      w * 0.92,
+    );
+    c.fillText(
+      'an hour passes in under four seconds, to make life bearable.',
+      w / 2,
+      h * 0.68,
+      w * 0.92,
+    );
   });
-  turnTo(timePanel.group, LAB_TIME.x, LAB_TIME.buttonsY, SOUTH, Math.PI);
-  timePanel.group.userData.onWall = 'TIME panel';
+  turnTo(plaque, PLAQUE.x, PLAQUE.y, SOUTH, Math.PI);
+  plaque.userData.onWall = '1,000× plaque';
   object.add(
-    markComponent(timePanel.group, {
-      name: 'TIME panel',
-      decorative: true,
-      status: () => `TIME ×${session.clock.speed} lit`,
-    }),
+    still(markComponent(plaque, { name: '1,000× plaque', decorative: true })),
   );
-  timePanel.group.traverse((o) => {
-    if (o.name === 'TIME selector') exhibitOnly(o);
-  });
-  take(timePanel.parts.uses);
-  updates.push(timePanel.update);
-  let clockShown = '';
-  updates.push((delta) => {
-    const s = state();
-    const sec = Math.floor((s.start + s.seconds) % 86400);
-    const two = (n: number) => String(n).padStart(2, '0');
-    const text = `${two(Math.floor(sec / 3600))}.${two(Math.floor(sec / 60) % 60)}`;
-    if (text !== clockShown) timeDigits.show((clockShown = text));
-    // New lines onto the paper, a line at a time.
-    const fresh = Math.min(s.printed - printedShown, s.log.length);
-    for (const line of s.log.slice(s.log.length - fresh)) printer.record(line);
-    printedShown = s.printed;
-    printer.update(delta, false);
-  });
 
   // ---- The dosing pot, the pump, the pool ----
   const pot = new Group();
@@ -820,97 +777,36 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       c.fillText('THE CHALLENGE CARDS', w * 0.02, h * 0.1);
       c.font = `${h * 0.05}px Arial`;
       c.fillText(
-        'Choose a card below (◄ ►), press START, put the water right and keep it so for an hour.',
+        'Choose a card on the console’s left screen, JOURNEYMAN or POOL PRO, press START; put the water right within par and keep it so for an hour.',
         w * 0.02,
         h * 0.18,
         w * 0.96,
       );
-      CARDS.forEach((card, k) => {
-        const col = k < 6 ? 0 : 1;
-        const row = k % 6;
+      CHALLENGES.forEach((card, k) => {
+        const col = k < 4 ? 0 : 1;
+        const row = k % 4;
         const x = w * (0.02 + col * 0.5);
-        const y = h * (0.3 + row * 0.12);
+        const y = h * (0.32 + row * 0.17);
         c.font = `bold ${h * 0.05}px Arial`;
-        c.fillText(`${k + 1} ${card.title}`, x, y, w * 0.46);
+        c.fillText(
+          `${k + 1} ${card.title}  (par ${card.pars.journeyman} · ${card.pars.pro})`,
+          x,
+          y,
+          w * 0.46,
+        );
         c.font = `${h * 0.037}px Arial`;
-        c.fillText(`GOAL: ${card.goal}`, x, y + h * 0.045, w * 0.46);
+        c.fillText(card.goal, x, y + h * 0.05, w * 0.46);
       });
     },
   );
   turnTo(cardsBoard, CARDS_BOARD.x, CARDS_BOARD.y, NORTH, FACE_SOUTH);
   cardsBoard.userData.onWall = 'Challenge cards';
-  // Its controls on a flush plate centred under it, at reach height:
-  // exhibit controls (the challenges), decorative.
-  const challengePanel = createChallengePanel(kit, {
-    card: () => state().card,
-    cards: CARDS.length,
-    stepCard: (by) => act({ type: 'card', by }),
-    startCard: () => {
-      act({ type: 'start-card' });
-      narrate(CARD_NARRATION[state().card]);
-    },
-  });
-  turnTo(
-    challengePanel.group,
-    CARDS_BOARD.x,
-    CARDS_BOARD.controlsY,
-    NORTH,
-    FACE_SOUTH,
-  );
-  challengePanel.group.userData.onWall = 'CHALLENGE panel';
-  object.add(
-    markComponent(challengePanel.group, {
-      name: 'CHALLENGE panel',
-      decorative: true,
-      status: () => `card ${state().card + 1} chosen`,
-    }),
-  );
-  challengePanel.group.traverse((o) => {
-    if (/^CHALLENGE /.test(o.name)) exhibitOnly(o);
-  });
-  take(challengePanel.parts.uses);
-  updates.push(challengePanel.update);
   object.add(still(cardsBoard));
 
   // No entrance panel (the owner, 2026-10-31): the desk invites the visitor.
   const root = new Group();
   root.name = 'Hall 4';
   root.add(object);
-  const resetSign = createWallPanel(
-    kit,
-    'RESET sign',
-    1.0,
-    0.56,
-    paintResetSign(RESET_SIGN),
-  );
-  // Its back flush to the wall behind the pedestal.
-  // On a lectern just behind the pedestal, tilted toward the visitor at
-  // RESET (the owner, 2026-10-31).
-  const resetLectern = new Group();
-  resetLectern.name = 'RESET sign lectern';
-  const lecternFrame = t.paint('#2b3438', 0.5, 0.3);
-  t.box(resetLectern, lecternFrame, 0.36, 0.03, 0.3, 0, 0.015, 0);
-  t.box(resetLectern, lecternFrame, 0.07, 0.95, 0.07, 0, 0.475, 0);
-  resetSign.position.set(0, 1.25, 0.03);
-  resetSign.rotation.x = -0.45;
-  resetLectern.add(resetSign);
-  resetLectern.position.set(0, 0, -RESET_LECTERN_BACK);
-  const resetButton = createResetPedestal(kit, {
-    reset: () => reset(localNow()),
-    lit: () => sinceReset < 2.5,
-  });
-  turnTo(resetButton.group, RESET.x, 0, RESET.z, FACE_SOUTH);
-  resetButton.group.add(resetLectern);
-  // The exhibit's RESET: it restarts the simulation, it works no plant.
-  object.add(
-    markComponent(resetButton.group, {
-      name: 'RESET SIMULATION pedestal',
-      decorative: true,
-    }),
-  );
-  take(resetButton.parts.uses);
-  updates.push(resetButton.update);
-
   for (const p of hall4Placards()) {
     const at = LECTERNS[p.station!];
     const lectern = createLectern(kit, p);
@@ -919,15 +815,11 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   }
 
   function reset(now: number) {
-    session = hallSession(HALL4_MODEL, now);
-    reading = readWater(session.state.bench.pool);
-    mimicDue = 0;
-    sinceReset = 0;
+    game = newGame(now);
+    changed();
+    caption = null;
     pumpValves['pump.suction'] = true;
     pumpValves['pump.discharge'] = true;
-    // The sheet torn off: a fresh sheet's lines follow.
-    printer.record('---------------- TORN OFF ----------------');
-    printedShown = 0;
   }
 
   // Turned half round, along the south wall (layout C, `STANDS`).
@@ -935,17 +827,25 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   return {
     object: root,
     parts,
-    status: () =>
-      state().active ? `card ${state().card + 1} running` : 'at rest',
+    status: () => (game.card ? `${game.card.title} running` : 'free play'),
     solids: () => solids,
     reset,
     update(delta) {
-      session = runSession(HALL4_MODEL, session, delta);
-      sinceReset += delta;
-      reading = readWater(session.state.bench.pool);
+      game = stepGame(game, delta);
+      // A narration fired: its clip, and its words on the scenario screen.
+      const n = game.narration;
+      if (n && n.seq !== seenSeq && game.card) {
+        seenSeq = n.seq;
+        caption = { kind: n.kind, text: game.card[n.kind] };
+        captionLeft = CAPTION_SECONDS;
+        narrate(CARD_NARRATION[game.card.id]?.[n.kind] ?? '');
+      }
+      captionLeft -= delta;
+      if (!game.card || captionLeft <= 0) caption = null;
+      reading = readWater(game.lab.bench.pool);
       mimicDue -= delta;
       if (mimicDue <= 0) {
-        mimicState = hall4MimicState(session.state, false, circulating());
+        mimicState = hall4MimicState(state(), false, circulating());
         mimicDue = 0.25;
       }
       board.parts.update(delta);

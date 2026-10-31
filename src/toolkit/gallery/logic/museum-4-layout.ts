@@ -10,7 +10,8 @@ import { hallColumns, hallInterior, hallOrigin } from './museum-plan';
  * owner's layout (2026-10-31, revised the same day; see `TANK_LIFT`): the
  * tanks raised at the back, the desk before them, the pool on the hall's
  * west wall, the pump in its far corner, the mimic on its east wall,
- * RESET beside the desk, a lectern at each station along the way round.
+ * a lectern at each station along the way round (RESET is on the
+ * console's screen since mission 113).
  * Each pipe is one of the schematic's links. The exhibit turns all this, and
  * `placedFootprints` gives its footprints turned.
  */
@@ -58,8 +59,8 @@ export const SOUTH = INTERIOR.maxZ;
  * the arrival archway), under its two courtyard windows and centred on
  * them, lifted 0.6 m on a steel stand with the bund on its deck as a drip
  * tray; the desk 2 m in front of them on their centre line, its operating
- * side toward the visitor, the teleprinter on the operator's right, RESET
- * and its sign's lectern on the left; the pump in the far right corner;
+ * side toward the visitor (the dosing console since mission 113; the
+ * teleprinter and RESET are gone); the pump in the far right corner;
  * the readout board and the Balance Beam side by side on the west wall;
  * the mimic on the east wall. Here, turned, everything is negated.
  */
@@ -89,12 +90,16 @@ export const STAND = {
   maxZ: BUND.maxZ,
   h: TANK_LIFT,
 } as const;
-/** The desk 2 m in front of the stand (the owner, 2026-10-31), centred on the tanks, its operator's back to the arrival. */
+/**
+ * The dosing console (mission 113: three touch screens and DOSE, 2.4 by
+ * 0.85 m) 2 m in front of the stand (the owner, 2026-10-31), front and
+ * centre on the tanks, its operator's back to the arrival.
+ */
 export const DESK = {
   x: TANKS_MID,
-  z: STAND.maxZ + 2 + 0.375,
-  w: 2.0,
-  d: 0.75,
+  z: STAND.maxZ + 2 + 0.425,
+  w: 2.4,
+  d: 0.85,
 } as const;
 /**
  * Where the pipework was laid for (the first layout): re-plumbing for the
@@ -111,9 +116,6 @@ const plumbedTankX = (id: TankId) =>
  * at 4.05 m, under the windows' sills (4.2 m).
  */
 export const MIMIC_AT = { x: TANKS_MID, y: 3.35 } as const;
-export const PRINTER = { x: DESK.x + 1.6, z: DESK.z } as const;
-/** The teleprinter on its own stand, as drawn: its footprint about `PRINTER`. */
-export const PRINTER_FOOT = { hw: 0.33, minZ: -0.06, maxZ: 0.5 } as const;
 /**
  * The ideal pool (the owner, 2026-10-31: "where a visitor at the desk can
  * see the effect of dosing"): ahead and to the right of the desk, beside
@@ -198,21 +200,12 @@ export const BEAM_LECTERN = {
   yaw: Math.PI / 2,
 } as const;
 /**
- * The LAB TIME display on the archways' wall (SOUTH here, the hall's north
- * wall), centred between the archways, under the hall's title vinyl (from
- * 2.6 m) and clear of the sounder and the arches' bulkheads.
+ * The 1,000× plaque on the archways' wall (SOUTH here, the hall's north
+ * wall), centred between the archways, where LAB TIME hung (mission 113).
  */
-/** Its TIME buttons on a small flush panel centred under it, at reach height. */
-export const LAB_TIME = { x: 0, y: 2.2, buttonsY: 1.4 } as const;
+export const PLAQUE = { x: 0, y: 1.6 } as const;
 /** The challenge cards' poster on the back wall, its middle; its controls' plate centred under it. */
 export const CARDS_BOARD = { x: -5.0, y: 2.3, controlsY: 1.4 } as const;
-/**
- * RESET, in the middle of the north wall as the hall stands, flush to it,
- * between the archways' approaches, facing into the hall.
- */
-export const RESET = { x: DESK.x - 1.7, z: DESK.z } as const;
-/** The RESET sign's lectern, just behind the pedestal (toward the tanks). */
-export const RESET_LECTERN_BACK = 0.42;
 /** A lectern's footprint as drawn, facing +z: its tilted head overhangs its post. */
 export const LECTERN_FOOT = { hw: 0.47, hd: 0.21 } as const;
 /**
@@ -421,12 +414,6 @@ export function footprints() {
   return [
     { minX: STAND.minX, maxX: STAND.maxX, minZ: STAND.minZ, maxZ: STAND.maxZ },
     r(DESK.x, DESK.z, DESK.w / 2, DESK.d / 2),
-    {
-      minX: PRINTER.x - PRINTER_FOOT.hw,
-      maxX: PRINTER.x + PRINTER_FOOT.hw,
-      minZ: PRINTER.z + PRINTER_FOOT.minZ,
-      maxZ: PRINTER.z + PRINTER_FOOT.maxZ,
-    },
     r(POT.x, POT.z, POT.r, POT.r),
     r(PUMP.x, PUMP.z, PUMP_FOOT.hw, PUMP_FOOT.hd),
     r(POOL.x, POOL.z, POOL.w / 2, POOL.d / 2),
@@ -439,7 +426,6 @@ export function footprints() {
       maxZ: BEAM.z + (1.9 / 2) * BEAM_SCALE.x,
     },
     lecternFoot(BEAM_LECTERN),
-    r(RESET.x, RESET.z - 0.17, 0.5, 0.45),
     ...(LECTERNS_PARKED ? [] : Object.values(LECTERNS).map(lecternFoot)),
   ];
 }

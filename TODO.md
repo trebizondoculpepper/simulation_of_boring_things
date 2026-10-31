@@ -62,7 +62,8 @@ Sorted by kind (the owner, 2026-10-23): gameplay, architecture, lighting, and th
 - [ ] Mission 113: Hall 4's dosing console and challenge cards (`doc/prompts/113-hall-4-dosing-console.md`; the owner, 2026-10-31): three touch screens and a DOSE button, free play, golf-style challenge cards at Journeyman and Pool Pro, five exponential dose sizes in each chemical's own unit, a fixed 1,000× clock, an authoring solver with stored solutions replayed and fuzzed ±10 % in the tests, and a briefing and explanation for each card.
   - [x] Plans and Codex critiques (`doc/plans/113/`), the dose table, the challenge engine with its narrations, the solver and the first seven cards, tested (2026-10-31).
   - [x] The Frutiger Aero widget kit and the three screens, tried in dev57 (2026-10-31).
-  - [ ] The console installed in Hall 4 in place of the desk.
+  - [x] The console installed in Hall 4 in place of the desk (2026-10-31).
+  - [ ] Record the cards' narration clips (briefing, clue, explanation) and fill `CARD_NARRATION`; confirm the draft bands against PWTAG; re-plumb Hall 4 (deferred by the owner) so DOSE uses the real dosing path and the layout and binding tests pass again.
 
 - [x] **High-contrast aiming reticle** (the owner, 2026-10-29; done 2026-10-29, `aae85cee`): a slightly larger hollow light ring with a dark outer edge, retained on amber and green target feedback, and a dark outline on the red rejection cross.
 - [ ] **Review reticle contrast in the live game** against cream tile, dark plant rooms, and amber, green and red feedback; automated browser capture was unavailable during the implementation.
