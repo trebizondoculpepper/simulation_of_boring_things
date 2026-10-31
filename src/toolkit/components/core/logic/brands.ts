@@ -80,7 +80,9 @@ export type BrandMark =
   /** A traction sheave, its ropes hanging down to a car. */
   | 'sheave'
   /** A gas cylinder, its shoulder banded. */
-  | 'cylinder';
+  | 'cylinder'
+  /** A glossy water orb, a leaf curled round its foot. */
+  | 'orb';
 
 /** Every brand's id: a part names its maker by one of these. */
 export type BrandId =
@@ -116,7 +118,8 @@ export type BrandId =
   | 'haulmark'
   | 'plantrooms'
   | 'stannard'
-  | 'arncliffe';
+  | 'arncliffe'
+  | 'aqualis';
 
 export interface Brand {
   id: BrandId;
@@ -577,6 +580,24 @@ export const BRANDS: readonly Brand[] = [
     promise: 'A full cylinder on site before the last one is empty',
     mark: 'cylinder',
     colours: ['#1f5f8b', '#9aa0a3', '#14181b'],
+    type: 'sans',
+  },
+  {
+    // The dosing console's software house (mission 113, the owner,
+    // 2026-10-31): a British maker of glossy touch-screen software for
+    // leisure centres, of the late 2000s, whose ClearDose Studio runs Hall
+    // 4's console on Penfold's desk. Our own invention.
+    id: 'aqualis',
+    name: 'Aqualis Interactive',
+    wordmark: 'aqualis',
+    tagline: 'Clear water, clear screens',
+    founded: 2003,
+    country: 'England',
+    makes:
+      'Touch-screen control software for pools and leisure centres: ClearDose Studio, ClearView Leisure',
+    promise: 'Software as calm and clear as a well-kept pool',
+    mark: 'orb',
+    colours: ['#1d86c6', '#86d143', '#0d2f4a'],
     type: 'sans',
   },
 ];

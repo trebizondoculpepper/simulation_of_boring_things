@@ -77,6 +77,7 @@ export type GalleryRoomId =
   | 'dev54_4'
   | 'dev55'
   | 'dev56'
+  | 'dev57'
   | 'retired0'
   | 'retired1'
   | 'dev_corridor';
@@ -294,6 +295,8 @@ export const ROOMS: readonly RoomId[] = [
   'dev55',
   // By its URL only: baked ambient occlusion, tried on a plain room.
   'dev56',
+  // By its URL only: Hall 4's dosing console (mission 113).
+  'dev57',
   // By its URL only: the Olympic plant room, frozen as a reference.
   'retired0',
   'retired1',
@@ -481,6 +484,7 @@ export const DEV_ROOM_NAMES: Record<RoomId, string> = {
   dev54_4: 'DEV54 · TRIAL FLOOR 4',
   dev55: 'DEV55 · THE CO₂ CAGE',
   dev56: 'DEV56 · BAKED AMBIENT OCCLUSION',
+  dev57: 'DEV57 · THE DOSING CONSOLE',
   retired0: 'RETIRED0 · OLYMPIC PLANT ROOM, 2026-10-23',
   retired1: 'RETIRED1 · JACUZZI PLANT ROOM, 2026-10-25',
   dev_corridor: 'DEV CORRIDOR',
@@ -616,6 +620,7 @@ export const DEV_ROOM_COLOURS: Record<RoomId, string> = {
   dev54_4: '#8a6a8f',
   dev55: '#1f5f8b',
   dev56: '#5f6f4b',
+  dev57: '#2b9ad6',
   retired0: '#6d7a6f',
   retired1: '#6d7a6f',
   dev_corridor: '#2d9ca0',

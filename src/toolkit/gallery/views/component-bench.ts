@@ -1,3 +1,14 @@
+import { CHALLENGES } from '../../../game/plant/museum-4-cards';
+import {
+  canDose,
+  doseGame,
+  dosesLeft,
+  newGame,
+  scenarioView,
+  startCard,
+  stepGame,
+} from '../../../game/plant/museum-4-challenge';
+import { createDosingConsole } from './dosing-console';
 import {
   AmbientLight,
   Box3,
@@ -236,6 +247,51 @@ async function candidates(usage: Map<string, Usage>): Promise<Candidate[]> {
           t += clockStopped.value ? 0 : d;
           chart.set(swing(t));
           chart.update(d);
+        },
+      };
+    },
+  });
+  // Hall 4's dosing console (mission 113), its three Aero touch screens
+  // driven as a visitor would: the real engine at 1,000×, a challenge
+  // holding, a chemical and a size chosen every two seconds.
+  usage.set('part:dosing-console', { count: 1, busy: 0, rooms: ['dev57'] });
+  list.push({
+    id: 'part:dosing-console',
+    label: 'Dosing console (three Aero touch screens)',
+    source: 'part',
+    room: 'dev57',
+    build: (kit) => {
+      let game = startCard(newGame(), CHALLENGES[0], 'journeyman');
+      game = doseGame(game, 'hcl', 2);
+      const desk = createDosingConsole(kit, {
+        titles: CHALLENGES.map((c) => c.title),
+        scenario: () => scenarioView(game),
+        caption: () => null,
+        left: () => dosesLeft(game),
+        ready: () => canDose(game),
+        effect: () => {},
+        dose: () => false,
+      });
+      let t = 0;
+      let step = 0;
+      return {
+        object: desk.group,
+        update: (d) => {
+          if (!clockStopped.value) {
+            t += d;
+            game = stepGame(game, d);
+            if (game.outcome !== 'playing')
+              game = doseGame(
+                startCard(game, CHALLENGES[0], 'journeyman'),
+                'hcl',
+                2,
+              );
+            if (Math.floor(t / 2) !== step) {
+              step = Math.floor(t / 2);
+              desk.press(step % 2 ? 'chem-down' : 'size-up');
+            }
+          }
+          desk.update(d);
         },
       };
     },

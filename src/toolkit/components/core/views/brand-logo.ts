@@ -579,6 +579,43 @@ export function drawBrandMark(
       ctx.fillRect(-r * 0.16, -r * 0.66, r * 0.32, r * 0.07);
       break;
     }
+    case 'orb': {
+      // A glossy water orb, its highlight a crescent, a leaf at its foot.
+      const g = ctx.createRadialGradient(
+        -r * 0.3,
+        -r * 0.35,
+        r * 0.1,
+        0,
+        0,
+        r * 0.85,
+      );
+      g.addColorStop(0, '#ffffff');
+      g.addColorStop(0.35, main);
+      g.addColorStop(1, ink);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, -r * 0.08, r * 0.78, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.beginPath();
+      ctx.ellipse(
+        -r * 0.25,
+        -r * 0.45,
+        r * 0.32,
+        r * 0.14,
+        -0.5,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+      ctx.fillStyle = second;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.75, r * 0.85);
+      ctx.quadraticCurveTo(-r * 0.1, r * 0.25, r * 0.7, r * 0.6);
+      ctx.quadraticCurveTo(r * 0.05, r * 1.05, -r * 0.75, r * 0.85);
+      ctx.fill();
+      break;
+    }
     case 'tiles': {
       // Nine pale tiles in their grout, the bottom right one gone: behind
       // it, in the dark, a pipe bends round to a valve's handwheel.
