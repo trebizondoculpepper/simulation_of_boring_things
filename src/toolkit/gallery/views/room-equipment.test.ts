@@ -6,7 +6,9 @@ import {
   it,
   vi,
 } from 'vite-plus/test';
-import { Box3, Group, Mesh, MeshBasicMaterial } from 'three';
+import { Box3, Group, Mesh, MeshBasicMaterial, Vector3 } from 'three';
+import type { Object3D } from 'three';
+import type { PortableObject } from '../../controls/input/object-handling';
 import { createPanelKit } from '../../components/core/views/eighties-controls';
 import { EQUIPPED_ROOMS, layoutRoom } from '../logic/room-equipment';
 import {
@@ -67,6 +69,84 @@ describe.each(EQUIPPED_ROOMS)('%s, as built', (room) => {
       expect(box.min.z, p.item.label).toBeGreaterThan(f.minZ - SLACK);
       expect(box.max.z, p.item.label).toBeLessThan(f.maxZ + SLACK);
     });
+    built.dispose();
+  });
+});
+
+describe('the engineer’s office’s boxed software', () => {
+  const build = () => {
+    const built = createRoomEquipment(createPanelKit(), 'engineers_office');
+    const group = built.group as Group;
+    group.updateMatrixWorld(true);
+    const boxes = new Map<string, Object3D>();
+    let carton: Object3D | undefined;
+    let desk: Object3D | undefined;
+    group.traverse((o) => {
+      if (o.userData.softwareBox) boxes.set(o.userData.softwareBox, o);
+      if (o.name === 'Gateway 3000 carton') carton = o;
+      if (o.name === 'Engineer’s desk') desk = o;
+    });
+    return { built, group, boxes, carton: carton!, desk: desk! };
+  };
+  const pickUp = (box: Object3D) =>
+    (box.userData.portable as PortableObject).component.pickUp();
+
+  it('stands five of its eight boxes on the shelf over the desk, Pool Simulator 97 face out to the room', () => {
+    const { built, boxes, desk } = build();
+    expect(boxes.size).toBe(8);
+    const onShelf = [...boxes].filter(
+      ([, box]) => new Box3().setFromObject(box).min.y > 1.6,
+    );
+    expect(onShelf).toHaveLength(5);
+    const star = boxes.get('macrosoft-pool-simulator-97')!;
+    expect(onShelf.map(([id]) => id)).toContain('macrosoft-pool-simulator-97');
+    // Its front (+z) faces the way the desk's user faces, into the room.
+    const front = new Vector3(0, 0, 1).transformDirection(star.matrixWorld);
+    const room = new Vector3(0, 0, 1).transformDirection(desk.matrixWorld);
+    expect(front.dot(room)).toBeGreaterThan(0.95);
+    // Within reach of the eye: its middle a little above standing head height.
+    const middle = new Box3().setFromObject(star).getCenter(new Vector3());
+    expect(middle.y).toBeGreaterThan(1.7);
+    expect(middle.y).toBeLessThan(1.9);
+    built.dispose();
+  });
+
+  it('lets a box be picked up and put back exactly where it was', () => {
+    const { built, boxes } = build();
+    const box = boxes.get('macrosoft-pool-simulator-97')!;
+    const parent = box.parent;
+    const position = box.position.clone();
+    const quaternion = box.quaternion.clone();
+    expect(built.canRemove(box)).toBe(true);
+    pickUp(box);
+    // In the hands, as the control scheme carries it.
+    built.group.attach(box);
+    box.position.set(0, 1.5, 0);
+    expect(built.release(box)).toBe(true);
+    expect(box.parent).toBe(parent);
+    expect(box.position.distanceTo(position)).toBeLessThan(1e-9);
+    expect(box.quaternion.angleTo(quaternion)).toBeLessThan(1e-6);
+    built.dispose();
+  });
+
+  it('leaves the pile’s bottom box while the opened one is on it, and bins what is thrown in the carton', () => {
+    const { built, boxes, carton } = build();
+    const bottom = boxes.get('coshh-manager-95')!;
+    const top = boxes.get('beige-accounting-leisure-centre-ledger')!;
+    expect(built.canRemove(bottom)).toBe(false);
+    pickUp(top);
+    expect(built.release(top, carton.children[0])).toBe(true);
+    expect(top.parent).toBe(carton);
+    expect(built.canRemove(bottom)).toBe(true);
+    pickUp(bottom);
+    expect(built.release(bottom, carton)).toBe(true);
+    // Resting on the first, inside the carton.
+    expect(bottom.position.y).toBeGreaterThan(top.position.y);
+    expect(
+      new Box3()
+        .setFromObject(carton)
+        .containsBox(new Box3().setFromObject(bottom)),
+    ).toBe(true);
     built.dispose();
   });
 });

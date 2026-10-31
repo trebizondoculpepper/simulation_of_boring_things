@@ -1,18 +1,30 @@
 import {
   Box3,
   CanvasTexture,
+  Euler,
   Group,
   Mesh,
+  Quaternion,
   SRGBColorSpace,
   Vector3,
 } from 'three';
 import type { Material, MeshStandardMaterial, Object3D, Texture } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import deskUrl from '../../../../../resources/models/office/desk.glb?url';
+import type { PortableObject } from '../../../controls/input/object-handling';
+import { createDropProfile } from '../../../controls/logic/drop-profile';
+import { createPortableBoard } from '../../../controls/logic/portable-board';
 import type { PanelKit } from '../../core/views/eighties-controls';
+import { createPutBack } from '../logic/put-back';
+import type { Pose } from '../logic/put-back';
 import { SOFTWARE_TITLES } from '../logic/software-boxes';
-import type { SoftwareTitle } from '../logic/software-boxes';
+import type { BoxSize, SoftwareTitle } from '../logic/software-boxes';
 import { createOfficeChair } from './office-chair';
+import {
+  WALL_SHELF,
+  WALL_SHELF_STANDOFF,
+  createWallShelf,
+} from './office-wall-shelf';
 import { createLead, createPcCarton, createPeriodPc } from './period-pc';
 import type { PeriodPcOptions } from './period-pc';
 import {
@@ -26,6 +38,87 @@ export const DESK = { w: 1.6, d: 0.8, h: 0.73 } as const;
 
 /** The PC's carton beside the desk's open end, turned a quarter: its middle, width and depth, metres. */
 const CARTON = { x: -1.12, z: -0.08, w: 0.62, d: 0.52 } as const;
+
+/**
+ * The wall shelf over the desk (`office-wall-shelf.ts`): its middle along
+ * the desk, the height of its board's top (about standing head height),
+ * and where Macrosoft Pool Simulator 97 stands face out on it, metres.
+ */
+export const SHELF = { x: 0.05, top: 1.65, star: 0.27 } as const;
+
+/** The opened box, Beige Accounting's ledger, on top of the desk's pile. */
+const LEDGER = 'beige-accounting-leisure-centre-ledger';
+
+const quaternionOf = (x: number, y: number, z: number, order: string) =>
+  new Quaternion().setFromEuler(new Euler(x, y, z, order as 'XYZ'));
+const poseOf = (position: Vector3, q: Quaternion): Pose => ({
+  position: [position.x, position.y, position.z],
+  quaternion: [q.x, q.y, q.z, q.w],
+});
+
+/** Put `object` at `pose` in its parent's frame. */
+function applyPose(object: Object3D, pose: Pose) {
+  object.position.set(...pose.position);
+  object.quaternion.set(...pose.quaternion);
+  object.scale.set(1, 1, 1);
+}
+
+/** A box lying on its back, front up, its top to −z, its footprint's middle at (x, z) on y, turned `yaw`. */
+function flat(size: BoxSize, x: number, y: number, z: number, yaw: number) {
+  const q = quaternionOf(-Math.PI / 2, yaw, 0, 'YXZ');
+  const offset = new Vector3(0, size.d / 2, size.h / 2).applyAxisAngle(
+    new Vector3(0, 1, 0),
+    yaw,
+  );
+  return poseOf(new Vector3(x, y, z).add(offset), q);
+}
+
+/**
+ * A box stood like a book, its right-hand spine to +z, its left side at
+ * `x`, its back `back` + a centimetre, on y; leaning `lean` radians to −x
+ * about its bottom left edge, onto its neighbour.
+ */
+function spineOut(
+  size: BoxSize,
+  x: number,
+  y: number,
+  back: number,
+  lean: number,
+) {
+  const q = quaternionOf(0, -Math.PI / 2, lean, 'ZYX');
+  const offset = new Vector3(size.d / 2, 0, 0).applyAxisAngle(
+    new Vector3(0, 0, 1),
+    lean,
+  );
+  return poseOf(new Vector3(x, y, back + size.w / 2 + 0.01).add(offset), q);
+}
+
+/**
+ * A box standing face out to +z, centred on `x`, on y, leaning back
+ * `lean` radians about its bottom front edge until its top meets the
+ * wall at `back`; turned a little, `yaw`.
+ */
+function faceOut(
+  size: BoxSize,
+  x: number,
+  y: number,
+  back: number,
+  lean: number,
+  yaw = 0,
+) {
+  const q = quaternionOf(-lean, yaw, 0, 'YXZ');
+  const front =
+    back + size.h * Math.sin(lean) + size.d * Math.cos(lean) + 0.002;
+  const offset = new Vector3(0, 0, -size.d / 2).applyQuaternion(q);
+  return poseOf(new Vector3(x, y, front).add(offset), q);
+}
+
+/** The carton's `slot`th box thrown in (0 at the bottom), lying on what is under it, in the carton's frame. */
+function inBin(size: BoxSize, slot: number) {
+  const x = ((slot % 3) - 1) * 0.07;
+  const z = ((slot % 2) - 0.5) * 0.08;
+  return flat(size, x, 0.07 + slot * 0.052, z, ((slot * 7) % 5) * 0.15 - 0.3);
+}
 
 /** Beech-effect laminate, the late 1990s' office finish, for the model's dark wood. */
 const BEECH: [number, number, number] = [200, 172, 130];
@@ -96,10 +189,12 @@ export interface EngineersDeskOptions extends PeriodPcOptions {
  * The engineer's desk (the owner, 2026-10-31), late 1990s: a pedestal desk
  * from a free model library (CreativeTrio's "Desk", CC0, `resources/models/
  * office/`), in beech-effect laminate, with its Gateway 3000 PC
- * (`period-pc.ts`), its stack of boxed software, one box opened with its
- * manual and disks out (`software-box.ts`), the PC's cow-spotted carton
- * beside it, and a chair. Set decoration, outside the plant model; only the
- * PC has a little life of its own. Its origin is the middle of its
+ * (`period-pc.ts`), its boxed software (`software-box.ts`) on a wall
+ * shelf over it (`office-wall-shelf.ts`) and on the desk, one box opened
+ * with its manual and disks out, the PC's cow-spotted carton beside it,
+ * and a chair. Set decoration, outside the plant model; only the PC has a
+ * little life of its own, and the boxes can be picked up, turned over and
+ * put back, or thrown in the carton. Its origin is the middle of its
  * footprint on the floor, its user's side facing +z, its back on the wall.
  */
 export function createEngineersDesk(
@@ -168,66 +263,123 @@ export function createEngineersDesk(
     ),
   );
 
-  // The boxed software, at the desk's far end against the wall: a pile
-  // lying flat, a row standing behind, leaning, and one opened.
+  // Over the desk, on the wall at about head height: a cantilever shelf
+  // on twin-slot uprights, the boxed software on it like books (the
+  // owner, 2026-10-31).
+  const shelf = createWallShelf(kit);
+  shelf.position.set(SHELF.x, SHELF.top, -DESK.d / 2);
+  group.add(shelf);
+  const shelfBack = -DESK.d / 2 + WALL_SHELF_STANDOFF;
+
+  // The PC's carton beside the desk's open end, empty, kept in case it
+  // ever goes back, and used as a bin. It stands on the floor between the
+  // desk, the wall and the cupboard, so its flaps on those sides stand up,
+  // leaning a little in, and only its flap to the room splays out.
+  const carton = createPcCarton(
+    kit,
+    CARTON.w,
+    0.5,
+    CARTON.d,
+    [-0.06, -0.05, -0.06, 0.42],
+  );
+  carton.position.set(CARTON.x, 0, CARTON.z);
+  carton.rotation.y = Math.PI / 2 + 0.04;
+  // Beside the desk, not on it: outside its footprint, a solid of its own.
+  carton.userData.beside = true;
+  group.add(carton);
+
+  // The boxed software: three on the shelf, spines out, and a fourth
+  // leaning on them; Macrosoft Pool Simulator 97 face out on the shelf's
+  // right, leaning back on the wall, the first thing seen; and on the
+  // desk's far end, a pile of two lying flat, the top one opened, and one
+  // standing by the monitor. Each can be picked up, turned over and put
+  // back, or thrown in the carton (`logic/put-back.ts`).
   const wanted = options.titles ?? SOFTWARE_TITLES.map((t) => t.id);
   const titles = SOFTWARE_TITLES.filter((t) => wanted.includes(t.id));
   const byId = (id: string) => titles.find((t) => t.id === id);
-  /** A box lying on its back on the pile at height `y`, its front up, its top to the wall; the pile's new height. */
-  const flat = (
+  const things = createPutBack<string>();
+  const boxes = new Map<Object3D, string>();
+  /** Set a title's box out on the desk at `pose`, resting on `restsOn`. */
+  const setOut = (
     t: SoftwareTitle | undefined,
-    x: number,
-    z: number,
-    y: number,
-    yaw: number,
-  ) => {
-    if (!t) return y;
-    const { h, d } = softwareBoxSize(t);
-    const box = createSoftwareBox(kit, t);
-    // Rotated back a quarter turn about x, its height runs to −z and its
-    // depth stands up, centred on y = 0: lifted and drawn forward to sit.
-    box.rotation.x = -Math.PI / 2;
-    box.position.set(0, d / 2, h / 2);
-    const holder = new Group();
-    holder.add(box);
-    holder.position.set(x, y, z);
-    holder.rotation.y = yaw;
-    group.add(holder);
-    return y + d;
-  };
-  let y: number = top;
-  y = flat(byId('coshh-manager-95'), 0.6, -0.25, y, 0.05);
-  y = flat(byId('bookit-pro-4-for-workgroups'), 0.6, -0.26, y, -0.06);
-  y = flat(byId('macrosoft-pool-simulator-97'), 0.62, -0.27, y, 0.14);
-  y = flat(
-    byId('beige-accountings-leisure-centre-simulator'),
-    0.6,
-    -0.25,
-    y,
-    -0.12,
-  );
-  // Standing, fronts out, leaning back against the wall: two between the
-  // monitor and the pile, two more stood up on the pile.
-  const stand = (
-    t: SoftwareTitle | undefined,
-    x: number,
-    y: number,
-    lean: number,
-    yaw: number,
+    pose: Pose,
+    restsOn?: string,
   ) => {
     if (!t) return;
-    const { d } = softwareBoxSize(t);
     const box = createSoftwareBox(kit, t);
-    box.position.set(x, y, -DESK.d / 2 + d / 2 + 0.012);
-    box.rotation.set(-lean, yaw, 0);
+    box.userData.softwareBox = t.id;
+    const portable = createPortableBoard(
+      createDropProfile('box', softwareBoxSize(t).h, 'board'),
+    );
+    portable.onEvent((event) => {
+      if (event === 'pick-up') things.pickUp(t.id);
+    });
+    box.userData.portable = {
+      component: portable,
+      flat: 'face',
+      detach: () => {},
+    } satisfies PortableObject;
+    applyPose(box, pose);
     group.add(box);
+    boxes.set(box, t.id);
+    things.home(t.id, pose, restsOn && byId(restsOn) ? restsOn : undefined);
   };
-  stand(byId('lido-tycoon'), 0.12, top, 0.05, -0.04);
-  stand(byId('chlorine-quest-ii-the-shallow-end'), 0.31, top, 0.09, 0.03);
-  stand(byId('deep-end'), 0.53, y, 0.06, 0.05);
-  stand(byId('doseright-gold-2-1'), 0.69, y, 0.1, -0.08);
-  // The opened one: Beige Accounting's, its manual and disks out in front.
-  const opened = byId('beige-accountings-leisure-centre-simulator');
+  // The shelf: books standing from its left end, the last leaning.
+  let x = SHELF.x - WALL_SHELF.w / 2 + 0.04;
+  let last: SoftwareTitle | undefined;
+  for (const id of ['deep-end', 'lido-tycoon', 'bookit-pro-4-for-workgroups']) {
+    const t = byId(id);
+    if (!t) continue;
+    const size = softwareBoxSize(t);
+    setOut(t, spineOut(size, x, SHELF.top, shelfBack, 0));
+    x += size.d + 0.003;
+    last = t;
+  }
+  const leaning = byId('chlorine-quest-ii-the-shallow-end');
+  if (leaning) {
+    const size = softwareBoxSize(leaning);
+    const lean = 0.2;
+    // Its top edge on the last one's side, or on its top corner if shorter.
+    const gap = last
+      ? Math.min(
+          size.h * Math.sin(lean),
+          softwareBoxSize(last).h * Math.tan(lean),
+        )
+      : 0;
+    setOut(
+      leaning,
+      spineOut(size, x + gap, SHELF.top, shelfBack, last ? lean : 0),
+      last?.id,
+    );
+  }
+  const star = byId('macrosoft-pool-simulator-97');
+  if (star)
+    setOut(
+      star,
+      faceOut(softwareBoxSize(star), SHELF.star, SHELF.top, shelfBack, 0.07),
+    );
+  // The desk: the pile, and one standing by the monitor.
+  const pile = { x: 0.6, z: -0.25 };
+  const coshh = byId('coshh-manager-95');
+  let y: number = top;
+  if (coshh) {
+    setOut(coshh, flat(softwareBoxSize(coshh), pile.x, y, pile.z, 0.05));
+    y += softwareBoxSize(coshh).d;
+  }
+  const opened = byId(LEDGER);
+  if (opened)
+    setOut(
+      opened,
+      flat(softwareBoxSize(opened), pile.x, y, pile.z - 0.01, -0.12),
+      coshh?.id,
+    );
+  const standing = byId('doseright-gold-2-1');
+  if (standing)
+    setOut(
+      standing,
+      faceOut(softwareBoxSize(standing), 0.24, top, -DESK.d / 2, 0.08, -0.06),
+    );
+  // The opened one's manual and disks out in front.
   if (opened) {
     const contents = createBoxContents(kit, opened);
     contents.position.set(0.47, top, 0.2);
@@ -235,14 +387,46 @@ export function createEngineersDesk(
     group.add(contents);
   }
 
-  // Beside the desk's open end: the PC's carton, empty, kept in case it
-  // ever goes back. It stands on the floor, so it is walked round.
-  const carton = createPcCarton(kit);
-  carton.position.set(CARTON.x, 0, CARTON.z);
-  carton.rotation.y = Math.PI / 2 + 0.04;
-  // Beside the desk, not on it: outside its footprint, a solid of its own.
-  carton.userData.beside = true;
-  group.add(carton);
+  /** Whether `target` is the carton, or part of it. */
+  const inCarton = (target: Object3D) => {
+    for (let o: Object3D | null = target; o; o = o.parent)
+      if (o === carton) return true;
+    return false;
+  };
+  const handling = {
+    /** Null if `object` is not one of the desk's boxes, else whether it may be picked up now. */
+    canPickUp(object: Object3D) {
+      const id = boxes.get(object);
+      return id === undefined ? null : things.canPickUp(id);
+    },
+    /**
+     * Let go of a held box: aimed at the carton (`target`), into it, to
+     * rest on what is in it; otherwise back where it was. Null if it is
+     * not one of the desk's boxes; 'refuse' if it has nowhere to go back to.
+     */
+    release(object: Object3D, target?: Object3D): boolean | 'refuse' | null {
+      const id = boxes.get(object);
+      if (id === undefined || things.held() !== id) return null;
+      const portable = object.userData.portable as PortableObject;
+      const size = softwareBoxSize(byId(id)!);
+      if (target && inCarton(target)) {
+        const slot = things.bin(id)!;
+        carton.add(object);
+        applyPose(object, inBin(size, slot));
+        portable.component.reset();
+        return true;
+      }
+      const pose = things.putBack(id);
+      if (!pose) return 'refuse';
+      group.add(object);
+      applyPose(object, pose);
+      portable.component.reset();
+      return true;
+    },
+    /** What is in the carton, bottom first, by title id. */
+    binned: () => things.binned(),
+  };
+
   // A chair, pushed back a little.
   const chair = createOfficeChair(1);
   chair.group.position.set(-0.15, 0, 0.75);
@@ -256,6 +440,8 @@ export function createEngineersDesk(
     uses: pc.uses,
     /** Resolves once the desk's model is in. */
     ready,
+    /** Its boxes' picking up, putting back and binning. */
+    handling,
     /** What stands on the floor beyond the desk's footprint, in the desk's frame: the carton, and the chair's base. */
     footprints: [
       {

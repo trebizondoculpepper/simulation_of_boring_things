@@ -61,9 +61,10 @@ export function createEngineersOfficeElectrical(kit: PanelKit) {
       'power',
     );
   const sockets = [
-    // Its drop down beside the room's title card (±1.2 m on the north
-    // wall, `shell-room.ts`), not across it, then over to the socket.
-    { name: 'Desk twin socket', x: -0.9, z: north, yaw: 0, via: -1.27 },
+    // Over the desk's end, just under the top of the green dado (1.2 m,
+    // `views/shell-room.ts`), its drop straight down to it (the owner,
+    // 2026-10-31; the room's title card it once went round is gone).
+    { name: 'Desk twin socket', x: -0.9, z: north, yaw: 0, y: 1.12 },
     { name: 'East wall twin socket', x: east, z: 0.8, yaw: -Math.PI / 2 },
     // West of the corridor door's opening (±0.96 m), not on its leaf, and
     // clear of the PIR east of it (the owner, 2026-10-26).
@@ -92,24 +93,14 @@ export function createEngineersOfficeElectrical(kit: PanelKit) {
     );
     part.object.name = socket.name;
     markComponent(part.object, { name: socket.name });
-    part.object.position.set(socket.x, 0.55, socket.z);
+    const y = 'y' in socket ? socket.y : 0.55;
+    part.object.position.set(socket.x, y, socket.z);
     part.object.rotation.y = socket.yaw;
     group.add(part.object);
-    const via = 'via' in socket ? socket.via : undefined;
-    line(
-      `${socket.name} conduit`,
-      via === undefined
-        ? [
-            [socket.x, high, socket.z],
-            [socket.x, 0.55, socket.z],
-          ]
-        : [
-            [via, high, socket.z],
-            [via, 0.75, socket.z],
-            [socket.x, 0.75, socket.z],
-            [socket.x, 0.55, socket.z],
-          ],
-    );
+    line(`${socket.name} conduit`, [
+      [socket.x, high, socket.z],
+      [socket.x, y, socket.z],
+    ]);
   }
 
   const sensing = signal(false);

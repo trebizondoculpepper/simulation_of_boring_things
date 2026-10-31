@@ -960,6 +960,9 @@ function engineersDesk(kit: PanelKit): LiveExhibit {
   const parts = createPartSet();
   for (const [object, use] of desk.uses) parts.uses.set(object, use);
   const object = desk.group;
+  // Its boxes, picked up and put back or binned (`createRoomEquipment`'s
+  // `canRemove` and `release`).
+  object.userData.deskHandling = desk.handling;
   return {
     object,
     parts,
@@ -1441,6 +1444,7 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
   const besides: Object3D[] = [];
   const storageCupboards: ReturnType<typeof createEngineerStorageCupboard>[] =
     [];
+  const desks: ReturnType<typeof createEngineersDesk>['handling'][] = [];
   for (const [i, p] of placed.entries()) {
     const built = modelFor(kit, p.item, room);
     if (!built) continue;
@@ -1449,6 +1453,10 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
       | ReturnType<typeof createEngineerStorageCupboard>
       | undefined;
     if (storage) storageCupboards.push(storage);
+    const deskHandling = object.userData.deskHandling as
+      | ReturnType<typeof createEngineersDesk>['handling']
+      | undefined;
+    if (deskHandling) desks.push(deskHandling);
     if (isLive(built)) lives.push(built);
     if (machinePorts(p.item).length) object.add(drawPortNozzles(kit, p.item));
     object.position.set(p.x, floorY + p.y, p.z);
@@ -1777,7 +1785,24 @@ export function createRoomEquipment(kit: PanelKit, room: string, floorY = 0) {
         const allowed = cupboard.canRemove(item);
         if (allowed !== null) return allowed;
       }
+      for (const desk of desks) {
+        const allowed = desk.canPickUp(item);
+        if (allowed !== null) return allowed;
+      }
       return false;
+    },
+    /**
+     * Let go of a held thing that is a desk's to place (a software box:
+     * back where it was, or into the carton aimed at, `target`): whether
+     * it was placed, 'refuse' if it cannot be, or null if it is not a
+     * desk's.
+     */
+    release(item: Object3D, target?: Object3D) {
+      for (const desk of desks) {
+        const placed = desk.release(item, target);
+        if (placed !== null) return placed;
+      }
+      return null;
     },
     returnItem(item: Object3D, target: Object3D) {
       return storageCupboards.some((cupboard) =>

@@ -58,6 +58,19 @@ describe('software boxes', () => {
     }
   });
 
+  it('sells Beige Accounting’s box as an accounts package for leisure centres, not a simulator', () => {
+    const ledger = SOFTWARE_TITLES.find(
+      (title) => title.publisher === 'Beige Accounting',
+    )!;
+    expect(ledger.title).toBe('Beige Accounting: Leisure Centre Ledger 3.1');
+    expect(ledger.kind).toBe('business');
+    const text = [ledger.title, ledger.blurb, ...ledger.features].join(' ');
+    expect(text).not.toMatch(/simulat/i);
+    expect(text).toMatch(/takings/i);
+    expect(text).toMatch(/membership/i);
+    expect(text).toMatch(/VAT/);
+  });
+
   it('prints complete system requirements on every box', () => {
     for (const title of SOFTWARE_TITLES) {
       expect(title.features.length).toBeGreaterThanOrEqual(3);

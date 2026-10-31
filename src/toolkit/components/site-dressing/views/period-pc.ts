@@ -1051,7 +1051,18 @@ export function createPeriodPc(kit: PanelKit, options: PeriodPcOptions = {}) {
  * and the Gateway 3000's name and arrows on its sides. Origin the middle
  * of its base. `w × h × d` metres.
  */
-export function createPcCarton(kit: PanelKit, w = 0.62, h = 0.5, d = 0.52) {
+export function createPcCarton(
+  kit: PanelKit,
+  w = 0.62,
+  h = 0.5,
+  d = 0.52,
+  /**
+   * Each flap's lean, radians, outward positive, on its +z, −z, +x and
+   * −x sides: by default all splayed a little; where the carton stands
+   * against something, those flaps stand up or lean in clear of it.
+   */
+  flaps: readonly [number, number, number, number] = [0.16, 0.26, 0.16, 0.26],
+) {
   const group = new Group();
   group.name = 'Gateway 3000 carton';
   const side = (seed: number, sw: number, sh: number, words: boolean) =>
@@ -1096,7 +1107,7 @@ export function createPcCarton(kit: PanelKit, w = 0.62, h = 0.5, d = 0.52) {
     hinge.position.set(x, sh, z);
     hinge.rotation.y = yaw;
     hinge.add(flap);
-    flap.rotation.x = 0.16 + 0.1 * (i % 2);
+    flap.rotation.x = flaps[i];
     const flapBack = new Mesh(flap.geometry, inside);
     flapBack.rotation.y = Math.PI;
     flap.add(flapBack);

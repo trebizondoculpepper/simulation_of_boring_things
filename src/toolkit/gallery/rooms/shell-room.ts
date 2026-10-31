@@ -211,9 +211,15 @@ export function startShellRoom(canvas: HTMLCanvasElement, id: ShellRoomId) {
         ...room,
         floor: 0,
         roof: spec.height,
-        // The control room's walls are its mimics': no title card there.
+        // The control room's walls are its mimics': no title card there;
+        // nor in the engineer's office, whose door is signed outside
+        // (the owner, 2026-10-31).
         title:
-          id === 'control_room' || id === 'loading_bay' ? null : spec.title,
+          id === 'control_room' ||
+          id === 'loading_bay' ||
+          id === 'engineers_office'
+            ? null
+            : spec.title,
         titleHeight: (spec as { titleHeight?: number }).titleHeight,
         // The loading dock's lorry channels, cut out of its floor; its
         // lights a metre higher, all at one level (the owner, 2026-10-26).
@@ -718,11 +724,11 @@ gl_FragColor = vec4(colour, sampleColour.a); }`,
       const hit = raycaster
         .intersectObject(machines.group, true)
         .find((candidate) => !isHeldPortableHit(candidate.object));
-      return Boolean(
-        hit &&
-        hit.distance <= 3 * metre &&
-        machines.returnItem(object, hit.object),
-      );
+      const near = hit && hit.distance <= 3 * metre ? hit.object : undefined;
+      // A software box goes back where it was, or into the carton aimed at.
+      const placed = machines.release(object, near);
+      if (placed !== null) return placed;
+      return Boolean(near && machines.returnItem(object, near));
     },
     metre,
     floorY: cfg.floorAt(cfg.start.x, cfg.start.z, 0) * metre,

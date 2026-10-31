@@ -165,8 +165,8 @@ export const SOFTWARE_TITLES: readonly SoftwareTitle[] = [
     compatibility: 'Designed for PANES 95',
   },
   {
-    id: 'beige-accountings-leisure-centre-simulator',
-    title: "Beige Accounting's Leisure Centre Simulator",
+    id: 'beige-accounting-leisure-centre-ledger',
+    title: 'Beige Accounting: Leisure Centre Ledger 3.1',
     publisher: 'Beige Accounting',
     kind: 'business',
     size: 'sierra-tall',
@@ -175,20 +175,16 @@ export const SOFTWARE_TITLES: readonly SoftwareTitle[] = [
     palette: { background: '#c7b994', ink: '#27383b', accent: '#8d483d' },
     style: 'spreadsheet',
     publisherLogo: { shape: 'bars', letters: 'BA' },
-    frontBadges: ['THE NUMBERS ARE IN', 'Includes wet-weather forecasts'],
+    frontBadges: ['NOW WITH VAT RETURNS', 'Multi-site memberships'],
     blurb:
-      'Where spreadsheets meet swimming. Set admission prices, reconcile float receipts and find out whether Tuesday aqua-aerobics can pay for a new mop.',
+      "The accounts package for the municipal leisure centre. Bank the day's takings from every till, keep the membership direct debits straight, and have the quarter's VAT return ready before the auditors ask for it.",
     features: [
-      'Model pool attendance by the quarter hour',
-      'Print seventeen useful ledgers',
-      'Track towel shrinkage',
-      'Balance the café till',
+      'Daily takings by till, activity and session',
+      'Membership direct debits and renewals',
+      'Quarterly VAT returns, ready to post',
+      'Nominal ledger, accruals and the café float',
     ],
-    screenshots: [
-      'Quarterly takings',
-      'The locker ledger',
-      'A sound investment',
-    ],
+    screenshots: ['Daily takings', 'Membership renewals', 'The VAT return'],
     requirements: {
       ...standardRequirements,
       disk: '18 MB free hard disk space',
