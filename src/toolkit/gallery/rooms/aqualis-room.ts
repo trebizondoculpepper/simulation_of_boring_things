@@ -43,6 +43,21 @@ import type {
   ControllerState,
 } from '../../../game/plant/aqualis-controller';
 import { advise, alarms } from '../../../game/plant/aqualis-advisor';
+import {
+  INCIDENT_PROGRAMME,
+  firstAidHolds,
+  firstAidNoHypochlorite,
+  firstAidSettings,
+  startFirstAid,
+  stepFirstAid,
+  withFirstAid,
+} from '../../../game/plant/aqualis-first-aid';
+import type {
+  FirstAidEnded,
+  FirstAidId,
+  FirstAidState,
+  Incident,
+} from '../../../game/plant/aqualis-first-aid';
 import type { LedState } from '../../components/plant/logic/aqualis-cabinet';
 import {
   DOCTOR,
@@ -141,7 +156,19 @@ import { OVERLAY } from '../../components/plant/logic/aqualis-cabinet';
  * (`drawLcdGlitch`) over a copy of the last good frame, Dr Aqualis drawn
  * into it, redrawn on each `glitchMoment`, while its outputs jump on each
  * burst. Only the supply, off and on, brings it back.
+ *
+ * First Aid (`aqualis-first-aid.ts`): a programme started from its page is
+ * stepped on each tick, and while it runs the controller and the advisor
+ * work to its settings (`firstAidSettings`), its dosing pause holds every
+ * output (the controller's 'first-aid-pause' inhibit) and Bring chlorine
+ * down holds hypochlorite off; Dr Aqualis puts its status first, and a word
+ * as it ends (`FIRST_AID_ENDED_SHOWN`). A programme is the software's: a
+ * reboot loses it, as it loses the integral. An incident scenario's report
+ * leads his advice until its programme is started.
  */
+
+/** World seconds Dr Aqualis keeps his word on a programme just ended. */
+export const FIRST_AID_ENDED_SHOWN = 3600;
 
 /** Seconds from a crash board button to the crash. */
 export const CRASH_COUNTDOWN = 5;
@@ -239,6 +266,15 @@ export interface AqualisRoomHost {
   advice(): Advice[];
   /** What its control ports send each dosing unit now, 0 to 1. */
   outputs(): Outputs;
+  /** The First Aid programme running, if any. */
+  firstAid(): FirstAidState | null;
+  /** Start a programme (as its page's YES does), or stop the one running (STOP). */
+  startFirstAid(id: FirstAidId): void;
+  stopFirstAid(): void;
+  /** The incident reported and not yet answered by its programme. */
+  incident(): Incident | null;
+  /** The settings the controller and advisor work to now: First Aid's while one runs. */
+  workingSettings(): AqualisSettings;
 }
 
 export interface AqualisHostOptions {
@@ -297,6 +333,9 @@ export function createAqualisRoomHost(
   let out: ControllerOutput | null = null;
   let advice: Advice[] = [];
   let alarmsOn: Alarm[] = [];
+  let firstAid: FirstAidState | null = null;
+  let ended: { e: FirstAidEnded; at: number } | null = null;
+  let incident: Incident | null = RIG_SCENARIOS[scenario].incident ?? null;
   let display: DisplayState = newDisplay();
   let doctor: DrAqualisFrame | null = null;
   let doctorDrawn = '';
@@ -344,13 +383,44 @@ export function createAqualisRoomHost(
   let doctorAtCrash = false;
   let doctorCanvas: CanvasImageSource | null = null;
 
+  /** The settings worked to: First Aid's while a programme runs. */
+  const working = () => firstAidSettings(firstAid, settings);
+
   /** The controller's step on the sample now (dt 0: its view, nothing integrated). */
   const controlNow = (dt: number) =>
     stepController(
       control,
-      { readings, sample, selector: sel, ports: rigPorts(rig), settings, hand },
+      {
+        readings,
+        sample,
+        selector: sel,
+        ports: rigPorts(rig),
+        settings: working(),
+        hand,
+        pause: firstAidHolds(firstAid),
+        noHypochlorite: firstAidNoHypochlorite(firstAid),
+      },
       dt,
     );
+
+  /** Dr Aqualis's advice and the alarms on the controller's output now. */
+  const adviseNow = () => {
+    const w = working();
+    advice = withFirstAid(advise(readings, w, out!.channels, rig.water), {
+      state: firstAid,
+      incident,
+      ended: ended?.e ?? null,
+    });
+    alarmsOn = alarms(readings, sample, out!.channels, w, sel);
+  };
+
+  /** The controller's view now, and the advice on it (after a press). */
+  const lookNow = () => {
+    const c = controlNow(0);
+    control = c.state;
+    out = c.out;
+    adviseNow();
+  };
 
   /** One chemistry tick of the cabinet: sample, control, advise. */
   const tick = () => {
@@ -364,11 +434,23 @@ export function createAqualisRoomHost(
       rig = stepRig(rig, osOutputs(os, NO_DEMAND), TICK);
       return;
     }
+    if (firstAid) {
+      const next = stepFirstAid(firstAid, readings, settings, TICK);
+      if (!next)
+        ended = {
+          e: {
+            id: firstAid.id,
+            combinedChlorine: readings?.combinedChlorine ?? null,
+          },
+          at: rig.time,
+        };
+      firstAid = next;
+    }
+    if (ended && rig.time - ended.at > FIRST_AID_ENDED_SHOWN) ended = null;
     const c = controlNow(TICK);
     control = c.state;
     out = c.out;
-    advice = advise(readings, settings, out.channels, rig.water);
-    alarmsOn = alarms(readings, sample, out.channels, settings, sel);
+    adviseNow();
     rig = stepRig(rig, out.demands, TICK);
   };
   tick();
@@ -382,18 +464,28 @@ export function createAqualisRoomHost(
     wreck = null;
     alarmsOn = [];
     advice = [];
+    firstAid = null;
+    ended = null;
     control = newController();
     display = newDisplay();
   };
   /** Its software running: its first view of the plant, then its first page. */
   const booted = () => {
     drawn = '';
-    const c = controlNow(0);
-    control = c.state;
-    out = c.out;
-    advice = advise(readings, settings, out.channels, rig.water);
-    alarmsOn = alarms(readings, sample, out.channels, settings, sel);
+    lookNow();
     display = newDisplay();
+  };
+  const startProgramme = (id: FirstAidId) => {
+    if (!running()) return;
+    firstAid = startFirstAid(id, readings, settings);
+    ended = null;
+    if (incident && INCIDENT_PROGRAMME[incident] === id) incident = null;
+    lookNow();
+  };
+  const stopProgramme = () => {
+    if (!firstAid) return;
+    firstAid = null;
+    if (running()) lookNow();
   };
   if (options.boot !== false) {
     // Its first boot, as the room loads: a clean one, the first of its seed.
@@ -411,6 +503,7 @@ export function createAqualisRoomHost(
     alarms: osAlarms(os, alarmsOn),
     settings,
     hand,
+    firstAid,
   });
   /** What its software would draw (as it crashed, for a glitch's wreckage). */
   const drawGood = (
@@ -495,6 +588,8 @@ export function createAqualisRoomHost(
     scenario: () => rig.scenario,
     chooseScenario(id) {
       rig = resetWater(rig, id);
+      incident = RIG_SCENARIOS[id].incident ?? null;
+      if (running() && out) adviseNow();
     },
     speed: () => speed,
     setSpeed(i) {
@@ -629,6 +724,8 @@ export function createAqualisRoomHost(
       if (r.effect?.kind === 'settings') settings = r.effect.settings;
       if (r.effect?.kind === 'hand')
         hand = { ...hand, [r.effect.channel]: r.effect.demand };
+      if (r.effect?.kind === 'first-aid-start') startProgramme(r.effect.id);
+      if (r.effect?.kind === 'first-aid-stop') stopProgramme();
       if (r.effect?.kind === 'restart') {
         os = restartOs(os);
         freshSoftware();
@@ -668,5 +765,10 @@ export function createAqualisRoomHost(
     alarms: () => osAlarms(os, alarmsOn),
     advice: () => osAdvice(os, advice),
     outputs: () => osOutputs(os, running() && out ? out.demands : NO_DEMAND),
+    firstAid: () => firstAid,
+    startFirstAid: startProgramme,
+    stopFirstAid: stopProgramme,
+    incident: () => incident,
+    workingSettings: working,
   };
 }

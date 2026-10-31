@@ -220,6 +220,8 @@ export interface ChannelView {
 export type Inhibit =
   | 'selector-off'
   | 'sample-flow-lost'
+  /** A First Aid programme's dosing pause holds every output off (`aqualis-first-aid.ts`). */
+  | 'first-aid-pause'
   /** No readings yet (just powered up, the sample not settled). */
   | 'no-readings';
 

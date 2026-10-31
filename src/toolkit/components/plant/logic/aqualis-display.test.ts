@@ -1,12 +1,19 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { DEFAULT_TARGETS } from '../../../../game/plant/aqualis-types';
+import { DEFAULT_TARGETS, SCREEN } from '../../../../game/plant/aqualis-types';
 import type {
   Advice,
   ChannelId,
   ChannelView,
 } from '../../../../game/plant/aqualis-types';
 import {
+  FIRST_AID,
+  FIRST_AID_IDS,
+  startFirstAid,
+} from '../../../../game/plant/aqualis-first-aid';
+import type { FirstAidState } from '../../../../game/plant/aqualis-first-aid';
+import {
   CYCLE_SECONDS,
+  FIRST_AID_PAGE,
   HOLD_SECONDS,
   displayModel,
   displayRegions,
@@ -237,5 +244,131 @@ describe('the Aqualis display', () => {
     expect(displayModel(s, inputs()).key).toBe(a);
     s = tickDisplay(s, DEMO_SCENE_SECONDS);
     expect(displayModel(s, inputs()).key).not.toBe(a);
+  });
+});
+
+describe('the Aqualis display’s First Aid', () => {
+  const running = (over: Partial<FirstAidState> = {}): FirstAidState => ({
+    ...startFirstAid('diarrhoea', null, inputs().settings),
+    ...over,
+  });
+
+  it('has a fifth tab, all five fitting the title strip right of its name', () => {
+    const tabs = tabRects();
+    expect(tabs.map((t) => t.page)).toEqual([
+      'pumps',
+      'water',
+      'doctor',
+      'firstAid',
+      'settings',
+    ]);
+    expect(tabs[3].name).toBe('First Aid');
+    expect(tabs[0].rect.x).toBeGreaterThan(130);
+    expect(tabs[4].rect.x + tabs[4].rect.w).toBeLessThanOrEqual(SCREEN.w);
+    for (let i = 1; i < tabs.length; i++)
+      expect(tabs[i].rect.x).toBeGreaterThanOrEqual(
+        tabs[i - 1].rect.x + tabs[i - 1].rect.w,
+      );
+  });
+
+  it('is never cycled to', () => {
+    let s = newDisplay();
+    const seen = new Set<string>();
+    for (let i = 0; i < 12; i++) {
+      s = tickDisplay(s, CYCLE_SECONDS);
+      seen.add(s.page);
+    }
+    expect(seen.has('firstAid')).toBe(false);
+  });
+
+  it('lists the five programmes, each with its use', () => {
+    const s: DisplayState = { ...newDisplay(), page: 'firstAid' };
+    const m = displayModel(s, inputs());
+    expect(m.firstAid.programmes.map((p) => p.id)).toEqual([...FIRST_AID_IDS]);
+    expect(m.firstAid.programmes[1].use).toBe(FIRST_AID.diarrhoea.use);
+    const ids = displayRegions(s, inputs()).map((r) => r.id);
+    for (const id of FIRST_AID_IDS) expect(ids).toContain(`fa:${id}`);
+  });
+
+  it('asks to confirm, starting on YES and not on NO', () => {
+    let s: DisplayState = { ...newDisplay(), page: 'firstAid' };
+    const b = FIRST_AID_PAGE.button(1);
+    const id = hitDisplay(s, inputs(), b.x + 10, b.y + 10);
+    expect(id).toBe('fa:diarrhoea');
+    let r = pressDisplay(s, inputs(), id!);
+    expect(r.effect).toBe(null);
+    s = r.state;
+    const m = displayModel(s, inputs());
+    expect(m.firstAid.confirm).toEqual({
+      id: 'diarrhoea',
+      name: 'Diarrhoea',
+      says: FIRST_AID.diarrhoea.says,
+    });
+    const ids = displayRegions(s, inputs()).map((x) => x.id);
+    expect(ids).toContain('fa-yes');
+    expect(ids).not.toContain('fa:diarrhoea');
+    // NO puts the list back.
+    expect(pressDisplay(s, inputs(), 'fa-no').state.confirm).toBe(null);
+    expect(pressDisplay(s, inputs(), 'fa-no').effect).toBe(null);
+    r = pressDisplay(s, inputs(), 'fa-yes');
+    expect(r.effect).toEqual({ kind: 'first-aid-start', id: 'diarrhoea' });
+    expect(r.state.confirm).toBe(null);
+    // Leaving the page forgets the question.
+    expect(pressDisplay(s, inputs(), 'tab:pumps').state.confirm).toBe(null);
+  });
+
+  it('shows a running programme’s status and STOP', () => {
+    const s: DisplayState = { ...newDisplay(), page: 'firstAid' };
+    const ins = inputs({ firstAid: running() });
+    const m = displayModel(s, ins);
+    expect(m.firstAid.running?.status).toBe(
+      'Diarrhoea · raising chlorine to 20 mg/l',
+    );
+    expect(m.firstAid.running?.closePool).toBe(true);
+    const ids = displayRegions(s, ins).map((r) => r.id);
+    expect(ids).toContain('fa-stop');
+    expect(ids.some((i) => i.startsWith('fa:'))).toBe(false);
+    expect(pressDisplay(s, ins, 'fa-stop').effect).toEqual({
+      kind: 'first-aid-stop',
+    });
+  });
+
+  it('puts its banner on every page’s status strip, in amber, over alarms and inhibits', () => {
+    const ins = inputs({
+      firstAid: running(),
+      inhibit: 'sample-flow-lost',
+      alarms: [{ id: 'ph-high', text: 'pH HIGH' }],
+    });
+    for (const page of ['pumps', 'water', 'doctor', 'settings'] as const) {
+      const m = displayModel({ ...newDisplay(), page }, ins);
+      expect(m.status).toMatchObject({
+        text: 'FIRST AID: Diarrhoea · raising chlorine to 20 mg/l',
+        tint: 'amber',
+      });
+    }
+    expect(
+      displayModel(newDisplay(), inputs({ inhibit: 'first-aid-pause' })).status
+        .text,
+    ).toBe('Dosing paused: First Aid');
+  });
+
+  it('redraws only when the words change: its time left by the minute', () => {
+    const holding = running({ phase: 'holding', held: 3600 });
+    for (const page of ['firstAid', 'pumps'] as const) {
+      const s: DisplayState = { ...newDisplay(), page };
+      const a = displayModel(s, inputs({ firstAid: holding })).key;
+      expect(
+        displayModel(s, inputs({ firstAid: { ...holding, held: 3610 } })).key,
+      ).toBe(a);
+      expect(
+        displayModel(s, inputs({ firstAid: { ...holding, held: 3700 } })).key,
+      ).not.toBe(a);
+      expect(displayModel(s, inputs()).key).not.toBe(a);
+    }
+    // The confirm redraws the page.
+    const s: DisplayState = { ...newDisplay(), page: 'firstAid' };
+    expect(
+      displayModel({ ...s, confirm: 'breakpoint' }, inputs()).key,
+    ).not.toBe(displayModel(s, inputs()).key);
   });
 });

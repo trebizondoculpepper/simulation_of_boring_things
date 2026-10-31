@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { CRASH_COUNTDOWN, createAqualisRoomHost } from './aqualis-room';
 import { SETTINGS } from '../../components/plant/logic/aqualis-display';
-import { tabRects } from '../../components/plant/logic/aqualis-display';
+import {
+  FIRST_AID_PAGE,
+  tabRects,
+} from '../../components/plant/logic/aqualis-display';
+import { FIRST_AID_IDS } from '../../../game/plant/aqualis-first-aid';
 import { DEFAULT_TARGETS } from '../../../game/plant/aqualis-types';
 import { ALARM_LIMITS } from '../../../game/plant/aqualis-advisor';
 
@@ -252,5 +256,112 @@ describe('dev58’s host: the crash board', () => {
     host.step(0.1);
     expect(host.alarms().map((a) => a.id)).toContain('chlorine-high');
     expect(host.outputs().hypochlorite).toBe(0);
+  });
+});
+
+describe('dev58’s host: First Aid', () => {
+  const touch = (
+    host: ReturnType<typeof createAqualisRoomHost>,
+    r: { x: number; y: number; w: number; h: number },
+  ) => host.screenTouch(r.x + r.w / 2, r.y + r.h / 2);
+  /** Start a programme from its page, as the operator does. */
+  const start = (
+    host: ReturnType<typeof createAqualisRoomHost>,
+    id: (typeof FIRST_AID_IDS)[number],
+  ) => {
+    touch(host, tabRects().find((t) => t.page === 'firstAid')!.rect);
+    touch(host, FIRST_AID_PAGE.button(FIRST_AID_IDS.indexOf(id)));
+    touch(host, FIRST_AID_PAGE.yes);
+  };
+
+  it('reports an incident first, until its programme is started from the screen', () => {
+    const host = createAqualisRoomHost('incident-diarrhoea', { boot: false });
+    expect(host.incident()).toBe('diarrhoea');
+    expect(host.advice()[0]).toMatchObject({
+      id: 'incident',
+      problem: 'A diarrhoeal faecal incident has been reported!',
+      direction: 'Close the pool and start First Aid › Diarrhoea.',
+      mood: 'alarmed',
+    });
+    expect(host.advice().some((a) => a.id === 'all-well')).toBe(false);
+    // The wrong programme leaves the report standing.
+    start(host, 'formed-stool');
+    expect(host.incident()).toBe('diarrhoea');
+    host.stopFirstAid();
+    start(host, 'diarrhoea');
+    expect(host.firstAid()?.id).toBe('diarrhoea');
+    expect(host.incident()).toBe(null);
+    expect(host.advice()[0]).toMatchObject({
+      id: 'first-aid',
+      problem: 'First Aid: Diarrhoea · raising chlorine to 20 mg/l.',
+      direction: 'Keep the pool closed.',
+      mood: 'concerned',
+    });
+  });
+
+  it('works to the programme’s settings, Show dose giving a hand dose of hypochlorite', () => {
+    const host = createAqualisRoomHost('incident-diarrhoea', { boot: false });
+    start(host, 'diarrhoea');
+    expect(host.workingSettings().targets.freeChlorine.set).toBe(20);
+    host.step(1);
+    expect(host.outputs().hypochlorite).toBeGreaterThan(0.9);
+    const low = host.advice().find((a) => a.id === 'free-chlorine-low');
+    expect(low?.additive).toBe('hypochlorite');
+    expect(low?.dose?.amount).toBeGreaterThan(10);
+  });
+
+  it('holds every output off through a dosing pause, and doses again after STOP', () => {
+    const host = createAqualisRoomHost('chlorine-low', { boot: false });
+    host.step(1);
+    expect(host.outputs().hypochlorite).toBeGreaterThan(0);
+    start(host, 'dosing-pause');
+    host.step(1);
+    expect(host.outputs()).toEqual({ hypochlorite: 0, acid: 0, co2: 0 });
+    touch(host, FIRST_AID_PAGE.stop);
+    expect(host.firstAid()).toBe(null);
+    host.step(1);
+    expect(host.outputs().hypochlorite).toBeGreaterThan(0);
+  });
+
+  it('holds hypochlorite off while bringing chlorine down, the advice pointing there first', () => {
+    const host = createAqualisRoomHost('chlorine-high', { boot: false });
+    const high = host.advice().find((a) => a.id === 'free-chlorine-high');
+    expect(high?.direction).toContain(
+      'Or start First Aid › Bring chlorine down.',
+    );
+    start(host, 'chlorine-down');
+    host.step(1);
+    expect(host.outputs().hypochlorite).toBe(0);
+    expect(
+      host.advice().find((a) => a.id === 'free-chlorine-high')?.additive,
+    ).toBe('thiosulphate');
+    expect(
+      host.advice().find((a) => a.id === 'free-chlorine-high')?.direction,
+    ).not.toContain('First Aid');
+  });
+
+  it('points a high combined chlorine at Breakpoint shock', () => {
+    const host = createAqualisRoomHost('combined-high', { boot: false });
+    expect(
+      host.advice().find((a) => a.id === 'combined-chlorine-high')?.direction,
+    ).toContain('Or start First Aid › Breakpoint shock.');
+  });
+
+  it('ends a formed stool’s programme after its hold, the plain settings back and Dr Aqualis saying so', () => {
+    const host = createAqualisRoomHost('incident-formed', { boot: false });
+    start(host, 'formed-stool');
+    host.setSpeed(3);
+    for (let i = 0; i < 200 && host.firstAid(); i++) host.step(0.1);
+    expect(host.firstAid()).toBe(null);
+    expect(host.rig.water.freeChlorine).toBeGreaterThan(1.9);
+    expect(host.workingSettings().targets).toEqual(DEFAULT_TARGETS);
+    expect(host.advice()[0]).toMatchObject({
+      id: 'first-aid-ended',
+      problem: 'Disinfection complete: 2 mg/l held for half an hour.',
+      mood: 'pleased',
+    });
+    // His word lasts an hour of the rig's time.
+    for (let i = 0; i < 40; i++) host.step(0.1);
+    expect(host.advice().some((a) => a.id === 'first-aid-ended')).toBe(false);
   });
 });

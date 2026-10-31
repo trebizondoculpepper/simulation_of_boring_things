@@ -193,7 +193,7 @@ describe('the loop and the sample', () => {
 
 describe('the scenarios and the sources', () => {
   test('every scenario loads, with a name and a one-line description', () => {
-    expect(RIG_SCENARIO_IDS).toHaveLength(11);
+    expect(RIG_SCENARIO_IDS).toHaveLength(13);
     for (const id of RIG_SCENARIO_IDS) {
       const s = RIG_SCENARIOS[id];
       expect(s.id).toBe(id);

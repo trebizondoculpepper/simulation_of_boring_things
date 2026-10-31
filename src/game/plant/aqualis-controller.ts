@@ -59,7 +59,10 @@ import { CONTROLLER } from './water-treatment';
  * HAND passes the touch screen's demands through; OFF doses nothing. Sample
  * flow lost for longer than `SAMPLE_LOSS_DELAY` stops every demand, in HAND
  * too (dosing into a stopped loop is how acid meets hypochlorite). With no
- * readings yet, AUTO doses nothing. Demands are capped at 1.
+ * readings yet, AUTO doses nothing. A First Aid programme may pause every
+ * output (`pause`, the 'first-aid-pause' inhibit) or forbid hypochlorite
+ * (`noHypochlorite`: its demand nought, its integral held). Demands are
+ * capped at 1.
  */
 
 /**
@@ -111,6 +114,10 @@ export interface ControllerInputs {
   settings: AqualisSettings;
   /** HAND's demands from the touch screen, 0 to 1. */
   hand: Record<ChannelId, number>;
+  /** A First Aid dosing pause: every output held off (`firstAidHolds`). */
+  pause?: boolean;
+  /** A First Aid programme forbidding hypochlorite (`firstAidNoHypochlorite`): its demand held at nought. */
+  noHypochlorite?: boolean;
 }
 
 export interface ControllerOutput {
@@ -204,9 +211,11 @@ export function stepController(
       ? 'selector-off'
       : !inp.sample.flowing && inp.sample.lostFor > SAMPLE_LOSS_DELAY
         ? 'sample-flow-lost'
-        : inp.selector === 'auto' && !readings
-          ? 'no-readings'
-          : null;
+        : inp.pause
+          ? 'first-aid-pause'
+          : inp.selector === 'auto' && !readings
+            ? 'no-readings'
+            : null;
 
   let integral = s.integral;
   let lockout = false;
@@ -238,7 +247,13 @@ export function stepController(
     const pinned =
       (hypoDemand >= 1 && error > 0) ||
       (hypoDemand <= 0 && error < 0 && u <= 0);
-    if (!lockout && online('hypochlorite') && error !== 0 && !pinned) {
+    if (
+      !lockout &&
+      !inp.noHypochlorite &&
+      online('hypochlorite') &&
+      error !== 0 &&
+      !pinned
+    ) {
       integral = clamp(
         s.integral + (error * dt) / 3600 / integralHours,
         -band,
@@ -260,6 +275,8 @@ export function stepController(
       co2: toDemand('co2', co2Gh, ports.co2),
     };
   }
+
+  if (inp.noHypochlorite) wanted = { ...wanted, hypochlorite: 0 };
 
   const channels = perChannel((id): ChannelView => {
     const f = ports[id];

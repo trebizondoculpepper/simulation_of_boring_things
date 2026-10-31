@@ -17,6 +17,15 @@ import {
   stepRig,
 } from './aqualis-rig';
 import type { Rig } from './aqualis-rig';
+import {
+  FIRST_AID_RULES,
+  firstAidHolds,
+  firstAidNoHypochlorite,
+  firstAidSettings,
+  startFirstAid,
+  stepFirstAid,
+} from './aqualis-first-aid';
+import type { FirstAidState } from './aqualis-first-aid';
 
 /**
  * The Aqualis models closed round the test rig (mission 114): sampler,
@@ -109,5 +118,84 @@ describe('the Aqualis loop', () => {
     const { out, readings } = run(rig, 12);
     expect(out.channels.co2.status.kind).toBe('unconnected');
     expect(readings.ph).toBeLessThan(7.5);
+  });
+});
+
+describe('the Aqualis loop under First Aid', () => {
+  it('raises a formed-stool incident’s chlorine to 2 mg/l, holds it half an hour, then ends', () => {
+    let rig = newRig('incident-formed');
+    let sampler = newSampler(rigSample(rig));
+    let control = newController();
+    let fa: FirstAidState | null = startFirstAid(
+      'formed-stool',
+      null,
+      SETTINGS,
+    );
+    let reached: number | null = null;
+    let endedAt: number | null = null;
+    let most = 0;
+    const dt = 10;
+    for (let t = 0; t < 4 * 3600 && endedAt === null; t += dt) {
+      const s = stepSampler(sampler, rigSample(rig), dt);
+      sampler = s.state;
+      if (fa) {
+        fa = stepFirstAid(fa, s.readings, SETTINGS, dt);
+        if (fa?.phase === 'holding' && reached === null) reached = t;
+        if (!fa) endedAt = t;
+      }
+      if (s.readings) most = Math.max(most, s.readings.freeChlorine);
+      const c = stepController(
+        control,
+        {
+          readings: s.readings,
+          sample: s.status,
+          selector: 'auto',
+          ports: rigPorts(rig),
+          settings: firstAidSettings(fa, SETTINGS),
+          hand: { hypochlorite: 0, acid: 0, co2: 0 },
+          pause: firstAidHolds(fa),
+          noHypochlorite: firstAidNoHypochlorite(fa),
+        },
+        dt,
+      );
+      control = c.state;
+      rig = stepRig(rig, c.out.demands, dt);
+    }
+    // Up to 2 mg/l within the hour, held 30 minutes, then the programme ends.
+    expect(reached).not.toBe(null);
+    expect(reached!).toBeLessThan(3600);
+    expect(endedAt).not.toBe(null);
+    expect(endedAt! - reached!).toBeGreaterThanOrEqual(
+      FIRST_AID_RULES.formed.hold - dt,
+    );
+    expect(endedAt! - reached!).toBeLessThan(FIRST_AID_RULES.formed.hold + 60);
+    expect(most).toBeGreaterThan(1.94);
+    expect(most).toBeLessThan(2.6);
+  });
+
+  it('doses nothing through a dosing pause', () => {
+    let rig = newRig('chlorine-low');
+    let sampler = newSampler(rigSample(rig));
+    const fa = startFirstAid('dosing-pause', null, SETTINGS);
+    for (let t = 0; t < 1800; t += 10) {
+      const s = stepSampler(sampler, rigSample(rig), 10);
+      sampler = s.state;
+      const c = stepController(
+        newController(),
+        {
+          readings: s.readings,
+          sample: s.status,
+          selector: 'auto',
+          ports: rigPorts(rig),
+          settings: SETTINGS,
+          hand: { hypochlorite: 0, acid: 0, co2: 0 },
+          pause: firstAidHolds(fa),
+        },
+        10,
+      );
+      expect(c.out.inhibit).toBe('first-aid-pause');
+      rig = stepRig(rig, c.out.demands, 10);
+    }
+    expect(rig.sources.hypochlorite).toBe(0);
   });
 });

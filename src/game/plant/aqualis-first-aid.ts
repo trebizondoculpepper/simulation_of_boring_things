@@ -1,4 +1,9 @@
-import type { AqualisReadings, AqualisSettings, Target } from './aqualis-types';
+import type {
+  Advice,
+  AqualisReadings,
+  AqualisSettings,
+  Target,
+} from './aqualis-types';
 
 /**
  * The Dr Aqualis Trio's First Aid programmes (mission 114; the owner,
@@ -246,4 +251,147 @@ export function firstAidStatus(s: FirstAidState): string {
   return s.phase === 'raising'
     ? `${p.name} · raising chlorine to ${chlorine} mg/l`
     : `${p.name} · holding ${chlorine} mg/l · ${time(hold! - s.held)} left`;
+}
+
+// ---- Dr Aqualis's words about First Aid ------------------------------------------------
+
+/** A faecal incident reported at the poolside (dev58's incident scenarios). */
+export type Incident = 'formed' | 'diarrhoea';
+
+/** The programme each incident wants. */
+export const INCIDENT_PROGRAMME: Record<Incident, FirstAidId> = {
+  formed: 'formed-stool',
+  diarrhoea: 'diarrhoea',
+};
+
+/** A programme that has just ended, and the combined chlorine as it did (the breakpoint's verdict). */
+export interface FirstAidEnded {
+  id: FirstAidId;
+  combinedChlorine: number | null;
+}
+
+/** The incident report, first until its programme is started. */
+export function incidentAdvice(incident: Incident): Advice {
+  const p = FIRST_AID[INCIDENT_PROGRAMME[incident]];
+  return {
+    id: 'incident',
+    reading: null,
+    severity: 'alarm',
+    problem:
+      incident === 'diarrhoea'
+        ? 'A diarrhoeal faecal incident has been reported!'
+        : 'A formed faecal incident has been reported!',
+    direction: `Close the pool and start First Aid › ${p.name}.`,
+    additive: null,
+    where: null,
+    dose: null,
+    mood: 'alarmed',
+  };
+}
+
+/** A programme running: its status, and whether the pool stays shut. */
+export function runningAdvice(s: FirstAidState): Advice {
+  const p = FIRST_AID[s.id];
+  return {
+    id: 'first-aid',
+    reading: null,
+    severity: 'warning',
+    problem: `First Aid: ${firstAidStatus(s)}.`,
+    direction: p.closePool
+      ? 'Keep the pool closed.'
+      : 'The pool may stay open; dosing resumes on its own.',
+    additive: null,
+    where: null,
+    dose: null,
+    mood: 'concerned',
+  };
+}
+
+/** What he says as a programme ends. */
+export function endedAdvice(e: FirstAidEnded): Advice {
+  const shocked =
+    e.combinedChlorine !== null &&
+    e.combinedChlorine <= FIRST_AID_RULES.breakpoint.done;
+  const words: Record<FirstAidId, [string, string]> = {
+    'formed-stool': [
+      'Disinfection complete: 2 mg/l held for half an hour.',
+      'The pool may reopen once the readings are back in their bands.',
+    ],
+    diarrhoea: [
+      'Hyperchlorination complete. Now we must bring the chlorine down before anyone swims.',
+      'Start First Aid › Bring chlorine down.',
+    ],
+    breakpoint: shocked
+      ? [
+          'Breakpoint reached: the chloramines are gone.',
+          'Let the chlorine fall back to its band before the pool reopens.',
+        ]
+      : [
+          'The shock has run its eight hours and the chloramines are still there.',
+          'Dilute the pool with fresh water, or shock it again.',
+        ],
+    'chlorine-down': [
+      'The chlorine is back in its band: hypochlorite dosing resumes.',
+      'The pool may reopen.',
+    ],
+    'dosing-pause': [
+      'The pause is over: I am dosing again.',
+      'Carry on just as you are.',
+    ],
+  };
+  const [problem, direction] = words[e.id];
+  return {
+    id: 'first-aid-ended',
+    reading: null,
+    severity: 'info',
+    problem,
+    direction,
+    additive: null,
+    where: null,
+    dose: null,
+    mood: 'pleased',
+  };
+}
+
+/** The programme an advice points at, with none running. */
+function pointerOf(a: Advice): FirstAidId | null {
+  if (a.id === 'combined-chlorine-high') return 'breakpoint';
+  // Far too high: the thiosulphate advice.
+  if (a.id === 'free-chlorine-high' && a.additive === 'thiosulphate')
+    return 'chlorine-down';
+  return null;
+}
+
+/**
+ * Dr Aqualis's advice with First Aid's in it: an incident report first
+ * (until its programme starts), then a running programme's status (or a
+ * word on one just ended), then the advisor's own. With none running, a
+ * combined chlorine high points at Breakpoint shock and a chlorine far too
+ * high (the thiosulphate advice) at Bring chlorine down; an incident
+ * silences "every reading in its band".
+ */
+export function withFirstAid(
+  advice: readonly Advice[],
+  f: {
+    state: FirstAidState | null;
+    incident: Incident | null;
+    ended: FirstAidEnded | null;
+  },
+): Advice[] {
+  const head: Advice[] = [];
+  if (f.incident) head.push(incidentAdvice(f.incident));
+  if (f.state) head.push(runningAdvice(f.state));
+  else if (f.ended) head.push(endedAdvice(f.ended));
+  const rest = advice
+    .filter((a) => !(f.incident && a.id === 'all-well'))
+    .map((a) => {
+      const to = f.state ? null : pointerOf(a);
+      return to
+        ? {
+            ...a,
+            direction: `${a.direction} Or start First Aid › ${FIRST_AID[to].name}.`,
+          }
+        : a;
+    });
+  return [...head, ...rest];
 }

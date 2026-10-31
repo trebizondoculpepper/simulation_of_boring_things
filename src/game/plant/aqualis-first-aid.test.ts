@@ -9,6 +9,7 @@ import {
   firstAidStatus,
   startFirstAid,
   stepFirstAid,
+  withFirstAid,
 } from './aqualis-first-aid';
 
 const settings: AqualisSettings = {
@@ -99,5 +100,38 @@ describe('the First Aid programmes', () => {
     s = stepFirstAid(s, water(), settings, 20 * 60)!;
     expect(firstAidStatus(s)).toBe('Dosing pause · dosing held · 10 min left');
     expect(stepFirstAid(s, water(), settings, 10 * 60)).toBe(null);
+  });
+});
+
+describe('Dr Aqualis on First Aid', () => {
+  const none = { state: null, incident: null, ended: null };
+
+  it('says what comes after a hyperchlorination, and judges a breakpoint by its end', () => {
+    const [d] = withFirstAid([], {
+      ...none,
+      ended: { id: 'diarrhoea', combinedChlorine: 0.1 },
+    });
+    expect(d.problem).toBe(
+      'Hyperchlorination complete. Now we must bring the chlorine down before anyone swims.',
+    );
+    expect(d.direction).toBe('Start First Aid › Bring chlorine down.');
+    const done = (cc: number) =>
+      withFirstAid([], {
+        ...none,
+        ended: { id: 'breakpoint', combinedChlorine: cc },
+      })[0].problem;
+    expect(done(0.15)).toContain('Breakpoint reached');
+    expect(done(0.6)).toContain('eight hours');
+  });
+
+  it('keeps the pool open through a dosing pause', () => {
+    const [a] = withFirstAid([], {
+      ...none,
+      state: startFirstAid('dosing-pause', null, settings),
+    });
+    expect(a.problem).toBe(
+      'First Aid: Dosing pause · dosing held · 30 min left.',
+    );
+    expect(a.direction).not.toContain('closed');
   });
 });

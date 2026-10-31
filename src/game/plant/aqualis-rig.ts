@@ -14,6 +14,7 @@ import {
   type SampleInput,
 } from './aqualis-types';
 import { MAINS, STRENGTH } from './water-treatment';
+import type { Incident } from './aqualis-first-aid';
 
 /**
  * The Aqualis test rig (mission 114, `doc/plans/114/`): the simplified world
@@ -93,7 +94,9 @@ export type RigScenarioId =
   | 'hardness-low'
   | 'scaling'
   | 'tds-high'
-  | 'busy';
+  | 'busy'
+  | 'incident-formed'
+  | 'incident-diarrhoea';
 
 export interface RigScenario {
   id: RigScenarioId;
@@ -105,6 +108,8 @@ export interface RigScenario {
   chloramine?: number;
   organicChloramine?: number;
   bathers: number;
+  /** A faecal incident reported at the poolside, for First Aid to deal with (`aqualis-first-aid.ts`). */
+  incident?: Incident;
 }
 
 const T = RIG_POOL.temperature;
@@ -198,6 +203,24 @@ export const RIG_SCENARIOS: Record<RigScenarioId, RigScenario> = {
       'Good water meeting a full pool of bathers: AUTO must keep up.',
     water: GOOD,
     bathers: 60,
+  },
+  'incident-formed': {
+    id: 'incident-formed',
+    name: 'Faecal incident: formed',
+    description:
+      'Good water, a formed stool reported: the pool cleared for First Aid.',
+    water: GOOD,
+    bathers: 0,
+    incident: 'formed',
+  },
+  'incident-diarrhoea': {
+    id: 'incident-diarrhoea',
+    name: 'Faecal incident: diarrhoea',
+    description:
+      'Good water, a diarrhoeal incident reported: the Cryptosporidium risk.',
+    water: GOOD,
+    bathers: 0,
+    incident: 'diarrhoea',
   },
 };
 

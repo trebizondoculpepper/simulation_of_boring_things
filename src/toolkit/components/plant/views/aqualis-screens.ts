@@ -7,6 +7,7 @@ import {
   drawProgressBar,
   drawSegmented,
   drawText,
+  drawTextBlock,
   drawTitleBar,
   drawDroplet,
 } from '../../../../ui2d/aero/aero-widgets';
@@ -14,6 +15,7 @@ import { wrapLines } from '../../../../ui2d/aero/logic/aero-layout';
 import { SCREEN } from '../../../../game/plant/aqualis-types';
 import {
   DOCTOR,
+  FIRST_AID_PAGE,
   LAYOUT,
   SETTINGS,
   pumpRow,
@@ -74,12 +76,21 @@ export function drawAqualisScreen(
   if (m.page === 'pumps') drawPumps(ctx, m);
   else if (m.page === 'water') drawWater(ctx, m);
   else if (m.page === 'doctor') drawDoctor(ctx, m, hooks);
+  else if (m.page === 'firstAid') drawFirstAid(ctx, m);
   else drawSettings(ctx, m);
   drawStatus(ctx, m);
 }
 
 function drawStatus(ctx: Ctx, m: DisplayModel) {
   const r = LAYOUT.status;
+  if (m.status.banner) {
+    // First Aid's banner: the strip filled amber under its glass.
+    const g = ctx.createLinearGradient(0, r.y, 0, r.y + r.h);
+    g.addColorStop(0, AERO.tints.amber[0]);
+    g.addColorStop(1, AERO.tints.amber[1]);
+    ctx.fillStyle = g;
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+  }
   drawGlassPanel(ctx, r, { radius: 0, tint: AERO.tints[m.status.tint][1] });
   const knob = { hand: 'HAND', off: 'OFF', auto: 'AUTO' }[m.selector];
   drawText(ctx, `Mode: ${knob}`, r.x + 14, r.y + r.h / 2, {
@@ -262,6 +273,102 @@ function drawDoctor(ctx: Ctx, m: DisplayModel, hooks: ScreenHooks) {
     state: !a?.dose ? 'disabled' : press(m, 'show-dose'),
     tint: 'green',
     size: 18,
+  });
+}
+
+function drawFirstAid(ctx: Ctx, m: DisplayModel) {
+  const f = m.firstAid;
+  const P = FIRST_AID_PAGE;
+  if (f.running) {
+    const r = P.running;
+    drawGlassPanel(ctx, r, { tint: AERO.tints.amber[1] });
+    drawText(ctx, 'FIRST AID RUNNING', r.x + 20, r.y + 30, {
+      size: 16,
+      weight: 700,
+      colour: AERO.tints.amber[3],
+    });
+    drawText(ctx, f.running.name, r.x + 20, r.y + 70, {
+      size: 32,
+      weight: 700,
+    });
+    drawTextBlock(
+      ctx,
+      { x: r.x + 20, y: r.y + 100, w: r.w - 40, h: 90 },
+      // Its name is the heading above.
+      f.running.status.replace(`${f.running.name} · `, ''),
+      { size: 22, weight: 600 },
+    );
+    drawText(
+      ctx,
+      f.running.closePool ? 'Keep the pool closed.' : 'The pool may stay open.',
+      r.x + 20,
+      r.y + r.h - 34,
+      {
+        size: 18,
+        weight: 700,
+        colour: f.running.closePool ? AERO.tints.red[3] : AERO.inkSoft,
+      },
+    );
+    drawGlossyButton(ctx, P.stop, 'STOP', {
+      state: press(m, 'fa-stop'),
+      tint: 'red',
+      size: 30,
+    });
+    return;
+  }
+  if (f.confirm) {
+    const r = P.confirm;
+    drawGlassPanel(ctx, r, { radius: 18, strength: 1.6 });
+    drawText(ctx, `Start ${f.confirm.name}?`, r.x + r.w / 2, r.y + 44, {
+      size: 28,
+      weight: 700,
+      align: 'center',
+    });
+    drawText(ctx, 'Dr Aqualis says:', r.x + 28, r.y + 92, {
+      size: 15,
+      weight: 600,
+      colour: AERO.inkSoft,
+    });
+    drawTextBlock(
+      ctx,
+      { x: r.x + 28, y: r.y + 108, w: r.w - 56, h: 150 },
+      f.confirm.says,
+      { size: 19, lineHeight: 26 },
+    );
+    drawGlossyButton(ctx, P.yes, 'YES', {
+      state: press(m, 'fa-yes'),
+      tint: 'green',
+      size: 24,
+    });
+    drawGlossyButton(ctx, P.no, 'NO', {
+      state: press(m, 'fa-no'),
+      tint: 'grey',
+      size: 24,
+    });
+    return;
+  }
+  f.programmes.forEach((p, i) => {
+    const r = P.button(i);
+    drawGlossyButton(ctx, r, '', {
+      state: press(m, `fa:${p.id}`),
+      tint: p.id === 'dosing-pause' ? 'grey' : 'aqua',
+      shape: 'rounded',
+    });
+    const ink = p.id === 'dosing-pause' ? AERO.ink : AERO.inkOnDark;
+    drawText(ctx, p.name, r.x + 22, r.y + 24, {
+      size: 22,
+      weight: 700,
+      colour: ink,
+    });
+    drawText(ctx, p.use, r.x + 22, r.y + 49, {
+      size: 15,
+      colour: ink,
+    });
+    drawText(ctx, '▶', r.x + r.w - 24, r.y + r.h / 2, {
+      size: 20,
+      colour: ink,
+      align: 'right',
+    });
   });
 }
 

@@ -16,6 +16,15 @@ import {
   demoScene,
 } from './aqualis-demo';
 import type { BootApp } from '../../core/logic/boot-sequence';
+import {
+  FIRST_AID,
+  FIRST_AID_IDS,
+  firstAidStatus,
+} from '../../../../game/plant/aqualis-first-aid';
+import type {
+  FirstAidId,
+  FirstAidState,
+} from '../../../../game/plant/aqualis-first-aid';
 import type {
   Advice,
   Alarm,
@@ -38,7 +47,11 @@ import type {
  * water status and Dr Aqualis; a touch holds it on the page touched until
  * it has been left untouched for a while. Settings (pool dynamics and
  * targets) is reached from its tab and never cycled to. HAND's rates are
- * set on the pump page while the knob is at HAND. Pure: the screen's
+ * set on the pump page while the knob is at HAND. First Aid (its five
+ * programmes, `aqualis-first-aid.ts`) is reached from its tab and never
+ * cycled to: a press asks to confirm, YES starts it (a `DisplayEffect`),
+ * and while one runs the page shows its status and STOP, and the status
+ * strip on every page its banner, in amber. Pure: the screen's
  * drawing is `views/aqualis-screens.ts`, which draws a page when its
  * model's `key` changes.
  */
@@ -61,7 +74,7 @@ export const TRIO_BOOT_APP: BootApp = {
   seconds: 5.5,
 };
 
-export type Page = 'pumps' | 'water' | 'doctor' | 'settings';
+export type Page = 'pumps' | 'water' | 'doctor' | 'firstAid' | 'settings';
 export const CYCLED: readonly Page[] = ['pumps', 'water', 'doctor'];
 export type SettingsTab = 'dynamics' | 'targets';
 
@@ -108,6 +121,8 @@ export interface DisplayState {
   glow: number;
   /** Seconds into the demonstration, or null when it is not running. */
   demo: number | null;
+  /** The First Aid programme pressed, awaiting YES or NO. */
+  confirm: FirstAidId | null;
 }
 
 export function newDisplay(): DisplayState {
@@ -122,6 +137,7 @@ export function newDisplay(): DisplayState {
     pressed: null,
     glow: 0,
     demo: null,
+    confirm: null,
   };
 }
 
@@ -137,6 +153,8 @@ export interface DisplayInputs {
   settings: AqualisSettings;
   /** HAND's demands, 0 to 1. */
   hand: Record<ChannelId, number>;
+  /** The First Aid programme running, if any. */
+  firstAid?: FirstAidState | null;
 }
 
 /** What a press asks of the cabinet beyond the display's own state. */
@@ -144,13 +162,17 @@ export type DisplayEffect =
   | { kind: 'settings'; settings: AqualisSettings }
   | { kind: 'hand'; channel: ChannelId; demand: number }
   /** Restart the cabinet's computer: it boots again (Settings › Pool dynamics). */
-  | { kind: 'restart' };
+  | { kind: 'restart' }
+  /** Start a First Aid programme (its YES), or stop the one running (STOP). */
+  | { kind: 'first-aid-start'; id: FirstAidId }
+  | { kind: 'first-aid-stop' };
 
 // ---- Time ------------------------------------------------------------------------------
 
 /** The display `dt` seconds on: the cycle turns while it is untouched. */
 export function tickDisplay(s: DisplayState, dt: number): DisplayState {
-  let { page, onPage, idle, glow, pressed, advice, showDose, demo } = s;
+  let { page, onPage, idle, glow, pressed, advice, showDose, demo, confirm } =
+    s;
   if (demo !== null) {
     demo += dt;
     if (demo >= DEMO_SECONDS)
@@ -162,6 +184,7 @@ export function tickDisplay(s: DisplayState, dt: number): DisplayState {
         idle: Infinity,
         advice: 0,
         showDose: false,
+        confirm: null,
       };
     return { ...s, demo };
   }
@@ -177,8 +200,20 @@ export function tickDisplay(s: DisplayState, dt: number): DisplayState {
     onPage = 0;
     advice = 0;
     showDose = false;
+    confirm = null;
   }
-  return { ...s, page, onPage, idle, glow, pressed, advice, showDose, demo };
+  return {
+    ...s,
+    page,
+    onPage,
+    idle,
+    glow,
+    pressed,
+    advice,
+    showDose,
+    demo,
+    confirm,
+  };
 }
 
 // ---- Layout ----------------------------------------------------------------------------
@@ -194,14 +229,16 @@ const TAB_NAMES: Record<Page, string> = {
   pumps: 'Pumps',
   water: 'Water',
   doctor: 'Dr Aqualis',
+  firstAid: 'First Aid',
   settings: 'Settings',
 };
 
+/** The five tabs, right of the title's "Aqualis". */
 export function tabRects(): { page: Page; name: string; rect: Rect }[] {
-  const pages: Page[] = ['pumps', 'water', 'doctor', 'settings'];
-  const w = 90;
-  const gap = 5;
-  const x0 = SCREEN.w - 10 - pages.length * w - (pages.length - 1) * gap;
+  const pages: Page[] = ['pumps', 'water', 'doctor', 'firstAid', 'settings'];
+  const w = 94;
+  const gap = 4;
+  const x0 = SCREEN.w - 8 - pages.length * w - (pages.length - 1) * gap;
   return pages.map((page, i) => ({
     page,
     name: TAB_NAMES[page],
@@ -269,6 +306,16 @@ export const SETTINGS = {
   restart: { x: 258, y: 372, w: 170, h: 46 } as Rect,
 };
 
+/** The First Aid page: its programmes' buttons, the confirm and the running panel. */
+export const FIRST_AID_PAGE = {
+  button: (i: number): Rect => ({ x: 16, y: 62 + i * 75, w: 608, h: 67 }),
+  confirm: { x: 40, y: 72, w: 560, h: 352 } as Rect,
+  yes: { x: 110, y: 350, w: 180, h: 58 } as Rect,
+  no: { x: 350, y: 350, w: 180, h: 58 } as Rect,
+  running: { x: 16, y: 62, w: 608, h: 270 } as Rect,
+  stop: { x: 200, y: 346, w: 240, h: 76 } as Rect,
+};
+
 /** Every region the page now answers. */
 export function displayRegions(
   s: DisplayState,
@@ -303,6 +350,16 @@ export function displayRegions(
         enabled: !!inputs.advice[Math.min(s.advice, n - 1)]?.dose,
       },
     );
+  }
+  if (s.page === 'firstAid') {
+    const P = FIRST_AID_PAGE;
+    if (inputs.firstAid) regions.push({ id: 'fa-stop', rect: P.stop });
+    else if (s.confirm)
+      regions.push({ id: 'fa-yes', rect: P.yes }, { id: 'fa-no', rect: P.no });
+    else
+      FIRST_AID_IDS.forEach((id, i) =>
+        regions.push({ id: `fa:${id}`, rect: P.button(i) }),
+      );
   }
   if (s.page === 'settings') {
     regions.push(
@@ -414,6 +471,7 @@ export function pressDisplay(
       showDose: false,
       pressed: null,
       glow: 0,
+      confirm: null,
     };
   } else if (verb === 'tab') {
     state = {
@@ -422,7 +480,17 @@ export function pressDisplay(
       onPage: 0,
       advice: 0,
       showDose: false,
+      confirm: null,
     };
+  } else if (verb === 'fa') {
+    state = { ...state, confirm: arg as FirstAidId };
+  } else if (verb === 'fa-yes') {
+    if (s.confirm) effect = { kind: 'first-aid-start', id: s.confirm };
+    state = { ...state, confirm: null };
+  } else if (verb === 'fa-no') {
+    state = { ...state, confirm: null };
+  } else if (verb === 'fa-stop') {
+    effect = { kind: 'first-aid-stop' };
   } else if (verb === 'hand-' || verb === 'hand+') {
     const ch = arg as ChannelId;
     const by = verb === 'hand+' ? HAND_STEP : -HAND_STEP;
@@ -531,6 +599,7 @@ export function channelBadge(v: ChannelView): {
 const INHIBIT_WORDS: Record<Inhibit, string> = {
   'selector-off': 'Dosing off',
   'sample-flow-lost': 'Dosing stopped: no sample flow',
+  'first-aid-pause': 'Dosing paused: First Aid',
   'no-readings': 'Waiting for readings',
 };
 
@@ -542,7 +611,13 @@ export interface DisplayModel {
   selector: Selector;
   /** The demonstration is running. */
   demo: boolean;
-  status: { text: string; alarms: number; tint: 'green' | 'red' | 'amber' };
+  status: {
+    text: string;
+    alarms: number;
+    tint: 'green' | 'red' | 'amber';
+    /** A First Aid programme's banner: the strip filled amber. */
+    banner?: boolean;
+  };
   pumps: {
     id: ChannelId;
     name: string;
@@ -567,6 +642,18 @@ export interface DisplayModel {
     index: number;
     count: number;
     showDose: boolean;
+  };
+  firstAid: {
+    programmes: { id: FirstAidId; name: string; use: string }[];
+    /** The programme awaiting YES or NO, with Dr Aqualis's words. */
+    confirm: { id: FirstAidId; name: string; says: string } | null;
+    /** The programme running, its status in words. */
+    running: {
+      id: FirstAidId;
+      name: string;
+      status: string;
+      closePool: boolean;
+    } | null;
   };
   settings: {
     dynamics: { volumeM3: number; flowM3h: number; turnoverH: number };
@@ -601,6 +688,7 @@ export function displayModel(
         advice: 0,
         showDose: !!scene.say?.dose,
         pressed: null,
+        confirm: null,
       },
       {
         ...inputs,
@@ -610,6 +698,7 @@ export function displayModel(
         advice: demoAdvice(scene),
         alarms: [],
         selector: 'auto',
+        firstAid: null,
       },
     );
     const status = {
@@ -626,19 +715,29 @@ export function displayModel(
   }
   const r = inputs.readings;
   const alarms = inputs.alarms.length;
-  const status = inputs.inhibit
-    ? { text: INHIBIT_WORDS[inputs.inhibit], alarms, tint: 'amber' as const }
-    : alarms > 0
-      ? {
-          text: inputs.alarms.map((a) => a.text).join(' · '),
-          alarms,
-          tint: 'red' as const,
-        }
-      : {
-          text: inputs.selector === 'auto' ? 'AUTO: regulating' : 'HAND',
-          alarms,
-          tint: 'green' as const,
-        };
+  const fa = inputs.firstAid ?? null;
+  // A First Aid programme's banner, in amber, over every other word (a
+  // crash is the host's: it draws no page at all).
+  const status = fa
+    ? {
+        text: `FIRST AID: ${firstAidStatus(fa)}`,
+        alarms,
+        tint: 'amber' as const,
+        banner: true,
+      }
+    : inputs.inhibit
+      ? { text: INHIBIT_WORDS[inputs.inhibit], alarms, tint: 'amber' as const }
+      : alarms > 0
+        ? {
+            text: inputs.alarms.map((a) => a.text).join(' · '),
+            alarms,
+            tint: 'red' as const,
+          }
+        : {
+            text: inputs.selector === 'auto' ? 'AUTO: regulating' : 'HAND',
+            alarms,
+            tint: 'green' as const,
+          };
   const pumps = CHANNEL_IDS.map((id) => {
     const v = inputs.channels[id];
     return {
@@ -692,6 +791,29 @@ export function displayModel(
       count: n,
       showDose: s.showDose,
     },
+    firstAid: {
+      programmes: FIRST_AID_IDS.map((id) => ({
+        id,
+        name: FIRST_AID[id].name,
+        use: FIRST_AID[id].use,
+      })),
+      confirm:
+        s.confirm && !fa
+          ? {
+              id: s.confirm,
+              name: FIRST_AID[s.confirm].name,
+              says: FIRST_AID[s.confirm].says,
+            }
+          : null,
+      running: fa
+        ? {
+            id: fa.id,
+            name: FIRST_AID[fa.id].name,
+            status: firstAidStatus(fa),
+            closePool: FIRST_AID[fa.id].closePool,
+          }
+        : null,
+    },
     settings: {
       dynamics: {
         volumeM3: d.volumeM3,
@@ -734,6 +856,11 @@ function modelKey(m: Omit<DisplayModel, 'key'>): string {
               m.doctor.showDose,
               m.doctor.advice?.dose?.text,
             ]
-          : [m.tab, m.settings.row, m.settings.dynamics, m.settings.targets];
+          : m.page === 'firstAid'
+            ? [
+                m.firstAid.confirm?.id ?? null,
+                m.firstAid.running?.status ?? null,
+              ]
+            : [m.tab, m.settings.row, m.settings.dynamics, m.settings.targets];
   return JSON.stringify([head, body]);
 }
