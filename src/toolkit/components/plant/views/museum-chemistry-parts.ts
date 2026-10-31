@@ -15,6 +15,8 @@ import {
   createPanelMeter,
   createVfd,
 } from '../../industrial-control/views/panel-instruments';
+import { drawGhs } from './chemicals-signs';
+import type { GhsKind } from './chemicals-signs';
 
 /**
  * The working fittings Hall 4 of the museum adds (107d): an ideal chemical
@@ -25,13 +27,13 @@ import {
  * each facing +z.
  */
 
-/** Each hazard's CLP pictogram number and its word on the label. */
-const HAZARD: Record<string, { ghs: string; word: string }> = {
-  corrosive: { ghs: 'GHS05', word: 'Corrosive' },
-  oxidiser: { ghs: 'GHS03', word: 'Oxidiser' },
-  irritant: { ghs: 'GHS07', word: 'Irritant' },
-  environment: { ghs: 'GHS09', word: 'Environment' },
-  gas: { ghs: 'GHS04', word: 'Gas under pressure' },
+/** Each hazard's CLP pictogram, as drawn (`drawGhs`), and its word on the label. */
+const HAZARD: Record<string, { ghs: GhsKind; word: string }> = {
+  corrosive: { ghs: 'corrosive', word: 'Corrosive' },
+  oxidiser: { ghs: 'oxidiser', word: 'Oxidiser' },
+  irritant: { ghs: 'exclamation', word: 'Irritant' },
+  environment: { ghs: 'environment', word: 'Environment' },
+  gas: { ghs: 'gas', word: 'Gas under pressure' },
 };
 
 /**
@@ -122,28 +124,24 @@ export function createChemicalTank(
       c.fillText(
         hazards.map((z) => HAZARD[z].word).join(', '),
         w / 2,
-        h * 0.67,
-        w * 0.94,
+        h * 0.655,
+        w * 0.8,
       );
-      hazards.forEach((z, k) => {
-        const x = w * (0.5 + (k - (hazards.length - 1) / 2) * 0.22);
-        const cy = h * 0.82;
-        const r = h * 0.07;
-        c.save();
-        c.translate(x, cy);
-        c.rotate(Math.PI / 4);
-        c.fillStyle = '#ffffff';
-        c.strokeStyle = '#c8261c';
-        c.lineWidth = r * 0.25;
-        c.fillRect(-r * 0.7, -r * 0.7, r * 1.4, r * 1.4);
-        c.strokeRect(-r * 0.7, -r * 0.7, r * 1.4, r * 1.4);
-        c.restore();
-        c.fillStyle = '#16232b';
-        c.font = `bold ${h * 0.03}px Arial`;
-        c.fillText(HAZARD[z].ghs, x, cy + h * 0.012, r * 1.3);
-      });
+      // The pictograms themselves (the owner, 2026-10-31: the symbols,
+      // not their GHS numbers), in a row kept to the label's front,
+      // where its curve does not turn them away.
+      const s = Math.min(h * 0.26, (w * 0.76) / Math.max(1, hazards.length));
+      hazards.forEach((z, k) =>
+        drawGhs(
+          c,
+          w / 2 + (k - (hazards.length - 1) / 2) * s,
+          h * 0.83,
+          s * 0.96,
+          HAZARD[z].ghs,
+        ),
+      );
     },
-    256,
+    512,
   );
   const sticker = new Mesh(
     new CylinderGeometry(

@@ -15,7 +15,12 @@ import type { Pictogram } from '../../general-safety/views/safety-signs';
 type Tools = ReturnType<typeof plantTools>;
 type Ctx = CanvasRenderingContext2D;
 
-export type GhsKind = 'corrosive' | 'environment' | 'exclamation' | 'oxidiser';
+export type GhsKind =
+  | 'corrosive'
+  | 'environment'
+  | 'exclamation'
+  | 'oxidiser'
+  | 'gas';
 export type MandatoryKind = 'gloves' | 'visor' | 'apron' | 'boots';
 /** Each mandatory kind's modern pictogram (`safety-signs.ts`). */
 const MANDATORY_PICTOGRAM: Record<MandatoryKind, Pictogram> = {
@@ -98,6 +103,14 @@ export function drawGhs(
     c.quadraticCurveTo(-1.4 * u, -2 * u, 0, -3 * u);
     c.quadraticCurveTo(1.4 * u, -2 * u, 1.2 * u, 0.2 * u);
     c.fill();
+  } else if (kind === 'gas') {
+    // A gas cylinder lying on its side, tilted, its valve up and right.
+    c.rotate(-0.3);
+    c.beginPath();
+    c.roundRect(-2.8 * u, -0.9 * u, 4.6 * u, 1.8 * u, 0.9 * u);
+    c.fill();
+    c.fillRect(1.6 * u, -0.45 * u, 0.9 * u, 0.9 * u);
+    c.fillRect(2.4 * u, -0.7 * u, 0.4 * u, 1.4 * u);
   } else {
     c.fillRect(-0.45 * u, -2.8 * u, 0.9 * u, 3.6 * u);
     c.beginPath();
