@@ -59,7 +59,11 @@ describe("Hall 4's first set of challenge cards", () => {
       it('words its briefing, clue and explanation from its chemistry', () => {
         const lower = (t: string) => t.toLowerCase();
         for (const t of card.targets)
-          expect(lower(card.briefing)).toContain(lower(BANDS[t].name));
+          for (const level of ['journeyman', 'pro'] as const)
+            expect(lower(card.briefing[level])).toContain(lower(BANDS[t].name));
+        expect(card.briefing.journeyman).toContain('Journeyman');
+        expect(card.briefing.pro).toContain('Pool Pro');
+        expect(card.briefing.pro).toContain('every other reading');
         const named = card.solutions.pro.map((d) => doseWords(d.tank, d.size));
         for (const n of named) expect(card.explanation).toContain(n);
         const used = new Set(card.solutions.pro.map((d) => d.tank));

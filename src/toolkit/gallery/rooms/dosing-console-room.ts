@@ -24,6 +24,7 @@ import {
 import { createFirstPerson } from '../../controls/input/first-person';
 import { CHALLENGES } from '../../../game/plant/museum-4-cards';
 import {
+  cardWords,
   canDose,
   doseGame,
   dosesLeft,
@@ -234,7 +235,10 @@ export function startDosingConsoleRoom(canvas: HTMLCanvasElement) {
       const n = game.narration;
       if (n && n.seq !== seenSeq && game.card) {
         seenSeq = n.seq;
-        caption = { kind: n.kind, text: game.card[n.kind] };
+        caption = {
+          kind: n.kind,
+          text: cardWords(game.card, n.kind, game.level),
+        };
         captionLeft = CAPTION_SECONDS;
       }
       captionLeft -= delta;

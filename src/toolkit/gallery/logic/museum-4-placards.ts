@@ -124,22 +124,30 @@ export function beamPlacard(): Placard {
  * words in `doc/scripts/museum/museum-narration.txt` for recording.
  */
 export const CARD_NARRATION: Readonly<
-  Record<string, Record<NarrationKind, string>>
+  Record<string, Record<NarrationKind | 'briefingPro', string>>
 > = Object.fromEntries(
-  CHALLENGES.map((c) => [c.id, { briefing: '', clue: '', explanation: '' }]),
+  CHALLENGES.map((c) => [
+    c.id,
+    { briefing: '', briefingPro: '', clue: '', explanation: '' },
+  ]),
 );
 
 /** The cards' narrations as the recording script sets them out. */
 export function cardNarrationScript() {
   const lines = ['HALL 4: THE CHALLENGE CARDS', ''];
   CHALLENGES.forEach((c, k) => {
-    for (const [n, kind] of (
-      ['briefing', 'clue', 'explanation'] as const
-    ).entries())
+    const words = [
+      ['briefing (Journeyman)', c.briefing.journeyman],
+      ['briefing (Pool Pro)', c.briefing.pro],
+      ['clue', c.clue],
+      ['explanation', c.explanation],
+    ] as const;
+    words.forEach(([kind, text], n) =>
       lines.push(
-        `7${'bcdefghij'[k]}${n + 1}. ${c.title}, ${kind}: ${c[kind]}`,
+        `7${'bcdefghij'[k]}${n + 1}. ${c.title}, ${kind}: ${text}`,
         '',
-      );
+      ),
+    );
   });
   return lines.join('\n');
 }

@@ -29,10 +29,11 @@ describe('Hall 4’s words', () => {
 });
 
 describe('Hall 4’s card narrations', () => {
-  it('have a clip slot for each card’s briefing, clue and explanation', () => {
+  it('have a clip slot for each card’s briefings, clue and explanation', () => {
     for (const c of CHALLENGES)
       expect(Object.keys(CARD_NARRATION[c.id]).sort()).toEqual([
         'briefing',
+        'briefingPro',
         'clue',
         'explanation',
       ]);

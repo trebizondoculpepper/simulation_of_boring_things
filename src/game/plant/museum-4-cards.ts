@@ -34,8 +34,11 @@ export const CHALLENGES: readonly ChallengeCard[] = [
         { tank: 'bicarbonate', size: 3 },
       ],
     },
-    briefing:
-      'The acid pump stopped two days ago, and the pH has crept up to 7.9. At that pH most of the chlorine is the weak hypochlorite ion, so it works poorly. Bring the pH back to 7.2 to 7.6. A Pool Pro also checks the alkalinity, which is a little low.',
+    briefing: {
+      journeyman:
+        'The acid pump stopped two days ago, and the pH has crept up to 7.9. At that pH most of the chlorine is the weak hypochlorite ion, so it works poorly. As a Journeyman, fix the fault: bring the pH back to 7.2 to 7.6.',
+      pro: 'The acid pump stopped two days ago, and the pH has crept up to 7.9. At that pH most of the chlorine is the weak hypochlorite ion, so it works poorly. As a Pool Pro, bring the pH back to 7.2 to 7.6, and restore every other reading too: the alkalinity is a little low.',
+    },
     clue: "Every acid lowers the pH, but most acids also eat the alkalinity, the water's buffer, and the buffer here is already thin. One way down leaves the buffer alone.",
     concept: 'buffer',
     explanation:
@@ -65,8 +68,11 @@ export const CHALLENGES: readonly ChallengeCard[] = [
         { tank: 'calciumChloride', size: 3 },
       ],
     },
-    briefing:
-      'Every dose sends the pH swinging, because the alkalinity has fallen to 48 mg/l. Bring the alkalinity back to 80 to 200 mg/l. A Pool Pro will notice the water is soft and aggressive as well.',
+    briefing: {
+      journeyman:
+        'Every dose sends the pH swinging, because the alkalinity has fallen to 48 mg/l. As a Journeyman, fix the fault: bring the alkalinity back to 80 to 200 mg/l.',
+      pro: 'Every dose sends the pH swinging, because the alkalinity has fallen to 48 mg/l. As a Pool Pro, bring the alkalinity back to 80 to 200 mg/l, and restore every other reading too: the water is soft, its calcium hardness low and its balance aggressive.',
+    },
     clue: "Alkalinity is the water's buffer: it soaks up acid and base so the pH holds still. Raise the buffer, not the pH. Then look at the balance: soft water eats grout even when the pH is right.",
     concept: 'buffer',
     explanation:
@@ -90,8 +96,11 @@ export const CHALLENGES: readonly ChallengeCard[] = [
         { tank: 'bicarbonate', size: 4 },
       ],
     },
-    briefing:
-      'The acid pump stuck on overnight. The pH is 6.9, stinging eyes, and the pool is closed. Bring the pH back to 7.2 to 7.6. The acid has eaten into the chlorine and the buffer as well.',
+    briefing: {
+      journeyman:
+        'The acid pump stuck on overnight. The pH is 6.9, stinging eyes, and the pool is closed. As a Journeyman, fix the fault: bring the pH back to 7.2 to 7.6.',
+      pro: 'The acid pump stuck on overnight. The pH is 6.9, stinging eyes, and the pool is closed. As a Pool Pro, bring the pH back to 7.2 to 7.6, and restore every other reading too: the acid has eaten into the free chlorine and the alkalinity as well.',
+    },
     clue: "The acid ate the alkalinity as well as dropping the pH. Rebuild the buffer and the pH comes up with it. And look at the free chlorine: the night's acid has left it low.",
     concept: 'buffer',
     explanation:
@@ -124,8 +133,11 @@ export const CHALLENGES: readonly ChallengeCard[] = [
         { tank: 'hcl', size: 3 },
       ],
     },
-    briefing:
-      'Scale is building on the heater. The water is hard, alkaline and its pH 7.8, so its balance index is far above zero: it is laying down calcium. Bring the balance back to −0.5 to +0.5.',
+    briefing: {
+      journeyman:
+        'Scale is building on the heater. The water is hard, alkaline and its pH 7.8, so its balance index is far above zero: it is laying down calcium. As a Journeyman, fix the fault: bring the balance back to −0.5 to +0.5.',
+      pro: 'Scale is building on the heater. The water is hard, alkaline and its pH 7.8, so its balance index is far above zero: it is laying down calcium. As a Pool Pro, bring the balance back to −0.5 to +0.5, and restore every other reading too: the free chlorine has been low all along.',
+    },
     clue: 'The balance index adds up pH, hardness, alkalinity and temperature. Of those, the pH moves fastest: bring it down and the balance follows. Then check the free chlorine, which has been low all along.',
     concept: 'balance index',
     explanation:
@@ -150,8 +162,11 @@ export const CHALLENGES: readonly ChallengeCard[] = [
         { tank: 'fresh', size: 4 },
       ],
     },
-    briefing:
-      'The chlorine controller stuck on overnight, and the free chlorine is 4.7 mg/l. Bring the free chlorine back to 1.0 to 2.0 mg/l so the pool can reopen.',
+    briefing: {
+      journeyman:
+        'The chlorine controller stuck on overnight, and the free chlorine is 4.7 mg/l. As a Journeyman, fix the fault: bring the free chlorine back to 1.0 to 2.0 mg/l so the pool can reopen.',
+      pro: 'The chlorine controller stuck on overnight, and the free chlorine is 4.7 mg/l. As a Pool Pro, bring the free chlorine back to 1.0 to 2.0 mg/l, and restore every other reading too: whatever you use will move the pH, the alkalinity and the balance, and they must all end in range.',
+    },
     clue: 'A dechlorinator takes chlorine away fast, but it is a side effect, not the chlorine, that catches people out: the pH rises afterwards. Too little and the pool stays shut; too much and you will need to chlorinate again.',
     concept: 'pH rises',
     explanation:
@@ -186,8 +201,11 @@ export const CHALLENGES: readonly ChallengeCard[] = [
         { tank: 'fresh', size: 4 },
       ],
     },
-    briefing:
-      'The UV failed in a busy week. The hall smells of chlorine and swimmers have red eyes: that smell is combined chlorine, chloramines, not too much chlorine. Bring combined chlorine under 1.0 mg/l and under half the free.',
+    briefing: {
+      journeyman:
+        'The UV failed in a busy week. The hall smells of chlorine and swimmers have red eyes: that smell is combined chlorine, chloramines, not too much chlorine. As a Journeyman, fix the fault: bring combined chlorine under 1.0 mg/l and under half the free.',
+      pro: 'The UV failed in a busy week. The hall smells of chlorine and swimmers have red eyes: that smell is combined chlorine, chloramines, not too much chlorine. As a Pool Pro, bring combined chlorine under 1.0 mg/l and under half the free, and restore every other reading too: the busy week has used up much of the alkalinity.',
+    },
     clue: 'Combined chlorine is chlorine already used up on what swimmers brought in. Some of it will not burn off: the cure for what has built up is dilution. Keep a little free chlorine working while you do it.',
     concept: 'dilution',
     explanation:
@@ -215,8 +233,11 @@ export const CHALLENGES: readonly ChallengeCard[] = [
         { tank: 'fresh', size: 4 },
       ],
     },
-    briefing:
-      'The pool was refilled from soft mains water. Its calcium hardness is 50 mg/l and it is eating the grout. Bring calcium hardness to 100 or more and the balance to −0.5 to +0.5.',
+    briefing: {
+      journeyman:
+        'The pool was refilled from soft mains water. Its calcium hardness is 50 mg/l and it is eating the grout. As a Journeyman, fix the fault: bring calcium hardness to 100 or more and the balance to −0.5 to +0.5.',
+      pro: 'The pool was refilled from soft mains water. Its calcium hardness is 50 mg/l and it is eating the grout. As a Pool Pro, bring calcium hardness to 100 or more and the balance to −0.5 to +0.5, and restore every other reading too: the fresh water has almost no alkalinity.',
+    },
     clue: 'Aggressive water wants calcium: give it some and it stops taking it from the grout. But the balance index also needs alkalinity, and this water has almost none. Fix the buffer as well as the hardness.',
     concept: 'calcium',
     explanation:

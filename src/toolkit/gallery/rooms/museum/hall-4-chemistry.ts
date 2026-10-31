@@ -42,6 +42,7 @@ import type {
 } from '../../../../game/plant/museum-4-lab';
 import { CHALLENGES } from '../../../../game/plant/museum-4-cards';
 import {
+  cardWords,
   canDose,
   doseGame,
   dosesLeft,
@@ -841,9 +842,18 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       const n = game.narration;
       if (n && n.seq !== seenSeq && game.card) {
         seenSeq = n.seq;
-        caption = { kind: n.kind, text: game.card[n.kind] };
+        caption = {
+          kind: n.kind,
+          text: cardWords(game.card, n.kind, game.level),
+        };
         captionLeft = CAPTION_SECONDS;
-        narrate(CARD_NARRATION[game.card.id]?.[n.kind] ?? '');
+        narrate(
+          CARD_NARRATION[game.card.id]?.[
+            n.kind === 'briefing' && game.level === 'pro'
+              ? 'briefingPro'
+              : n.kind
+          ] ?? '',
+        );
       }
       captionLeft -= delta;
       if (!game.card || captionLeft <= 0) caption = null;

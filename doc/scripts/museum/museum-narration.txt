@@ -34,47 +34,61 @@ HALL 4: THE CHEMISTRY OF POOLS
 
 HALL 4: THE CHALLENGE CARDS
 
-7b1. The acid pump failed, briefing: The acid pump stopped two days ago, and the pH has crept up to 7.9. At that pH most of the chlorine is the weak hypochlorite ion, so it works poorly. Bring the pH back to 7.2 to 7.6. A Pool Pro also checks the alkalinity, which is a little low.
+7b1. The acid pump failed, briefing (Journeyman): The acid pump stopped two days ago, and the pH has crept up to 7.9. At that pH most of the chlorine is the weak hypochlorite ion, so it works poorly. As a Journeyman, fix the fault: bring the pH back to 7.2 to 7.6.
 
-7b2. The acid pump failed, clue: Every acid lowers the pH, but most acids also eat the alkalinity, the water's buffer, and the buffer here is already thin. One way down leaves the buffer alone.
+7b2. The acid pump failed, briefing (Pool Pro): The acid pump stopped two days ago, and the pH has crept up to 7.9. At that pH most of the chlorine is the weak hypochlorite ion, so it works poorly. As a Pool Pro, bring the pH back to 7.2 to 7.6, and restore every other reading too: the alkalinity is a little low.
 
-7b3. The acid pump failed, explanation: The ideal answer was Medium carbon dioxide, then Large sodium bicarbonate. Carbon dioxide brings the pH down without touching the alkalinity, and the bicarbonate rebuilds the buffer so the pH stays put. A Journeyman stops at the pH; a Pool Pro fixes the buffer too.
+7b3. The acid pump failed, clue: Every acid lowers the pH, but most acids also eat the alkalinity, the water's buffer, and the buffer here is already thin. One way down leaves the buffer alone.
 
-7c1. The pH will not hold, briefing: Every dose sends the pH swinging, because the alkalinity has fallen to 48 mg/l. Bring the alkalinity back to 80 to 200 mg/l. A Pool Pro will notice the water is soft and aggressive as well.
+7b4. The acid pump failed, explanation: The ideal answer was Medium carbon dioxide, then Large sodium bicarbonate. Carbon dioxide brings the pH down without touching the alkalinity, and the bicarbonate rebuilds the buffer so the pH stays put. A Journeyman stops at the pH; a Pool Pro fixes the buffer too.
 
-7c2. The pH will not hold, clue: Alkalinity is the water's buffer: it soaks up acid and base so the pH holds still. Raise the buffer, not the pH. Then look at the balance: soft water eats grout even when the pH is right.
+7c1. The pH will not hold, briefing (Journeyman): Every dose sends the pH swinging, because the alkalinity has fallen to 48 mg/l. As a Journeyman, fix the fault: bring the alkalinity back to 80 to 200 mg/l.
 
-7c3. The pH will not hold, explanation: The ideal answer was Huge sodium bicarbonate and Large calcium chloride. Bicarbonate raises the alkalinity while hardly moving the pH, so the buffer is back; the calcium brings the hardness and the balance index into range, so the water stops eating the grout.
+7c2. The pH will not hold, briefing (Pool Pro): Every dose sends the pH swinging, because the alkalinity has fallen to 48 mg/l. As a Pool Pro, bring the alkalinity back to 80 to 200 mg/l, and restore every other reading too: the water is soft, its calcium hardness low and its balance aggressive.
 
-7d1. Stinging eyes, briefing: The acid pump stuck on overnight. The pH is 6.9, stinging eyes, and the pool is closed. Bring the pH back to 7.2 to 7.6. The acid has eaten into the chlorine and the buffer as well.
+7c3. The pH will not hold, clue: Alkalinity is the water's buffer: it soaks up acid and base so the pH holds still. Raise the buffer, not the pH. Then look at the balance: soft water eats grout even when the pH is right.
 
-7d2. Stinging eyes, clue: The acid ate the alkalinity as well as dropping the pH. Rebuild the buffer and the pH comes up with it. And look at the free chlorine: the night's acid has left it low.
+7c4. The pH will not hold, explanation: The ideal answer was Huge sodium bicarbonate and Large calcium chloride. Bicarbonate raises the alkalinity while hardly moving the pH, so the buffer is back; the calcium brings the hardness and the balance index into range, so the water stops eating the grout.
 
-7d3. Stinging eyes, explanation: The ideal answer was Medium sodium hypochlorite and Huge sodium bicarbonate. The bicarbonate rebuilds the alkalinity the acid ate, and the pH rises with it and holds; the hypochlorite restores the free chlorine. A Journeyman puts the pH right; a Pool Pro makes the water safe to swim in too.
+7d1. Stinging eyes, briefing (Journeyman): The acid pump stuck on overnight. The pH is 6.9, stinging eyes, and the pool is closed. As a Journeyman, fix the fault: bring the pH back to 7.2 to 7.6.
 
-7e1. White crust on the heater, briefing: Scale is building on the heater. The water is hard, alkaline and its pH 7.8, so its balance index is far above zero: it is laying down calcium. Bring the balance back to −0.5 to +0.5.
+7d2. Stinging eyes, briefing (Pool Pro): The acid pump stuck on overnight. The pH is 6.9, stinging eyes, and the pool is closed. As a Pool Pro, bring the pH back to 7.2 to 7.6, and restore every other reading too: the acid has eaten into the free chlorine and the alkalinity as well.
 
-7e2. White crust on the heater, clue: The balance index adds up pH, hardness, alkalinity and temperature. Of those, the pH moves fastest: bring it down and the balance follows. Then check the free chlorine, which has been low all along.
+7d3. Stinging eyes, clue: The acid ate the alkalinity as well as dropping the pH. Rebuild the buffer and the pH comes up with it. And look at the free chlorine: the night's acid has left it low.
 
-7e3. White crust on the heater, explanation: The ideal answer was Medium sodium hypochlorite and Large hydrochloric acid. The acid brings the pH and some alkalinity down, which brings the balance index into range so the scaling stops; the hypochlorite restores the free chlorine.
+7d4. Stinging eyes, explanation: The ideal answer was Medium sodium hypochlorite and Huge sodium bicarbonate. The bicarbonate rebuilds the alkalinity the acid ate, and the pH rises with it and holds; the hypochlorite restores the free chlorine. A Journeyman puts the pH right; a Pool Pro makes the water safe to swim in too.
 
-7f1. Too much chlorine, briefing: The chlorine controller stuck on overnight, and the free chlorine is 4.7 mg/l. Bring the free chlorine back to 1.0 to 2.0 mg/l so the pool can reopen.
+7e1. White crust on the heater, briefing (Journeyman): Scale is building on the heater. The water is hard, alkaline and its pH 7.8, so its balance index is far above zero: it is laying down calcium. As a Journeyman, fix the fault: bring the balance back to −0.5 to +0.5.
 
-7f2. Too much chlorine, clue: A dechlorinator takes chlorine away fast, but it is a side effect, not the chlorine, that catches people out: the pH rises afterwards. Too little and the pool stays shut; too much and you will need to chlorinate again.
+7e2. White crust on the heater, briefing (Pool Pro): Scale is building on the heater. The water is hard, alkaline and its pH 7.8, so its balance index is far above zero: it is laying down calcium. As a Pool Pro, bring the balance back to −0.5 to +0.5, and restore every other reading too: the free chlorine has been low all along.
 
-7f3. Too much chlorine, explanation: The ideal answer was Large sodium thiosulphate, Medium hydrochloric acid and Huge fresh water. The thiosulphate takes the excess chlorine away; the acid brings down the pH it raised; the fresh water brings back the alkalinity and the balance. A Journeyman reopens the pool; a Pool Pro leaves it balanced.
+7e3. White crust on the heater, clue: The balance index adds up pH, hardness, alkalinity and temperature. Of those, the pH moves fastest: bring it down and the balance follows. Then check the free chlorine, which has been low all along.
 
-7g1. The chlorine smell, briefing: The UV failed in a busy week. The hall smells of chlorine and swimmers have red eyes: that smell is combined chlorine, chloramines, not too much chlorine. Bring combined chlorine under 1.0 mg/l and under half the free.
+7e4. White crust on the heater, explanation: The ideal answer was Medium sodium hypochlorite and Large hydrochloric acid. The acid brings the pH and some alkalinity down, which brings the balance index into range so the scaling stops; the hypochlorite restores the free chlorine.
 
-7g2. The chlorine smell, clue: Combined chlorine is chlorine already used up on what swimmers brought in. Some of it will not burn off: the cure for what has built up is dilution. Keep a little free chlorine working while you do it.
+7f1. Too much chlorine, briefing (Journeyman): The chlorine controller stuck on overnight, and the free chlorine is 4.7 mg/l. As a Journeyman, fix the fault: bring the free chlorine back to 1.0 to 2.0 mg/l so the pool can reopen.
 
-7g3. The chlorine smell, explanation: The ideal answer was Tiny sodium hypochlorite, Huge sodium bicarbonate and Huge fresh water. The fresh water dilutes the combined chlorine away, the small top-up of hypochlorite keeps the free chlorine working, and the bicarbonate puts back the alkalinity the busy week used up.
+7f2. Too much chlorine, briefing (Pool Pro): The chlorine controller stuck on overnight, and the free chlorine is 4.7 mg/l. As a Pool Pro, bring the free chlorine back to 1.0 to 2.0 mg/l, and restore every other reading too: whatever you use will move the pH, the alkalinity and the balance, and they must all end in range.
 
-7h1. Eating the grout, briefing: The pool was refilled from soft mains water. Its calcium hardness is 50 mg/l and it is eating the grout. Bring calcium hardness to 100 or more and the balance to −0.5 to +0.5.
+7f3. Too much chlorine, clue: A dechlorinator takes chlorine away fast, but it is a side effect, not the chlorine, that catches people out: the pH rises afterwards. Too little and the pool stays shut; too much and you will need to chlorinate again.
 
-7h2. Eating the grout, clue: Aggressive water wants calcium: give it some and it stops taking it from the grout. But the balance index also needs alkalinity, and this water has almost none. Fix the buffer as well as the hardness.
+7f4. Too much chlorine, explanation: The ideal answer was Large sodium thiosulphate, Medium hydrochloric acid and Huge fresh water. The thiosulphate takes the excess chlorine away; the acid brings down the pH it raised; the fresh water brings back the alkalinity and the balance. A Journeyman reopens the pool; a Pool Pro leaves it balanced.
 
-7h3. Eating the grout, explanation: The ideal answer was Huge sodium bicarbonate, Large calcium chloride and Huge fresh water. The calcium chloride raises the hardness, the bicarbonate rebuilds the alkalinity, and together they bring the balance index into range; the fresh water evens out the pH and the rest.
+7g1. The chlorine smell, briefing (Journeyman): The UV failed in a busy week. The hall smells of chlorine and swimmers have red eyes: that smell is combined chlorine, chloramines, not too much chlorine. As a Journeyman, fix the fault: bring combined chlorine under 1.0 mg/l and under half the free.
+
+7g2. The chlorine smell, briefing (Pool Pro): The UV failed in a busy week. The hall smells of chlorine and swimmers have red eyes: that smell is combined chlorine, chloramines, not too much chlorine. As a Pool Pro, bring combined chlorine under 1.0 mg/l and under half the free, and restore every other reading too: the busy week has used up much of the alkalinity.
+
+7g3. The chlorine smell, clue: Combined chlorine is chlorine already used up on what swimmers brought in. Some of it will not burn off: the cure for what has built up is dilution. Keep a little free chlorine working while you do it.
+
+7g4. The chlorine smell, explanation: The ideal answer was Tiny sodium hypochlorite, Huge sodium bicarbonate and Huge fresh water. The fresh water dilutes the combined chlorine away, the small top-up of hypochlorite keeps the free chlorine working, and the bicarbonate puts back the alkalinity the busy week used up.
+
+7h1. Eating the grout, briefing (Journeyman): The pool was refilled from soft mains water. Its calcium hardness is 50 mg/l and it is eating the grout. As a Journeyman, fix the fault: bring calcium hardness to 100 or more and the balance to −0.5 to +0.5.
+
+7h2. Eating the grout, briefing (Pool Pro): The pool was refilled from soft mains water. Its calcium hardness is 50 mg/l and it is eating the grout. As a Pool Pro, bring calcium hardness to 100 or more and the balance to −0.5 to +0.5, and restore every other reading too: the fresh water has almost no alkalinity.
+
+7h3. Eating the grout, clue: Aggressive water wants calcium: give it some and it stops taking it from the grout. But the balance index also needs alkalinity, and this water has almost none. Fix the buffer as well as the hardness.
+
+7h4. Eating the grout, explanation: The ideal answer was Huge sodium bicarbonate, Large calcium chloride and Huge fresh water. The calcium chloride raises the hardness, the bicarbonate rebuilds the alkalinity, and together they bring the balance index into range; the fresh water evens out the pH and the rest.
 
 
 HALL 5: A DAY IN THE LIFE

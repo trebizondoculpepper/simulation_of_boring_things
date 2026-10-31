@@ -98,8 +98,12 @@ export interface ChallengeCard {
   pars: Record<Level, number>;
   /** The solver's stored solutions (`scripts/hall-4-solver.ts`). */
   solutions: Record<Level, readonly Dose[]>;
-  /** Narrated on START: the problem and the chemistry needed, not the answer. */
-  briefing: string;
+  /**
+   * Narrated on START, at each level: the problem and the chemistry needed,
+   * not the answer; a Journeyman fixes the major fault, a Pool Pro restores
+   * every reading (the owner, 2026-10-31).
+   */
+  briefing: Record<Level, string>;
   /** Narrated after a real minute without a win: what makes it hard, no doses given. */
   clue: string;
   /** The chemistry concept the card turns on, which the clue must name. */
@@ -215,6 +219,13 @@ export function startCard(
     'briefing',
   );
 }
+
+/** A narration's words on `card` at `level`. */
+export const cardWords = (
+  card: ChallengeCard,
+  kind: NarrationKind,
+  level: Level,
+) => (kind === 'briefing' ? card.briefing[level] : card[kind]);
 
 /** The readings a level must bring into band on `card`. */
 export const required = (card: ChallengeCard, level: Level) =>
