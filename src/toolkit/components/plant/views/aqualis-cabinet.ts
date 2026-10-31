@@ -790,15 +790,9 @@ export function createAqualisCabinet(
   );
   knob.object.position.set(KNOB_AT.x, KNOB_AT.y, P.z);
   contents.add(knob.object);
-  t.label(
-    contents,
-    'HAND  OFF  AUTO',
-    KNOB_AT.x,
-    KNOB_AT.y - 0.03,
-    P.z + 0.0005,
-    0.0065,
-    '#1b1b1b',
-  );
+
+  // Each knob's positions are on its own legend tag above it, its title
+  // above that: no second legend below (the owner, 2026-10-31).
   // Its own power switch (the owner, 2026-10-31): OFF · ON, on from the
   // start; off and on again, it power-cycles the computer.
   const mainOn = signal(true);
@@ -830,15 +824,7 @@ export function createAqualisCabinet(
     0.009,
     '#1b1b1b',
   );
-  t.label(
-    contents,
-    'OFF  ON',
-    POWER_AT.x,
-    POWER_AT.y - 0.03,
-    P.z + 0.0005,
-    0.0065,
-    '#1b1b1b',
-  );
+
   t.label(
     contents,
     'CONTROL',
