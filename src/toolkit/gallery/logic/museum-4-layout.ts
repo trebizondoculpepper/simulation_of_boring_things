@@ -204,7 +204,8 @@ export const BEAM_LECTERN = {
  */
 /** Its TIME buttons on a small flush panel centred under it, at reach height. */
 export const LAB_TIME = { x: 0, y: 2.2, buttonsY: 1.4 } as const;
-export const CARDS_BOARD = { x: -5.0, y: 2.3 } as const;
+/** The challenge cards' poster on the back wall, its middle; its controls' plate centred under it. */
+export const CARDS_BOARD = { x: -5.0, y: 2.3, controlsY: 1.4 } as const;
 /**
  * RESET, in the middle of the north wall as the hall stands, flush to it,
  * between the archways' approaches, facing into the hall.

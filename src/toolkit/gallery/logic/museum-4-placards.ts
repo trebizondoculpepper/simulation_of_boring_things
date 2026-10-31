@@ -119,6 +119,12 @@ export function beamPlacard(): Placard {
   };
 }
 
+/**
+ * Each challenge card's narration clip, by card: none recorded yet (an
+ * empty id), the hook for TODO.md's clip per scenario.
+ */
+export const CARD_NARRATION: readonly string[] = CARDS.map(() => '');
+
 export function hall4Entrance() {
   const k = hall4Facts();
   return {

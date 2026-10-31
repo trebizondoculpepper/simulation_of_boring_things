@@ -82,7 +82,7 @@ Try it: Try HIGH PH first, then FAECAL at TIME ×3600.
 
 THE CHALLENGE CARDS
 
-Choose a card on the desk (◄ ►), press START, put the water right and keep it so for an hour.
+Choose a card below (◄ ►), press START, put the water right and keep it so for an hour.
 
 1. COMBINED CL. UV FAILED, BUSY WEEK: CHLORINE SMELL, RED EYES. GOAL: COMBINED < 0.5 AND < HALF FREE, FREE 1-3
 2. LOW ALK. PH SWINGING WITH EVERY DOSE. GOAL: ALKALINITY 80-200, PH 7.0-7.4
@@ -133,7 +133,9 @@ Button: READINGS
 ## Captions and displays
 
 - Balance Beam scale: AGGRESSIVE: EATS GROUT, BALANCED, SCALING; SOFT WATER, HARD WATER; pH, HARDNESS, ALKALINITY, TEMP + TDS, INDEX
-- Dosing desk: SELECT A CHEMICAL, AMOUNT, DOSE, CANCEL, +20 SWIMMERS, SWIMMERS (NONE · NORMAL · BUSY), TIME (×1, ×60, ×600, ×3600), CHALLENGE 1–11, START
+- Dosing desk: SELECT A CHEMICAL, AMOUNT, DOSE, CANCEL, +20 SWIMMERS, SWIMMERS (NONE · NORMAL · BUSY)
+- TIME panel, under LAB TIME: TIME, ×1, ×60, ×600, ×3600; its LCD: RATE xN, AHEAD …
+- CHALLENGE panel, under the challenge cards: SELECT YOUR CHALLENGE, ◄, ►, START, CARDS 1–11
 - Tank plates: each tank’s code and product, with its hazard: CORROSIVE, OXIDISER, IRRITANT, ENVIRONMENT, GAS UNDER PRESSURE
 - Chemical usage counters: USED l, USED kg, USED m3
 - Teleprinter log, for example: DOSE CT3 HCl 10% 12.7 l; CANCEL … AFTER …; SWIMMERS …; CARD n TITLE: SYMPTOM; GOAL: …; PUT RIGHT

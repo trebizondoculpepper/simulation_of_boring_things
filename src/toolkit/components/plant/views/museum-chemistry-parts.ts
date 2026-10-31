@@ -361,7 +361,8 @@ export function createDosingDesk(kit: PanelKit, b: DeskBindings) {
       0.0,
     ),
   );
-  // The swimmers.
+  // The swimmers: centred on the row when it is theirs alone.
+  const sx = b.speeds.length || b.cards > 0 ? 0 : 0.685;
   parts.add(
     put(
       pushButton(kit, {
@@ -369,7 +370,7 @@ export function createDosingDesk(kit: PanelKit, b: DeskBindings) {
         legend: '+20 SWIMMERS',
         action: b.group,
       }),
-      -0.82,
+      -0.82 + sx,
       -0.2,
     ),
   );
@@ -381,12 +382,12 @@ export function createDosingDesk(kit: PanelKit, b: DeskBindings) {
         name: 'SWIMMERS dial',
         bound: b.swimmers,
       }),
-      -0.55,
+      -0.55 + sx,
       -0.2,
       1.1,
     ),
   );
-  text('SWIMMERS', -0.55, -0.28);
+  text('SWIMMERS', -0.55 + sx, -0.28);
   // TIME.
   const speedLit = b.speeds.map(() => signal(false));
   b.speeds.forEach((s, k) =>
@@ -407,51 +408,54 @@ export function createDosingDesk(kit: PanelKit, b: DeskBindings) {
     ),
   );
   if (b.speeds.length) text('TIME', -0.08, -0.28);
-  // CHALLENGE: beside the swimmers when the TIME buttons are elsewhere.
-  const cx = b.speeds.length ? 0 : -0.2;
-  parts.add(
-    put(
-      pushButton(kit, {
-        colour: 'black',
-        symbol: '◄',
-        name: 'CHALLENGE back',
-        action: () => b.stepCard(-1),
-      }),
-      0.3 + cx,
-      -0.2,
-      0.8,
-    ),
-  );
-  const cardNo = createSevenSegment(kit, 2, { digitHeight: 0.03 });
-  cardNo.group.position.set(0.42 + cx, -0.2, 0.002);
-  face.add(cardNo.group);
-  parts.add(
-    put(
-      pushButton(kit, {
-        colour: 'black',
-        symbol: '►',
-        name: 'CHALLENGE on',
-        action: () => b.stepCard(1),
-      }),
-      0.54 + cx,
-      -0.2,
-      0.8,
-    ),
-  );
-  parts.add(
-    put(
-      pushButton(kit, {
-        colour: 'yellow',
-        legend: 'START',
-        name: 'CHALLENGE START',
-        action: b.startCard,
-      }),
-      0.72 + cx,
-      -0.2,
-      0.8,
-    ),
-  );
-  text(`CHALLENGE 1–${b.cards}`, 0.48 + cx, -0.28);
+  let cardNo: ReturnType<typeof createSevenSegment> | null = null;
+  // CHALLENGE, unless it has a wall panel of its own (`createChallengePanel`).
+  if (b.cards > 0) {
+    const cx = b.speeds.length ? 0 : -0.2;
+    parts.add(
+      put(
+        pushButton(kit, {
+          colour: 'black',
+          symbol: '◄',
+          name: 'CHALLENGE back',
+          action: () => b.stepCard(-1),
+        }),
+        0.3 + cx,
+        -0.2,
+        0.8,
+      ),
+    );
+    cardNo = createSevenSegment(kit, 2, { digitHeight: 0.03 });
+    cardNo.group.position.set(0.42 + cx, -0.2, 0.002);
+    face.add(cardNo.group);
+    parts.add(
+      put(
+        pushButton(kit, {
+          colour: 'black',
+          symbol: '►',
+          name: 'CHALLENGE on',
+          action: () => b.stepCard(1),
+        }),
+        0.54 + cx,
+        -0.2,
+        0.8,
+      ),
+    );
+    parts.add(
+      put(
+        pushButton(kit, {
+          colour: 'yellow',
+          legend: 'START',
+          name: 'CHALLENGE START',
+          action: b.startCard,
+        }),
+        0.72 + cx,
+        -0.2,
+        0.8,
+      ),
+    );
+    text(`CHALLENGE 1–${b.cards}`, 0.48 + cx, -0.28);
+  }
   let vfdShown = '';
   let cardShown = '';
   return {
@@ -473,7 +477,7 @@ export function createDosingDesk(kit: PanelKit, b: DeskBindings) {
       if (line !== vfdShown)
         vfd.show([(vfdShown = line).padEnd(24).slice(0, 24)]);
       const c = String(b.card() + 1).padStart(2);
-      if (c !== cardShown) cardNo.show((cardShown = c));
+      if (cardNo && c !== cardShown) cardNo.show((cardShown = c));
       parts.update(delta);
     },
   };
@@ -575,6 +579,93 @@ export function createTimePanel(
       if (text === shown) return;
       shown = text;
       lcd.show(text.split('|').map((l) => l.padEnd(16).slice(0, 16)));
+    },
+  };
+}
+
+/**
+ * The exhibit's CHALLENGE panel (the owner, 2026-10-31), under the
+ * challenge cards' poster: a plate flush on the wall, its back at its
+ * origin, facing +z, a screw in each corner; ◄, the card's number, ► and
+ * START under the legend SELECT YOUR CHALLENGE.
+ */
+export function createChallengePanel(
+  kit: PanelKit,
+  b: {
+    card(): number;
+    cards: number;
+    stepCard(by: number): void;
+    startCard(): void;
+  },
+) {
+  const t = tools(kit);
+  const group = new Group();
+  group.name = 'CHALLENGE panel';
+  const W = 0.5;
+  const H = 0.24;
+  const T = 0.006;
+  t.box(group, t.paint('#d8d4c6', 0.5), W, H, T, 0, 0, T / 2);
+  const screw = t.paint('#9aa0a3', 0.35, 0.8);
+  for (const sx of [-1, 1])
+    for (const sy of [-1, 1])
+      t.cyl(group, screw, 0.007, 0.003, 0, 0, 0).position.set(
+        sx * (W / 2 - 0.018),
+        sy * (H / 2 - 0.018),
+        T + 0.0015,
+      );
+  group.children.slice(-4).forEach((o) => (o.rotation.x = Math.PI / 2));
+  const parts = createPartSet();
+  const put = <P extends { object: Group }>(p: P, x: number) => {
+    p.object.position.set(x, -0.03, T + 0.001);
+    group.add(p.object);
+    return p;
+  };
+  parts.add(
+    put(
+      pushButton(kit, {
+        colour: 'black',
+        symbol: '◄',
+        name: 'CHALLENGE back',
+        action: () => b.stepCard(-1),
+      }),
+      -0.17,
+    ),
+  );
+  const no = createSevenSegment(kit, 2, { digitHeight: 0.04 });
+  no.group.position.set(-0.06, -0.03, T + 0.001);
+  group.add(no.group);
+  parts.add(
+    put(
+      pushButton(kit, {
+        colour: 'black',
+        symbol: '►',
+        name: 'CHALLENGE on',
+        action: () => b.stepCard(1),
+      }),
+      0.05,
+    ),
+  );
+  parts.add(
+    put(
+      pushButton(kit, {
+        colour: 'yellow',
+        legend: 'START',
+        name: 'CHALLENGE START',
+        action: b.startCard,
+      }),
+      0.17,
+    ),
+  );
+  t.label(group, 'SELECT YOUR CHALLENGE', 0, 0.07, T + 0.001, 0.024, '#16191b');
+  t.label(group, `CARDS 1–${b.cards}`, 0, -0.095, T + 0.001, 0.016, '#16191b');
+  let shown = '';
+  return {
+    group,
+    parts,
+    update(delta: number) {
+      parts.update(delta);
+      const c = String(b.card() + 1).padStart(2);
+      if (c !== shown) no.show((shown = c));
     },
   };
 }
@@ -700,6 +791,13 @@ export function createReadoutBoard(
  * the index's terms (pH, hardness, alkalinity, temperature and TDS), and
  * the index itself. It shows what it is given; no maths of its own.
  */
+/**
+ * The beam's tilt at full scale (±1.5), radians: small enough that its arms
+ * and pans stay within the bezel round the card, and the card's arc drawn
+ * to the same angle so the pointer reads true.
+ */
+const BEAM_TILT = 0.35;
+
 export function createBalanceBeam(
   kit: PanelKit,
   /** Its plaque on its back panel, or none when its words stand on a lectern of their own. */
@@ -712,8 +810,8 @@ export function createBalanceBeam(
   const brass = t.paint('#b8913a', 0.35, 0.8);
   t.box(group, dark, 1.9, 0.05, 0.5, 0, 0.025, 0);
   // The back panel, a bezel of even width (0.2 m) all round the coloured
-  // card above the term windows (the owner, 2026-10-31).
-  t.box(group, dark, 1.9, 1.2, 0.08, 0, 0.65, -0.15);
+  // card (the owner, 2026-10-31): 0.35 to 1.25 m, the term windows below.
+  t.box(group, dark, 1.9, 0.9, 0.08, 0, 0.8, -0.15);
   // The arc scale and the pillar.
   const scale = t.printed(
     1.5,
@@ -729,7 +827,7 @@ export function createBalanceBeam(
         [-0.5, 0.5, '#4caf50'],
         [0.5, 1.5, '#4f8ad6'],
       ];
-      const ang = (v: number) => -Math.PI / 2 + (v / 1.5) * 0.6;
+      const ang = (v: number) => -Math.PI / 2 + (v / 1.5) * BEAM_TILT;
       for (const [a, b, col] of zones) {
         c.strokeStyle = col;
         c.lineWidth = h * 0.12;
@@ -749,9 +847,13 @@ export function createBalanceBeam(
         );
       }
       c.font = `bold ${h * 0.1}px Arial`;
-      c.fillText('AGGRESSIVE: EATS GROUT', w * 0.26, h * 0.95);
+      // In the card's top corners, clear of the beam's arms and pans.
+      c.fillText('AGGRESSIVE', w * 0.15, h * 0.12);
+      c.fillText('EATS GROUT', w * 0.15, h * 0.23);
+      c.fillText('SOFT WATER', w * 0.15, h * 0.34);
+      c.fillText('HARD WATER', w * 0.85, h * 0.23);
       c.fillText('BALANCED', cx, h * 0.12);
-      c.fillText('SCALING', w * 0.84, h * 0.95);
+      c.fillText('SCALING', w * 0.85, h * 0.12);
     },
     768,
   );
@@ -774,11 +876,9 @@ export function createBalanceBeam(
   );
   void pointer;
   for (const sx of [-1, 1]) {
-    t.box(beam, brass, 0.008, 0.25, 0.008, sx * 0.62, -0.13, 0);
-    t.cyl(beam, brass, 0.12, 0.02, sx * 0.62, -0.26, 0);
+    t.box(beam, brass, 0.008, 0.12, 0.008, sx * 0.62, -0.065, 0);
+    t.cyl(beam, brass, 0.12, 0.02, sx * 0.62, -0.13, 0);
   }
-  t.label(group, 'SOFT WATER', -0.62, 0.3, 0.16, 0.025, '#16191b');
-  t.label(group, 'HARD WATER', 0.62, 0.3, 0.16, 0.025, '#16191b');
   // The term windows.
   const terms = ['pH', 'HARDNESS', 'ALKALINITY', 'TEMP + TDS', 'INDEX'];
   const windows = terms.map((name, k) => {
@@ -844,7 +944,7 @@ export function createBalanceBeam(
       lsi: number,
       delta: number,
     ) {
-      const target = (Math.max(-1.5, Math.min(1.5, lsi)) / 1.5) * 0.6;
+      const target = (Math.max(-1.5, Math.min(1.5, lsi)) / 1.5) * BEAM_TILT;
       tilt += (target - tilt) * Math.min(1, delta * 2);
       beam.rotation.z = -tilt;
       const vals = [t4.ph, t4.hardness, t4.alkalinity, t4.temperatureTds, lsi];

@@ -597,7 +597,7 @@ Source: `toolkit/gallery/logic/museum-4-placards.ts:87` (station 5)
 Source: `toolkit/gallery/rooms/museum/hall-4-chemistry.ts:426`; the cards from `CARDS` (`game/plant/museum-4-lab.ts:661`)
 
 - Heading: THE CHALLENGE CARDS
-- Line: Choose a card on the desk (◄ ►), press START, put the water right and keep it so for an hour.
+- Line: Choose a card below (◄ ►), press START, put the water right and keep it so for an hour.
 
 | No. | Title         | Symptom (printed on the teleprinter)                 | GOAL:                                                           |
 | --- | ------------- | ---------------------------------------------------- | --------------------------------------------------------------- |

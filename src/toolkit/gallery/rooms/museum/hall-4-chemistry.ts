@@ -23,6 +23,7 @@ import { teleprinterInMetres } from '../../../components/industrial-control/view
 import {
   createBalanceBeam,
   createChemicalTank,
+  createChallengePanel,
   createDosingDesk,
   createTimePanel,
   createReadoutBoard,
@@ -94,6 +95,7 @@ import {
   hall4Reading,
 } from '../../logic/museum-4-mimic';
 import {
+  CARD_NARRATION,
   beamPlacard,
   RESET_SIGN,
   hall4Placards,
@@ -136,6 +138,15 @@ const FACE_WEST = -Math.PI / 2;
  * new positions. Set false again when `pipeRuns` is re-laid.
  */
 const PIPES_DEFERRED = true;
+
+/**
+ * The hook for each challenge card's narration clip (TODO.md: a clip per
+ * scenario, played when the challenge starts): no clips yet, so nothing
+ * plays; an empty id is no clip.
+ */
+const narrate = (clip: string) => {
+  void clip;
+};
 
 const turnTo = (o: Object3D, x: number, y: number, z: number, yaw: number) => {
   o.position.set(x, y, z);
@@ -513,9 +524,11 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     speed: () => session.clock.speed,
     setSpeed: () => {},
     card: () => state().card,
-    cards: CARDS.length,
-    stepCard: (by) => act({ type: 'card', by }),
-    startCard: () => act({ type: 'start-card' }),
+    // The CHALLENGE controls are on the wall under the cards' poster (the
+    // owner, 2026-10-31).
+    cards: 0,
+    stepCard: () => {},
+    startCard: () => {},
     cardTitle: () => CARDS[state().card].title,
   });
   turnTo(desk.group, DESK.x, 0, DESK.z, FACE_SOUTH);
@@ -769,10 +782,10 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     beam.group,
     t.paint('#2b3438', 0.5, 0.3),
     1.9,
-    1.25,
+    0.9,
     0.06,
     0,
-    0.625,
+    0.8,
     -0.22,
   );
   {
@@ -807,7 +820,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
       c.fillText('THE CHALLENGE CARDS', w * 0.02, h * 0.1);
       c.font = `${h * 0.05}px Arial`;
       c.fillText(
-        'Choose a card on the desk (◄ ►), press START, put the water right and keep it so for an hour.',
+        'Choose a card below (◄ ►), press START, put the water right and keep it so for an hour.',
         w * 0.02,
         h * 0.18,
         w * 0.96,
@@ -826,6 +839,37 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   );
   turnTo(cardsBoard, CARDS_BOARD.x, CARDS_BOARD.y, NORTH, FACE_SOUTH);
   cardsBoard.userData.onWall = 'Challenge cards';
+  // Its controls on a flush plate centred under it, at reach height:
+  // exhibit controls (the challenges), decorative.
+  const challengePanel = createChallengePanel(kit, {
+    card: () => state().card,
+    cards: CARDS.length,
+    stepCard: (by) => act({ type: 'card', by }),
+    startCard: () => {
+      act({ type: 'start-card' });
+      narrate(CARD_NARRATION[state().card]);
+    },
+  });
+  turnTo(
+    challengePanel.group,
+    CARDS_BOARD.x,
+    CARDS_BOARD.controlsY,
+    NORTH,
+    FACE_SOUTH,
+  );
+  challengePanel.group.userData.onWall = 'CHALLENGE panel';
+  object.add(
+    markComponent(challengePanel.group, {
+      name: 'CHALLENGE panel',
+      decorative: true,
+      status: () => `card ${state().card + 1} chosen`,
+    }),
+  );
+  challengePanel.group.traverse((o) => {
+    if (/^CHALLENGE /.test(o.name)) exhibitOnly(o);
+  });
+  take(challengePanel.parts.uses);
+  updates.push(challengePanel.update);
   object.add(still(cardsBoard));
 
   // No entrance panel (the owner, 2026-10-31): the desk invites the visitor.
