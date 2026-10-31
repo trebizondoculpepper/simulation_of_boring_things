@@ -405,7 +405,7 @@ The diagonal is chosen so that neither arrow can be mistaken for a flip (flips a
 ## 4. Questions for the owner, to ask one at a time
 
 1. Is one perspective arrow, coming in from the upper right and shrinking into the ring for a push, and growing out of it for a pull, the drawing you want, or would you rather have the ⊗ and ⊙ symbols? **Answered (the owner, 2026-10-31): yes, the perspective arrow; try it.** The owner's original request also settles question 3: the plain ring is green ("Green circle with no arrow implies use in some other way for now").
-2. Should toggles (light switches, MCBs, disconnect handles, levers) get an up or down arrow for the way they will go, or the plain green ring for now?
+2. Should toggles (light switches, MCBs, disconnect handles, levers) get an up or down arrow for the way they will go, or the plain green ring for now? **Answered (the owner, 2026-10-31): leave toggles out for now: the plain green ring.**
 3. Should the amber ring you see today over anything usable become the plain green ring, so that the ring is always green (with or without an arrow) or red?
 4. Should doors show push or pull by the side you are standing on (pull from the hall into a plant room, push from inside), or the plain ring?
 5. For quarter-turn valves, key switches and rotary isolators, which a use throws to their other position whichever half you click: should the turn arrow show the way it will go, whichever side the pointer is on?
