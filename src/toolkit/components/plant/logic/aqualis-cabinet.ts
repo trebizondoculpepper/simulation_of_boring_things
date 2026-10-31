@@ -151,6 +151,15 @@ export const PORTS: Record<PortId, CabinetPort> = {
  */
 export const SAMPLE_STUB = 0.18;
 
+/** Each gland's cable stub, drawn with the cabinet: from its gland's top, this long, m. */
+export const GLAND_CABLE = { from: 0.025, length: 0.25 } as const;
+
+/** Where a gland's cable stub ends, in the cabinet's frame: the room's cable or conduit joins it there. */
+export function glandCableEnd(id: GlandId): readonly [number, number, number] {
+  const [x, y, z] = PORTS[id].at;
+  return [x, y + GLAND_CABLE.from + GLAND_CABLE.length, z];
+}
+
 /** Where a sample stub ends, in the cabinet's frame: the room's tube joins it there. */
 export function sampleStubEnd(
   id: 'sampleIn' | 'sampleOut',

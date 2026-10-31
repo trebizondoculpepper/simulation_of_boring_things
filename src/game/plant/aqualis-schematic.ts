@@ -205,15 +205,27 @@ export const LOUNGE_TRIO = trioParts(LOUNGE_TRIO_SITE, 'Lounge pool');
 export const OLYMPIC_TRIO = trioParts(OLYMPIC_TRIO_SITE, 'Olympic pool');
 
 /**
- * The Trios' valves, in the model and the world but not yet drawn (the
- * pure logic first, the owner's order, mission 114): the drawn-valve
- * register's test passes them over until the plumber lays their lines.
- * Empty this when the lines are drawn.
+ * Each Trio's sample inlet valve (PLn-CP2-IV1), drawn on its cabinet, at
+ * its side (`SAMPLE_VALVE_AT`), not on the room's line: its handle is the
+ * fitting's, bound to the world's valve.
  */
-export const TRIO_VALVES_NOT_YET_DRAWN: ReadonlySet<string> = new Set(
+export const TRIO_CABINET_VALVES: ReadonlySet<string> = new Set(
   [...LOUNGE_TRIO.fittings, ...OLYMPIC_TRIO.fittings]
-    .filter((f) => f.kind === 'isolating-valve')
+    .filter((f) => f.role === 'sample inlet isolation')
     .map((f) => f.id),
+);
+
+/** A room's Trio's cabinet inlet valve, by its fitting's id. */
+export const trioCabinetValve = (site: TrioSite) =>
+  `${site.code}.${site.cabinet}.sampleIn.iso`;
+
+/** A room's Trio's supply isolator, by its fitting's id, where it has one (the Lounge's PL1-CP2-IS1). */
+export const trioIsolator = (site: TrioSite) =>
+  site.power.isolator ? `${site.code}.${site.cabinet}.power.isolator` : null;
+
+/** The Trios' links' names (each room's alike), for the plumbers that lay them. */
+export const TRIO_LINK_NAMES: ReadonlySet<string> = new Set(
+  LOUNGE_TRIO.links.map((l) => l.id),
 );
 
 /**
@@ -227,7 +239,7 @@ export const OLYMPIC_TRIO_NODES: readonly SchematicNode[] = [
     id: 'controller',
     kind: 'dosing-controller',
     code: 'CP2',
-    name: 'Dosing controller and sample cells',
+    name: 'Dosing controller, Dr Aqualis Trio',
   },
   { id: 'manifold', kind: 'header', name: 'Pump discharge manifold' },
   { id: 'tank', kind: 'balance-tank', name: 'Olympic pool balance tank' },

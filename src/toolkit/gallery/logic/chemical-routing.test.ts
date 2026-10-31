@@ -65,7 +65,9 @@ describe('the chemical lines, plumbed in every room', () => {
         if (
           /^(Hypochlorite|Acid|Sodium hypochlorite|Hydrochloric acid)\b/.test(
             r.name,
-          )
+          ) &&
+          // A Trio's control cable to its pump is no chemical line (mission 114).
+          !/dosing control/.test(r.name)
         )
           expect(['hypochlorite', 'acid'], `${room}: ${r.name}`).toContain(
             r.service,

@@ -14,6 +14,14 @@ import {
 } from '../../../game/plant/dose-bottle';
 import { WET_HALL_LAYOUT } from './shell-rooms';
 import { OT216_SIZE } from '../../components/industrial-control/logic/ot216-terminal';
+import {
+  CABINET,
+  glandCableEnd,
+  portsOf,
+  sampleStubEnd,
+} from '../../components/plant/logic/aqualis-cabinet';
+import type { PortId } from '../../components/plant/logic/aqualis-cabinet';
+import { TRIO_UNLINKED_PORTS } from '../../../game/plant/aqualis-schematic';
 
 /** The OT-216's scale over its design size (its view's `OT216_SCALE`). */
 const TERMINAL_SCALE = OT216_SIZE.w / 0.2;
@@ -363,10 +371,46 @@ export function machinePorts(item: Item): MachinePort[] {
       ),
       port('power', [item.w / 2 - 0.3, item.h, 0], [0, 1, 0], 0.0269, 'power'),
     ];
-  // The old dosing controller's one sample port is retired (mission 114):
-  // the Trio's ports (`aqualis-schematic.ts` `TRIO_PORTS`, at the
-  // cabinet's `portsOf('trio')`) come with its cabinet's placement.
-  if (kind === 'dosing-controller') return [];
+  // The Dr Aqualis Trio (mission 114): its cabinet's ports
+  // (`portsOf('trio')`, as the model's `TRIO_PORTS`), each where the
+  // room's line joins what the cabinet draws: its sample stubs' ends out of
+  // its side, its glands' cable stubs' tops. Its frame's origin is its
+  // back's middle; the item's is its footprint's.
+  if (kind === 'dosing-controller') {
+    const back = CABINET.d / 2;
+    const at = ([x, y, z]: readonly [number, number, number]) =>
+      [x, y, z - back] as const;
+    // Its blanked CO₂ gland is no connection until CO₂ dosing exists.
+    return (
+      Object.entries(portsOf('trio')) as [
+        PortId,
+        { out: readonly [number, number, number] },
+      ][]
+    )
+      .filter(([id]) => !TRIO_UNLINKED_PORTS.has(id))
+      .map(([id, p]) => ({
+        ...port(
+          id,
+          at(
+            id === 'sampleIn' || id === 'sampleOut'
+              ? sampleStubEnd(id)
+              : glandCableEnd(id),
+          ),
+          p.out,
+          id === 'sampleIn' || id === 'sampleOut'
+            ? 0.012
+            : id === 'power'
+              ? 0.02
+              : 0.016,
+          id === 'sampleIn' || id === 'sampleOut'
+            ? 'sample'
+            : id === 'power'
+              ? 'power'
+              : 'control',
+        ),
+        drawn: true,
+      }));
+  }
   // Each dosing board where its own pipework ends (`HYPO_PORTS`,
   // `ACID_PORTS`; the owner, 2026-10-28: the pipes did not meet them): its
   // suction in at its top edge, from its day tank's line overhead; its dose

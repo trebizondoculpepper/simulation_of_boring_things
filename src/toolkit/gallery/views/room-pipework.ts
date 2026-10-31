@@ -40,6 +40,25 @@ import { installedValveFor } from '../../../game/plant/installed-valves';
 import { markComponent } from '../../components/core/views/component-identity';
 import { runBinding } from '../logic/world-in-model';
 import { SCHEMATICS } from '../../../game/plant/schematics';
+import {
+  LOUNGE_TRIO_SITE,
+  OLYMPIC_TRIO_SITE,
+  trioIsolator,
+} from '../../../game/plant/aqualis-schematic';
+import type { TrioPool } from '../../../game/plant/aqualis-world';
+
+/** Each Trio's supply isolator, by its fitting's id: the pool it serves (mission 114). */
+const TRIO_ISOLATORS = new Map<string, TrioPool>(
+  (
+    [
+      [LOUNGE_TRIO_SITE, 'pool_01'],
+      [OLYMPIC_TRIO_SITE, 'pool_02'],
+    ] as const
+  ).flatMap(([site, pool]) => {
+    const id = trioIsolator(site);
+    return id ? [[id, pool] as const] : [];
+  }),
+);
 import { schematicNodeOfKind } from '../../../game/plant/model-valves';
 import { olympicMeterReadings } from '../../../game/plant/olympic-battery';
 import { olympicFlowsOfWorld } from '../logic/world-reading';
@@ -644,13 +663,21 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
     );
     // Switched here, it is switched in the world (`world.ts`): its
     // machine stops, and so, if it was the last, does its pool's water.
+    // A Trio's isolator is its own (mission 114): the world's Trio's.
     const name = place.name as IsolatorName;
+    const trio = TRIO_ISOLATORS.get(place.name);
     const toggle = () => {
       isolator.toggle();
-      store?.dispatch({ type: 'plant/isolator', name, on: isolator.on });
+      if (trio)
+        store?.dispatch({
+          type: 'aqualis',
+          pool: trio,
+          action: { act: 'isolator', on: isolator.on },
+        });
+      else store?.dispatch({ type: 'plant/isolator', name, on: isolator.on });
     };
     isolator.handle.traverse((o) => parts.uses.set(o, toggle));
-    return { isolator, name };
+    return { isolator, name, trio };
   });
   return {
     group,
@@ -676,9 +703,12 @@ export function createRoomPipework(kit: PanelKit, room: string, floorY = 0) {
           loungeValveFlows(world.loungeValvePositions, running).tankDrain / 3.6,
         );
       }
-      for (const { isolator, name } of switches) {
+      for (const { isolator, name, trio } of switches) {
         // As the world has it, switched here or anywhere.
-        const on = store?.world.value.plant.isolators[name];
+        const world = store?.world.value;
+        const on = trio
+          ? world?.aqualis[trio].isolator
+          : world?.plant.isolators[name];
         if (on !== undefined && on !== isolator.on) isolator.set(on);
         isolator.update(delta);
       }

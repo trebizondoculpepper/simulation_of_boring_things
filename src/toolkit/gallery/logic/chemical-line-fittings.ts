@@ -8,6 +8,11 @@ import {
   OLYMPIC_ROOM,
   olympicChemicalExpansion,
 } from '../../../game/plant/olympic-chemical-schematic';
+import {
+  TRIO_CABINET_VALVES,
+  TRIO_LINK_NAMES,
+  olympicTrioExpansion,
+} from '../../../game/plant/aqualis-schematic';
 import type { CheckFitting, Valve } from './room-pipes';
 
 /**
@@ -26,14 +31,21 @@ export function chemicalLineFittings(
   od: number,
   options: InlineOptions = {},
 ): { valves: Valve[]; checks: CheckFitting[]; problems: string[] } {
-  // The room's enhanced network; the Olympic's chemical lines' their own.
+  // The room's enhanced network; the Olympic's chemical lines' and its
+  // Trio's lines' their own.
   const network =
     schematicExpansion(room) ??
-    (room === OLYMPIC_ROOM ? olympicChemicalExpansion() : undefined);
+    (room === OLYMPIC_ROOM
+      ? TRIO_LINK_NAMES.has(link)
+        ? olympicTrioExpansion()
+        : olympicChemicalExpansion()
+      : undefined);
   const along = (network?.along.get(link) ?? []).filter(
     (f) =>
       (f.kind === 'isolating-valve' || f.kind === 'non-return-valve') &&
-      !EQUIPMENT_VALVES.has(f.id),
+      !EQUIPMENT_VALVES.has(f.id) &&
+      // A Trio's sample inlet valve is its cabinet's to draw (mission 114).
+      !TRIO_CABINET_VALVES.has(f.id),
   );
   if (!along.length || points.length < 2)
     return { valves: [], checks: [], problems: [] };

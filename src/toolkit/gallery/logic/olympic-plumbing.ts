@@ -4,6 +4,12 @@ import {
   OLYMPIC_CHEMICAL_LINKS,
   OLYMPIC_ROOM,
 } from '../../../game/plant/olympic-chemical-schematic';
+import {
+  OLYMPIC_TRIO_SITE,
+  SAMPLE_POINT,
+  TRIO_LINKS,
+  TRIO_LINK_NAMES,
+} from '../../../game/plant/aqualis-schematic';
 import type { PipeJoint, Vec3 } from '../../components/core/logic/pipe-route';
 import { pipeClashes } from '../../components/core/logic/pipe-route';
 import type { DrawnRun } from '../../components/core/logic/pipe-route';
@@ -295,6 +301,30 @@ const OVERHEAD = 2.6;
 const QUILL = 0.08;
 /** The open floor's cells, and how near a machine or a wall a run may still be low, metres. */
 const OPEN_FLOOR = { cell: 1, near: 1.0, wall: 0.9 } as const;
+/**
+ * The Trio's lines' heights (mission 114), metres: the sample down from
+ * its tapping (its valve on the drop, by the manifold, out of a hand's
+ * reach: worked from steps, as the manifold's own fittings are) and over
+ * the pumps' drain beside their
+ * block, and along the south wall over headroom, the return a little
+ * lower; its control cables just over its glands (the acid's under the
+ * hypochlorite's, stepped out from the wall); its alarm behind the
+ * busbar, over the landing's headroom; its supply's drop onto its gland.
+ */
+const TRIO_Y = {
+  overPumps: 2.45,
+  // Under the heating's lagged mains where it passes them by the wall, and
+  // more than a trapeze's reach over its return, so each is hung alone.
+  sample: 2.45,
+  return: 2.13,
+  hypochlorite: 2.35,
+  acid: 2.25,
+  alarm: 5.62,
+  mains: 2.4,
+} as const;
+/** Where its sample is tapped off the manifold, north of the pumps, and where its return turns west for the wall, m. */
+const TRIO_TAP_Z = 1.2;
+const TRIO_RETURN_Z = 5.0;
 /** The lines the router lays first: they have least room. */
 const FIRST = new Set(['battery-to-contact', 'hx-return']);
 /** A line ending at a wall ends this far inside its face, at its sleeve. */
@@ -307,6 +337,8 @@ const pipeOf: Record<string, { kind: Kind; joint: PipeJoint; medium: Medium }> =
     water: { kind: 'pvc-pressure', joint: 'socket', medium: 'water' },
     // A sample line: pool water, in small chemical-grade tube.
     sample: { kind: 'chemical-tube', joint: 'socket', medium: 'water' },
+    // A control or alarm cable, in small steel conduit (the Trio's, mission 114).
+    control: { kind: 'steel-screwed', joint: 'thread', medium: 'control' },
     drain: { kind: 'pvc-drain', joint: 'socket', medium: 'water' },
     heating: { kind: 'lagged-heating', joint: 'flange', medium: 'water' },
     makeup: { kind: 'copper', joint: 'socket', medium: 'water' },
@@ -1087,16 +1119,138 @@ export function plumbOlympic(
     });
   }
 
-  // ---- The sample line ---------------------------------------------------
-  // The old controller's, off pump B's discharge, is retired with it
-  // (mission 114): the Trio's sample, off the common discharge manifold,
-  // and its return are in the model (`olympic-annex.ts`) and laid when the
-  // Trio is.
+  // ---- The Dr Aqualis Trio's lines, laid by rule (mission 114) -------------
+  // Each of the Trio's links (`aqualis-schematic.ts`, `OLYMPIC_TRIO`, in the
+  // room's annex) as one run, named for it, each held by a wall or by the
+  // pumps' block, over headroom where it crosses the floor:
+  // - its sample point, a saddle on the side of the common discharge
+  //   manifold north of the pumps (so it never hangs on one pump's valves),
+  //   the tube down past its tapping valve (PL2-SP1-IV1) to over the pumps'
+  //   drain, south beside the block to the south wall and east along it,
+  //   down the Trio's east side into its inlet;
+  // - its return (PL2-CP2-IV2 on its riser) back west along the wall a
+  //   little lower, north clear of the hypochlorite day tank, and west
+  //   through the wall into the balance tank hall, beside the suctions;
+  // - its control cables from their glands along the wall over the dosing
+  //   boards and down onto their tops; its alarm cable up under the
+  //   busbar, across north of the stair to the east wall and down it onto the
+  //   local panel's (PL2-CP1's) top; its supply a drop from a fused tap-off
+  //   on the busbar's south run onto its mains gland.
+  {
+    const manifold = runs.find((r) => r.name === 'Pump discharge manifold')!;
+    const mx = manifold.points[1][0];
+    const my = manifold.points[1][1];
+    const tapZ = TRIO_TAP_Z;
+    // A saddle on the manifold's east face, its stub out east.
+    const face = round(mx + MAIN / 2);
+    const boss = round(face + 0.03);
+    const stub = round(boss + 0.03);
+    rule(TRIO_LINKS.tapping, TRIO_LINKS.tapping, 'sample', 0.03, [
+      [face, my, tapZ],
+      [boss, my, tapZ],
+    ]);
+    rule('Sample point', SAMPLE_POINT, 'sample', 0.02, [
+      [boss, my, tapZ],
+      [stub, my, tapZ],
+    ]);
+    const inlet = port('controller', 'sampleIn');
+    const outlet = port('controller', 'sampleOut');
+    const wallZ = round(hz - 0.4);
+    const inX = round(inlet.at[0] + 0.14);
+    const outX = round(outlet.at[0] + 0.22);
+    const byPumps = round(stub + 0.06);
+    rule(TRIO_LINKS.sample, TRIO_LINKS.sample, 'sample', 0.012, [
+      [stub, my, tapZ],
+      [byPumps, my, tapZ],
+      [byPumps, TRIO_Y.overPumps, tapZ],
+      [byPumps, TRIO_Y.sample, wallZ],
+      [inX, TRIO_Y.sample, wallZ],
+      [inX, TRIO_Y.sample, inlet.at[2]],
+      [inX, inlet.at[1], inlet.at[2]],
+      inlet.at,
+    ]);
+    const backZ = round(wallZ - 0.1);
+    const westZ = TRIO_RETURN_Z;
+    rule(TRIO_LINKS.return, TRIO_LINKS.return, 'sample', 0.012, [
+      outlet.at,
+      [outX, outlet.at[1], outlet.at[2]],
+      [outX, TRIO_Y.return, outlet.at[2]],
+      [outX, TRIO_Y.return, backZ],
+      [round(byPumps + 0.1), TRIO_Y.return, backZ],
+      [round(byPumps + 0.1), TRIO_Y.return, westZ],
+      [-hx + SLEEVE, TRIO_Y.return, westZ],
+    ]);
+    // The control cables: each up out of its gland, along the wall, and
+    // down onto its board's top, the hypochlorite's nearer the wall.
+    const board = (key: string) => items.find((i) => i.key === key)!;
+    const topOf = (i: PlanItem) => round((i.y ?? 0) + i.h / 2);
+    const hypo = port('controller', 'hypochlorite');
+    const hypoBoard = board('hypo');
+    const hypoX = round(hypoBoard.x + 0.27);
+    const hypoZ = round(hz - 0.1);
+    rule(TRIO_LINKS.hypochlorite, TRIO_LINKS.hypochlorite, 'control', 0.02, [
+      hypo.at,
+      [hypo.at[0], TRIO_Y.hypochlorite, hypo.at[2]],
+      [hypo.at[0], TRIO_Y.hypochlorite, hypoZ],
+      [hypoX, TRIO_Y.hypochlorite, hypoZ],
+      [hypoX, topOf(hypoBoard), hypoZ],
+    ]);
+    const acid = port('controller', 'acid');
+    const acidBoard = board('acid');
+    const acidX = round(acidBoard.x + 0.12);
+    const acidZ = round(acid.at[2] - 0.07);
+    rule(TRIO_LINKS.acid, TRIO_LINKS.acid, 'control', 0.02, [
+      acid.at,
+      [acid.at[0], TRIO_Y.acid, acid.at[2]],
+      [acid.at[0], TRIO_Y.acid, acidZ],
+      [acidX, TRIO_Y.acid, acidZ],
+      [acidX, topOf(acidBoard), acidZ],
+    ]);
+    // Its alarm to the local panel on the east wall: up over the landing's
+    // headroom, under the busbar, north of the stair and across, and down
+    // the wall behind the gantry.
+    const alarm = port('controller', 'alarm');
+    const panel = board('panel');
+    const pf = footprintOf(panel);
+    const hug = round(hx - 0.08);
+    // North of the stair, never over it.
+    const alarmZ = round(room.stair.minZ - 0.15);
+    const panelZ = round(pf.maxZ - 0.8);
+    const panelX = round((pf.minX + pf.maxX) / 2 + 0.1);
+    rule(TRIO_LINKS.alarm, TRIO_LINKS.alarm, 'control', 0.02, [
+      alarm.at,
+      [alarm.at[0], TRIO_Y.alarm, alarm.at[2]],
+      [alarm.at[0], TRIO_Y.alarm, alarmZ],
+      [hug, TRIO_Y.alarm, alarmZ],
+      [hug, TRIO_Y.alarm, panelZ],
+      [hug, round(panel.h + 0.3), panelZ],
+      [panelX, round(panel.h + 0.3), panelZ],
+      [panelX, panel.h, panelZ],
+    ]);
+    // Its supply: a drop from its fused tap-off on the busbar's south run.
+    const mains = port('controller', 'power');
+    const tapAt = tap('south', mains.at[0]).at;
+    rule(
+      OLYMPIC_TRIO_SITE.power.link,
+      OLYMPIC_TRIO_SITE.power.link,
+      'power',
+      0.0269,
+      [
+        tapAt,
+        [tapAt[0], TRIO_Y.mains, tapAt[2]],
+        [tapAt[0], TRIO_Y.mains, mains.at[2]],
+        mains.at,
+      ],
+    );
+  }
 
   // ---- The plumber: the fittings the schematic implies -------------------
   const nodes = [
+    // The floor machines whose water lines the plumber lays; not the
+    // Trio's cabinet, a node of the room's annex with its own lines
+    // (`olympic-annex.ts`, `aqualis-schematic.ts`).
     ...items
-      .filter((i) => i.mount === 'floor')
+      .filter((i) => i.mount === 'floor' && i.key !== 'controller')
       .map((i) => ({ id: i.key, kind: i.key.replace(/-\d$/, '') })),
     { id: 'pool', kind: 'pool' },
     { id: 'tank', kind: 'balance-tank' },
@@ -1742,7 +1896,8 @@ const serviceOf = (r: OlympicRun): PipeRun['service'] =>
           : 'heating flow'
         : r.kind === 'copper'
           ? 'make-up'
-          : r.line === 'sample'
+          : r.line === 'sample' ||
+              (r.kind === 'chemical-tube' && r.medium === 'water')
             ? 'sample'
             : r.kind === 'chemical-tube'
               ? /^acid|^Acid/.test(r.line)
@@ -1750,7 +1905,7 @@ const serviceOf = (r: OlympicRun): PipeRun['service'] =>
                 : 'hypochlorite'
               : r.kind === 'stainless'
                 ? 'ozone'
-                : r.medium === 'power'
+                : r.medium === 'power' || r.medium === 'control'
                   ? 'electrical'
                   : r.line === 'sample'
                     ? 'sample'
@@ -1926,17 +2081,21 @@ export function olympicRoom() {
         ];
       });
     // A chemical line's valves, from its schematic (prompt 085), set in
-    // its run as every room's are.
-    const chemical = OLYMPIC_CHEMICAL_LINKS.some((l) => l.id === r.line)
-      ? chemicalLineFittings(OLYMPIC_ROOM, r.line, r.points, r.od, {
-          // A dose line's out in front of its dosing board, clear of it.
-          ends: /dose line$/.test(r.line) ? 0.2 : 0.08,
-          reach: [0.3, 2.0],
-        })
-      : undefined;
+    // its run as every room's are; and the Trio's (mission 114).
+    const chemical =
+      OLYMPIC_CHEMICAL_LINKS.some((l) => l.id === r.line) ||
+      TRIO_LINK_NAMES.has(r.line)
+        ? chemicalLineFittings(OLYMPIC_ROOM, r.line, r.points, r.od, {
+            // A dose line's out in front of its dosing board, clear of it.
+            ends: /dose line$/.test(r.line) ? 0.2 : 0.08,
+            reach: [0.3, 2.0],
+          })
+        : undefined;
     runs.push({
       name: r.name,
-      model: { link: r.line },
+      // The Trio's sample point is a node (the saddle and its stub).
+      model:
+        r.line === SAMPLE_POINT ? { node: SAMPLE_POINT } : { link: r.line },
       kind: r.kind,
       od: r.od,
       points: r.points,

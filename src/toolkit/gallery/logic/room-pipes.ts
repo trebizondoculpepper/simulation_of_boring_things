@@ -2,6 +2,14 @@ import { chemicalOf, wetHallPlumbing } from './wet-hall-plumbing';
 import { storePlumbing } from './store-plumbing';
 import { loadingBayPlumbing } from './loading-bay-plumbing';
 import { dayTankPlumbing } from './day-tank-plumbing';
+import { chemicalLineFittings } from './chemical-line-fittings';
+import { MODEL_VALVES } from '../../../game/plant/model-valves';
+import {
+  LOUNGE_TRIO_SITE,
+  SAMPLE_POINT,
+  TRIO_LINKS,
+  trioIsolator,
+} from '../../../game/plant/aqualis-schematic';
 import { olympicRoom } from './olympic-plumbing';
 import { retiredPipes } from './retired-rooms';
 import type { Footprint } from '../../controls/logic/walk-collision';
@@ -202,6 +210,10 @@ export interface FloorChannel {
 
 /** The pumps' discharge header runs over them at this height. */
 export const PUMP_HEADER = 2.4;
+/** The Lounge Trio's supply's feed across over its glands' cables' feet, m (mission 114). */
+const TRIO_FEED_Y = 2.4;
+/** Its sample tube's foot by the pumps' header, where its tapping valve is worked, m. */
+const TRIO_TAP_LOW = 1.95;
 /** A duct's pipe runs this far under the floor. */
 export const DUCT_DEPTH = -0.45;
 /** The heights each service runs at, metres over the floor. */
@@ -1096,12 +1108,276 @@ export function poolPlantPipework(room: string): {
       mainOd: q.od,
     });
   }
+  // ---- The Dr Aqualis Trio's lines (mission 114), from its schematic -------
+  // Each of the Trio's links (`aqualis-schematic.ts`, `LOUNGE_TRIO`) laid in
+  // the room's own style, one run (or two, up into the services ceiling
+  // and down out of it) per link, each bound to its link: the sample off
+  // the pump discharge header (before the filters and any dosing), up and
+  // down to the cabinet's inlet; its return up and down into the balance
+  // tank's roof; a control cable from each gland up and down onto its
+  // dosing board's top, and the alarm onto the annunciator's; its supply
+  // through its isolator (PL1-CP2-IS1) on a stand beside it. Its valves are
+  // the model's, set in their lines by the plumber's inline placement
+  // (`chemicalLineFittings`); its inlet valve is the cabinet's own.
+  const trio = layout.placed.find((p) => p.item.key === 'dosing-controller');
+  const trioIsolatorPlace: IsolatorPlace[] = [];
+  const trioStands: Vec3[] = [];
+  if (trio && room === 'plant_pool_01') {
+    const tube = (
+      name: string,
+      model: string,
+      points: Vec3[],
+      service: PipeRun['service'],
+      label: string,
+      kind: PipeRun['kind'] = 'chemical-tube',
+      od = 0.012,
+      joins: string[] = [],
+      valves?: Omit<Valve, 'operator'>[],
+    ) =>
+      run({
+        name,
+        ...(name === model ? {} : { model: { link: model } }),
+        kind,
+        od,
+        points,
+        joins,
+        service,
+        label,
+        // Its valves, the model's, set in it by the plumber's inline
+        // placement (worked from the panel, as the room's every valve is).
+        valves:
+          valves ??
+          (kind === 'chemical-tube' && name === model
+            ? chemicalLineFittings(room, model, points, od, {
+                reach: [0.3, REACH],
+              }).valves
+            : []),
+      });
+    // The sample point: a saddle on the discharge header's level length
+    // between the pumps' risers, its stub out to the east, the tapping's
+    // valve on it.
+    const headerR = outA.od / 2;
+    const tapZ = (outA.at[2] + discharge.at[2]) / 2;
+    const surface: Vec3 = [outA.at[0] + headerR, PUMP_HEADER, tapZ];
+    const boss: Vec3 = [surface[0] + 0.03, PUMP_HEADER, tapZ];
+    const stub: Vec3 = [boss[0] + 0.03, PUMP_HEADER, tapZ];
+    tube(
+      TRIO_LINKS.tapping,
+      TRIO_LINKS.tapping,
+      [surface, boss],
+      'sample',
+      'SAMPLE',
+      'chemical-tube',
+      0.03,
+      ['Pump discharge header'],
+    );
+    run({
+      name: 'Sample point',
+      model: { node: SAMPLE_POINT },
+      kind: 'chemical-tube',
+      od: 0.02,
+      points: [boss, stub],
+      joins: [TRIO_LINKS.tapping],
+      service: 'sample',
+      label: 'SAMPLE',
+    });
+    // The tube down beside the header to a hand's height over the pumps
+    // for its tapping valve (PL1-SP1-IV1), and back up into the ceiling.
+    const dropX = stub[0] + 0.12;
+    const riseX = dropX + 0.1;
+    const tapValve = MODEL_VALVES.find(
+      (v) =>
+        v.room === room &&
+        v.link === TRIO_LINKS.sample &&
+        v.role === 'sample tapping isolation',
+    );
+    tube(
+      TRIO_LINKS.sample,
+      TRIO_LINKS.sample,
+      [
+        stub,
+        [dropX, PUMP_HEADER, tapZ],
+        [dropX, TRIO_TAP_LOW, tapZ],
+        [riseX, TRIO_TAP_LOW, tapZ],
+        [riseX, INTO_CEILING, tapZ],
+      ],
+      'sample',
+      'SAMPLE',
+      'chemical-tube',
+      0.012,
+      ['Sample point'],
+      tapValve
+        ? [
+            {
+              fitting: tapValve.id,
+              at: [dropX, REACH, tapZ],
+              axis: 'y',
+              name: tapValve.name,
+              od: 0.012,
+              style: 'chemical-line',
+              facing: [1, 0, 0],
+            },
+          ]
+        : [],
+    );
+    const sampleIn = placedPort(trio, 'sampleIn');
+    const sampleOut = placedPort(trio, 'sampleOut');
+    const inX = sampleIn.at[0] + 0.12;
+    tube(
+      `${TRIO_LINKS.sample}, to the cabinet`,
+      TRIO_LINKS.sample,
+      [
+        [inX, INTO_CEILING, sampleIn.at[2]],
+        [inX, sampleIn.at[1], sampleIn.at[2]],
+        [...sampleIn.at],
+      ],
+      'sample',
+      'SAMPLE',
+    );
+    // Its return: out of the cabinet, up beside the sample, and down out of
+    // the ceiling into the balance tank's roof, clear of its make-up.
+    const outX = sampleOut.at[0] + 0.2;
+    tube(
+      TRIO_LINKS.return,
+      TRIO_LINKS.return,
+      [
+        [...sampleOut.at],
+        [outX, sampleOut.at[1], sampleOut.at[2]],
+        [outX, INTO_CEILING, sampleOut.at[2]],
+      ],
+      'sample',
+      'SAMPLE RETURN',
+    );
+    const makeUpAt = placedPort(tank, 'makeUp').at;
+    const roof: Vec3 = [
+      tank.footprint.maxX - 0.4,
+      makeUpAt[1],
+      makeUpAt[2] - 0.3,
+    ];
+    tube(
+      `${TRIO_LINKS.return}, into the tank`,
+      TRIO_LINKS.return,
+      [[roof[0], INTO_CEILING, roof[2]], roof],
+      'sample',
+      'SAMPLE RETURN',
+      'chemical-tube',
+      0.012,
+      [tank.item.label],
+    );
+    // The control cables and the alarm: each up out of its gland into the
+    // ceiling's cable tray, and down out of it onto the far end's top.
+    const cable = (
+      name: string,
+      gland: string,
+      to: Placed,
+      along: number,
+      label: string,
+    ) => {
+      const g = placedPort(trio, gland);
+      const top = to.item.mount === 'wall' ? to.y + to.item.h / 2 : to.item.h;
+      const z = (to.footprint.minZ + to.footprint.maxZ) / 2 + 0.05;
+      const x = to.footprint.minX + along;
+      tube(
+        `${name}, from the cabinet`,
+        name,
+        [[...g.at], [g.at[0], INTO_CEILING, g.at[2]]],
+        'electrical',
+        label,
+        'steel-screwed',
+        0.02,
+      );
+      tube(
+        `${name}, to its far end`,
+        name,
+        [
+          [x, INTO_CEILING, z],
+          [x, top, z],
+        ],
+        'electrical',
+        label,
+        'steel-screwed',
+        0.02,
+      );
+    };
+    cable(
+      TRIO_LINKS.hypochlorite,
+      'hypochlorite',
+      by('hypochlorite dosing pumps'),
+      0.9,
+      'CONTROL',
+    );
+    cable(TRIO_LINKS.acid, 'acid', by('acid dosing pump'), 0.55, 'CONTROL');
+    const annunciator = layout.placed.find((p) =>
+      p.item.key.startsWith('annunciator'),
+    );
+    if (annunciator)
+      cable(
+        TRIO_LINKS.alarm,
+        'alarm',
+        annunciator,
+        annunciator.item.w - 0.12,
+        'ALARM',
+      );
+    // Its isolator on a stand against the wall beside it, east of its
+    // sample tubes, facing into the room; its supply down out of the
+    // ceiling, its feed up, across in front of the glands' cables, and down
+    // onto its mains gland.
+    const power = placedPort(trio, 'power');
+    const facing: Vec3 = [0, 0, -1];
+    const stand: [number, number] = [outX + 0.17, trio.footprint.maxZ];
+    const isoAt: Vec3 = [
+      stand[0],
+      ISOLATOR_Y,
+      stand[1] + facing[2] * (0.03 + ISOLATOR_BOX.d / 2),
+    ];
+    const top = ISOLATOR_Y + glandTop(POWER_ISOLATOR);
+    const [gIn, gOut] = POWER_ISOLATOR.glands.x;
+    const across: Vec3 = [facing[2], 0, -facing[0]];
+    const supplyIn: Vec3 = [isoAt[0] + across[0] * gIn, top, isoAt[2]];
+    const feedOut: Vec3 = [isoAt[0] + across[0] * gOut, top, isoAt[2]];
+    trioIsolatorPlace.push({
+      name: trioIsolator(LOUNGE_TRIO_SITE)!,
+      at: isoAt,
+      facing,
+      supplyIn,
+      feedOut,
+    });
+    trioStands.push([stand[0], 0, stand[1]]);
+    const powerLink = LOUNGE_TRIO_SITE.power.link;
+    tube(
+      `${powerLink}: supply`,
+      powerLink,
+      [[supplyIn[0], INTO_CEILING, supplyIn[2]], supplyIn],
+      'electrical',
+      '230 V',
+      'steel-screwed',
+      0.0269,
+    );
+    tube(
+      `${powerLink}: feed`,
+      powerLink,
+      [
+        feedOut,
+        [feedOut[0], TRIO_FEED_Y, feedOut[2]],
+        // Out in front of the sample tubes and the glands' cables.
+        [feedOut[0], TRIO_FEED_Y, power.at[2] - 0.12],
+        [power.at[0], TRIO_FEED_Y, power.at[2] - 0.12],
+        [power.at[0], TRIO_FEED_Y, power.at[2]],
+        [...power.at],
+      ],
+      'electrical',
+      '230 V',
+      'steel-screwed',
+      0.0269,
+    );
+  }
+
   // ---- Power: each machine through its isolator ------------------------------
   // Each isolator on a stand beside its machine, facing where someone
   // stands to work it; its supply down out of the ceiling's cable tray;
   // its feed up, across and down into the machine's terminal box.
-  const isolators: IsolatorPlace[] = [];
-  const stands: Vec3[] = [];
+  const isolators: IsolatorPlace[] = [...trioIsolatorPlace];
+  const stands: Vec3[] = [...trioStands];
   const pf = pumps.footprint;
   const uvF = uv.footprint;
   const genF = generator.footprint;

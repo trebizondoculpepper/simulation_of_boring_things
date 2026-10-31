@@ -212,6 +212,8 @@ describe('the Olympic plant room, plumbed and routed', () => {
       (r) => r.medium === 'power' && r.line.startsWith('power-'),
     );
     expect(drops.map((r) => r.line).sort()).toEqual([
+      // The Dr Aqualis Trio's (mission 114).
+      'power-controller',
       'power-generator',
       'power-panel',
       'power-pump-A',

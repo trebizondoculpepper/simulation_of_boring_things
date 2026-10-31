@@ -53,7 +53,7 @@ const nodes: SchematicNode[] = [
     ...machine(
       'dosing',
       'dosing-controller',
-      'Lounge pool dosing controller and sample cells',
+      'Lounge pool dosing controller, Dr Aqualis Trio',
     ),
     code: 'CP2',
   },

@@ -73,7 +73,8 @@ const SIZE = {
   uv: { w: 1.7, d: 1.6, h: 1.7 },
   exchanger: { w: 1.5, d: 0.7, h: 1.2 },
   panel: { w: 2.7, d: 0.6, h: 2.45 },
-  controller: { w: 1.0, d: 0.25, h: 1.4 },
+  // The Dr Aqualis Trio's cabinet (mission 114, `aqualis-cabinet.ts`).
+  controller: { w: 0.6, d: 0.3, h: 1.8 },
   hypo: { w: 1.2, d: 0.3, h: 1.0 },
   acid: { w: 0.7, d: 0.35, h: 0.8 },
   // Dev28's Penfold balance tank panel (`BALANCE_PANEL`).
@@ -83,7 +84,6 @@ const SIZE = {
 /** The dosing's fixing heights on the wall (as the room's equipment has them). */
 const WALL_HEIGHT: Record<string, number> = {
   tankPanel: 1.45,
-  controller: 1.35,
   hypo: 1.3,
   acid: 1.3,
 };
@@ -324,8 +324,21 @@ export function olympicPlan(): PlanItem[] {
   // The dosing on the south wall, west of the stair's foot, where the chemicals come in.
   const foot = STAIR.minX - 1.2;
   let at = foot - 0.6;
+  // The Dr Aqualis Trio (mission 114; the owner, 2026-10-31), in the old
+  // controller's place, which was a metre of wall: a floor cabinet, its
+  // middle where the old unit's was, its back 0.05 m off the wall.
+  const old = 1.0;
+  const trio = SIZE.controller;
+  out.push(
+    item(
+      'controller',
+      'Dosing controller, Dr Aqualis Trio',
+      trio,
+      against('south', at - old / 2, trio, 0.05),
+    ),
+  );
+  at -= old + 0.4;
   for (const [key, label, size] of [
-    ['controller', 'Dosing controller and sample cells', SIZE.controller],
     ['hypo', 'Hypochlorite dosing pumps', SIZE.hypo],
     ['acid', 'Acid dosing pump', SIZE.acid],
   ] as const) {

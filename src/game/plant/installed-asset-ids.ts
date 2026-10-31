@@ -54,8 +54,10 @@ export const INSTALLED_ASSET_IDS: Readonly<
     assetId: 'asset-0009',
     tag: 'PL1-T2',
   },
-  'plant_pool_01|dosing-controller|Lounge pool dosing controller and sample cells':
-    { assetId: 'asset-0010', tag: 'PL1-CP2' },
+  // Its Dr Aqualis Trio (mission 114): a machine replaced, its place and
+  // tag the same (asset-0010, the old controller, retired).
+  'plant_pool_01|dosing-controller|Lounge pool dosing controller, Dr Aqualis Trio':
+    { assetId: 'asset-0156', tag: 'PL1-CP2' },
   'plant_pool_01|hypo-pumps|Lounge pool hypochlorite dosing pumps': {
     assetId: 'asset-0011',
     tag: 'PL1-DP1',
@@ -374,9 +376,11 @@ export const INSTALLED_ASSET_IDS: Readonly<
     assetId: 'asset-0102',
     tag: 'PL2-HX1',
   },
-  'plant_pool_02|dosing-controller|Olympic pool dosing controller and sample cells':
+  // Its Dr Aqualis Trio (mission 114), replacing the old controller
+  // (asset-0103, retired) in its place, under its tag.
+  'plant_pool_02|dosing-controller|Olympic pool dosing controller, Dr Aqualis Trio':
     {
-      assetId: 'asset-0103',
+      assetId: 'asset-0155',
       tag: 'PL2-CP2',
     },
   'plant_pool_02|hypo-pumps|Olympic pool hypochlorite dosing pumps': {

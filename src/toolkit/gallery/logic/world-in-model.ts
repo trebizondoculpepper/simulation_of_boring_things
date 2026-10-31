@@ -13,6 +13,7 @@ import {
 } from './cabinet-pipes';
 import { olympicPlanKeys, olympicPlumbing } from './olympic-plumbing';
 import { OLYMPIC_ANNEX } from './olympic-annex';
+import { SAMPLE_POINT } from '../../../game/plant/aqualis-schematic';
 import { SCHEMATICS, schematicExpansion } from '../../../game/plant/schematics';
 import { modelValveOn } from '../../../game/plant/model-valves';
 import type {
@@ -177,7 +178,9 @@ function olympicThings(): DrawnThing[] {
     ...plumbed.runs.map((r): DrawnThing => ({
       kind: 'pipe',
       name: r.name,
-      binding: { link: r.line },
+      // The Trio's sample point is a node: the saddle and its stub.
+      binding:
+        r.line === SAMPLE_POINT ? { node: SAMPLE_POINT } : { link: r.line },
     })),
   ];
 }

@@ -697,15 +697,15 @@ function poolPlant(
       contactSide,
       3.05,
     ),
-    // Its dosing on the east wall, by the stair, clear of the pipe zones.
-    wall(
+    // Its dosing controller, a Dr Aqualis Trio (mission 114): a floor
+    // cabinet, its back 0.05 m off its wall (`aqualis-cabinet.ts`).
+    floor(
       'dosing-controller',
-      `${name} dosing controller and sample cells`,
-      1,
-      0.25,
-      1.4,
-      1.35,
-      { walls: ['east', 'west'] },
+      `${name} dosing controller, Dr Aqualis Trio`,
+      0.6,
+      0.3,
+      1.8,
+      { back: 0.05 },
     ),
     wall('hypo-pumps', `${name} hypochlorite dosing pumps`, 1.2, 0.3, 1, 1.3, {
       walls: ['east', 'west'],
@@ -803,6 +803,13 @@ function chemPlaced(
 
 /** PL1-CP3's edge from the equipment doors' frame beside it, metres. */
 export const ANNUNCIATOR_FRAME_GAP = 0.06;
+
+/**
+ * The Lounge Trio's west edge from the equipment doors' frame on its side,
+ * metres (mission 114): its lower door's sweep past that edge (0.2 m,
+ * `aqualis-cabinet.ts`) and the annunciator's gap.
+ */
+export const TRIO_FRAME_GAP = 0.2 + ANNUNCIATOR_FRAME_GAP;
 
 /** Each room's machines, and its box. */
 export function roomEquipment(
@@ -1757,9 +1764,9 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
   // gantry and stair take the north-east corner. The tank in the north-west,
   // a walkway all round it; the pumps off its face; the two filters on the
   // south wall west of the doors, their backwash short to the drainage;
-  // east of the doors the heat exchanger by the heating ring and the
-  // dosing pumps where their lines come in; the panel and the dosing
-  // controller on the east wall south of the stair's foot; the contact
+  // east of the doors the dosing controller (a Dr Aqualis Trio), the heat
+  // exchanger by the heating ring and the dosing pumps where their lines
+  // come in; the panel on the east wall south of the stair's foot; the contact
   // tank and the ozone generator along the north, east of the tank; the
   // UV in the middle, clear of the gantry.
   plant_pool_01: (box, items) => {
@@ -1822,17 +1829,25 @@ const FIXED: Record<string, (box: RoomBox, items: Item[]) => Placed[]> = {
     const hypo = at('hypochlorite dosing pumps');
     const hypoPlaced = put(box, hypo, { wall: 'south', along: x + hypo.w / 2 });
     out.push(hypoPlaced);
-    // The east wall south of the stair's foot.
-    const foot = Math.max(
-      ...box.keepClear
-        .filter((k) => k.maxX >= h - 1e-9 && k.maxZ < hz - 2)
-        .map((k) => k.maxZ),
-    );
-    const controller = at('dosing controller and sample cells');
+    // The Dr Aqualis Trio (mission 114; the owner, 2026-10-31): on the
+    // south wall just east of the door, where the annunciator was, its back
+    // 0.05 m off the wall, facing north. Placed from the equipment doors'
+    // frame (the lead, 2026-10-31), as PL1-CP3 is on the other side: its
+    // west edge clear of the frame by TRIO_FRAME_GAP, room for its lower
+    // door, hinged on that edge, to swing open past it. Its sample ports on
+    // its east side, toward DP2.
+    const trio = at('dosing controller, Dr Aqualis Trio');
     out.push(
-      put(box, controller, {
-        wall: 'east',
-        along: foot + 0.3 + controller.w / 2,
+      put(box, trio, {
+        // And out of the doorway's kept-clear floor, a trolley's turn.
+        x:
+          Math.max(
+            (door + doorEast) / 2 + EQUIPMENT_OPENING / 2 + TRIO_FRAME_GAP,
+            doorEast,
+          ) +
+          trio.w / 2,
+        z: hz - (trio.back ?? 0) - trio.d / 2,
+        face: 'north',
       }),
     );
     // Keep the acid pump with the other dosing supply on the south wall,

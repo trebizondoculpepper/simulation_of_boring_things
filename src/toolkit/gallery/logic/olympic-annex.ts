@@ -52,7 +52,7 @@ export const OLYMPIC_ANNEX = {
       id: 'controller',
       kind: 'dosing-controller',
       code: 'CP2',
-      name: 'Dosing controller and sample cells',
+      name: 'Dosing controller, Dr Aqualis Trio',
     },
     ...OLYMPIC_TRIO.nodes,
     { id: 'manifold', kind: 'header', name: 'Pump discharge manifold' },
@@ -154,6 +154,8 @@ export const OLYMPIC_ANNEX = {
     'power-pump-A.tap-off',
     'power-pump-B.tap-off',
     'power-uv.tap-off',
+    // The Dr Aqualis Trio's supply's (mission 114).
+    'power-controller.tap-off',
     'battery.outlet.regulating',
     'pumps.drain.iso',
     // Its chemical lines' valves (prompt 085).

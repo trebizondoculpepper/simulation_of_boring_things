@@ -12,7 +12,7 @@ import {
 } from './installed-valves';
 import { plantInventory } from './equipment-catalogue';
 import { EQUIPMENT_VALVES } from './chemical-valves';
-import { TRIO_VALVES_NOT_YET_DRAWN } from './aqualis-schematic';
+import { TRIO_CABINET_VALVES } from './aqualis-schematic';
 
 const ROOMS = [
   'plant_pool_01',
@@ -26,11 +26,9 @@ const ROOMS = [
   'acid_store',
   'loading_bay',
 ].filter((r) => !BEING_LAID_OUT.includes(r));
-/** The registered valves of rooms not being laid out afresh (and not the Trios' lines, in the model but not yet drawn, mission 114). */
+/** The registered valves of rooms not being laid out afresh. */
 const REGISTERED = Object.entries(INSTALLED_VALVES).filter(
-  ([key, v]) =>
-    !BEING_LAID_OUT.includes(key.split('|')[0]) &&
-    !TRIO_VALVES_NOT_YET_DRAWN.has(v.assetId),
+  ([key]) => !BEING_LAID_OUT.includes(key.split('|')[0]),
 );
 
 describe('installed pipework valves', () => {
@@ -58,6 +56,12 @@ describe('installed pipework valves', () => {
     );
     expect(seen.has(hallDrain.assetId)).toBe(false);
     seen.add(hallDrain.assetId);
+    // And each Trio's sample inlet valve, drawn on its cabinet (mission 114).
+    for (const id of TRIO_CABINET_VALVES) {
+      expect(installedValveByCommandId(id), id).toBeDefined();
+      expect(seen.has(id)).toBe(false);
+      seen.add(id);
+    }
     // And the chemical machines' own valves, drawn on them (plan 085).
     for (const id of EQUIPMENT_VALVES)
       if (installedValveByCommandId(id)) {
@@ -71,7 +75,7 @@ describe('installed pipework valves', () => {
       expect(installedValveByCommandId(valve.assetId)).toBe(valve);
       expect(installedValveByCommandId(valve.tag)).toBe(valve);
     }
-  });
+  }, 20_000); // It plumbs every room, the Olympic's routed afresh.
 
   it('keeps the valve position in world state by asset ID and exposes it in the inventory', () => {
     const installed = installedValveFor(
@@ -123,8 +127,13 @@ describe('installed pipework valves', () => {
     ];
     const offRoute: string[] = [];
     for (const [key, installed] of REGISTERED) {
-      // A chemical machine's own valve is drawn on it, on no route (plan 085).
-      if (EQUIPMENT_VALVES.has(installed.assetId)) continue;
+      // A chemical machine's own valve is drawn on it, on no route (plan
+      // 085); so is a Trio's sample inlet valve, on its cabinet (mission 114).
+      if (
+        EQUIPMENT_VALVES.has(installed.assetId) ||
+        TRIO_CABINET_VALVES.has(installed.assetId)
+      )
+        continue;
       const matches = authored.filter(
         ({ room, run, valve }) => `${room}|${run.name}|${valve.name}` === key,
       );
