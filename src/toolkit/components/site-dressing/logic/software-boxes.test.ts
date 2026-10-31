@@ -22,6 +22,28 @@ describe('software boxes', () => {
     }
   });
 
+  it('prints no real trademark on any face', () => {
+    // Every printed word is in the data, so its whole text is what the boxes say.
+    const printed = JSON.stringify(SOFTWARE_TITLES);
+    for (const mark of [
+      /sierra/i,
+      /police\s*quest/i,
+      /microsoft/i,
+      /windows/i,
+      /pentium/i,
+      /sound\s*blaster/i,
+      /ms-dos/i,
+      /\bintel\b/i,
+      /\bibm\b/i,
+      /maxis/i,
+      /sim\s*city/i,
+      /theme\s*park/i,
+      /bullfrog/i,
+      /pc\s*zone\b/i,
+    ])
+      expect(printed).not.toMatch(mark);
+  });
+
   it('uses valid EAN-13 codes and the standard check digit', () => {
     expect(ean13CheckDigit('400638133393')).toBe(1);
     expect(ean13CheckDigit('978020137962')).toBe(4);

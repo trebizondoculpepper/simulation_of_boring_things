@@ -1,3 +1,7 @@
+import { drawGameBoxFace } from './software-box-game-art';
+import type { GameBoxFurniture } from './software-box-game-art';
+import { drawQuestBoxFace } from './software-box-quest-art';
+import { drawPeriodBoxFace } from './software-box-period-art';
 import type {
   BoxArtStyle,
   BoxFace,
@@ -102,59 +106,44 @@ function linesFor(ctx: Paint, value: string, width: number): string[] {
   return lines;
 }
 
+/** A business box's title: its name, its version number large, and any detail. */
 function frontTitle(ctx: Paint, title: SoftwareTitle): void {
+  const version = title.title.match(/\d+(?:\.\d+)?/)?.[0] ?? '';
   const colon = title.title.indexOf(':');
-  const main = colon < 0 ? title.title : title.title.slice(0, colon + 1);
-  const suffix = colon < 0 ? '' : title.title.slice(colon + 1).trim();
-  // Clear of the price sticker in the top right corner.
-  const width = 296;
-  const centre = 174;
-  const available = suffix ? 2 : 3;
-  let size = 57;
-  let lines: string[] = [];
-  while (size >= 25) {
-    ctx.font = `900 ${size}px Impact, Arial Black, sans-serif`;
-    lines = linesFor(ctx, main, width);
-    if (
-      lines.length <= available &&
-      lines.length * size * 1.02 <= (suffix ? 104 : 135)
-    )
-      break;
-    size -= 1;
-  }
-  const start = 90 + (3 - lines.length - (suffix ? 1 : 0)) * 12;
+  const prefix = title.title
+    .slice(0, colon < 0 ? title.title.indexOf(version) : colon)
+    .trim();
+  const suffix = title.title
+    .slice(title.title.indexOf(version) + version.length)
+    .trim();
+  const gold = title.style === 'chemistry';
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
-  ctx.font = `900 ${size}px Impact, Arial Black, sans-serif`;
-  lines.forEach((line, index) =>
-    ctx.fillText(line, centre, start + index * size * 1.02, width),
-  );
-  let bottom = start + (lines.length - 1) * size * 1.02;
-  if (suffix) {
-    bottom += 35;
-    fittedText(
-      ctx,
-      suffix,
-      centre,
-      bottom,
-      width,
-      32,
-      'Arial Black, sans-serif',
-      18,
-    );
+  const lines: [string, number, number, number, number][] = [
+    [prefix, 135, 345, 39, 20],
+    [version, 181, 330, 44, 25],
+  ];
+  for (const [text, y, width, size, min] of lines) {
+    ctx.fillStyle = title.palette.ink;
+    fittedText(ctx, text, 200, y, width, size, 'Arial Black, sans-serif', min);
+    if (gold) {
+      // Foil lettering, on a dark keyline so it reads on the pale ground.
+      ctx.save();
+      ctx.shadowColor = 'transparent';
+      ctx.strokeStyle = title.palette.ink;
+      ctx.lineWidth = 5;
+      ctx.lineJoin = 'round';
+      ctx.strokeText(text, 200, y, width);
+      ctx.fillStyle = goldFoil(ctx, y - size * 0.8, size);
+      ctx.fillText(text, 200, y, width);
+      ctx.restore();
+    }
   }
-  if (title.subtitle) {
-    ctx.font = 'bold 16px Georgia, serif';
-    fittedText(
-      ctx,
-      title.subtitle,
-      centre,
-      Math.min(229, bottom + 23),
-      width,
-      16,
-      'Georgia, serif',
-    );
-  }
+  ctx.fillStyle = title.palette.ink;
+  const detail =
+    colon < 0
+      ? suffix
+      : title.title.slice(colon + 1, title.title.indexOf(version)).trim();
+  if (detail) fittedText(ctx, detail, 200, 211, 340, 20);
   ctx.textAlign = 'left';
 }
 
@@ -232,13 +221,15 @@ function logo(
   ctx.stroke();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
+  // The stepped bars leave their letters room only in the lower right.
+  const bars = mark.shape === 'bars';
   fittedText(
     ctx,
     mark.letters,
-    x + size / 2,
-    y + size / 2,
-    size * 0.72,
-    size * 0.35,
+    x + size * (bars ? 0.77 : 0.5),
+    y + size * (bars ? 0.7 : 0.5),
+    size * (bars ? 0.4 : 0.72),
+    size * (bars ? 0.3 : 0.35),
     'Arial Black, sans-serif',
     5,
   );
@@ -312,87 +303,13 @@ function priceSticker(ctx: Paint, title: SoftwareTitle): void {
   ctx.restore();
 }
 
-function starburst(
-  ctx: Paint,
-  label: string,
-  x: number,
-  y: number,
-  r: number,
-  colour: string,
-): void {
-  ctx.beginPath();
-  for (let i = 0; i < 20; i += 1) {
-    const angle = -Math.PI / 2 + (i * Math.PI) / 10;
-    const radius = i % 2 ? r * 0.82 : r;
-    const px = x + Math.cos(angle) * radius;
-    const py = y + Math.sin(angle) * radius;
-    if (!i) ctx.moveTo(px, py);
-    else ctx.lineTo(px, py);
-  }
-  ctx.closePath();
-  ctx.fillStyle = colour;
-  ctx.fill();
-  ctx.fillStyle = '#132b35';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.font = 'bold 9px Verdana, sans-serif';
-  wrap(ctx, label, x - r * 0.69, y - 6, r * 1.38, 10, 3);
-  ctx.textAlign = 'left';
-}
-
-function poolScene(ctx: Paint, accent: string): void {
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(22, 157, 356, 265);
-  ctx.clip();
-  const gradient = ctx.createLinearGradient(0, 155, 0, 423);
-  gradient.addColorStop(0, '#b9ece8');
-  gradient.addColorStop(1, '#086488');
-  rect(ctx, gradient, 22, 157, 356, 265);
-  ctx.strokeStyle = '#e1f7dd';
-  ctx.lineWidth = 2;
-  for (let i = 0; i < 9; i += 1) {
-    const y = 213 + i * i * 3.2;
-    ctx.beginPath();
-    ctx.moveTo(22, y + 28);
-    ctx.lineTo(378, y);
-    ctx.stroke();
-  }
-  for (let i = 0; i < 6; i += 1) {
-    ctx.setLineDash([10, 6]);
-    ctx.strokeStyle = i % 2 ? accent : '#f5f0de';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(145 + i * 20, 185);
-    ctx.lineTo(-30 + i * 84, 425);
-    ctx.stroke();
-  }
-  ctx.setLineDash([]);
-  rect(ctx, '#e4e2c8', 33, 180, 7, 107);
-  rect(ctx, '#e4e2c8', 34, 181, 91, 8);
-  ctx.fillStyle = '#f6d7a4';
-  ctx.beginPath();
-  ctx.arc(258, 229, 11, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = '#f6d7a4';
-  ctx.lineWidth = 8;
-  ctx.beginPath();
-  ctx.moveTo(252, 241);
-  ctx.lineTo(218, 267);
-  ctx.lineTo(193, 253);
-  ctx.moveTo(240, 252);
-  ctx.lineTo(274, 276);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function gridScene(ctx: Paint, accent: string): void {
+function gridScene(ctx: Paint, title: SoftwareTitle): void {
   rect(ctx, '#34505a', 22, 157, 356, 265);
   ctx.save();
   ctx.translate(46, 202);
   ctx.transform(1, -0.1, -0.28, 0.92, 0, 0);
   rect(ctx, '#ecede3', 0, 0, 315, 213);
-  rect(ctx, accent, 0, 0, 315, 27);
+  rect(ctx, title.palette.accent, 0, 0, 315, 27);
   ctx.strokeStyle = '#8a9da3';
   ctx.lineWidth = 1;
   const columns = 6;
@@ -415,31 +332,20 @@ function gridScene(ctx: Paint, accent: string): void {
       if ((row * 3 + col * 5) % 4 === 0)
         rect(
           ctx,
-          accent,
+          title.palette.accent,
           6 + (col * 315) / columns,
           34 + (row * 186) / 8,
           24,
           8,
         );
   ctx.restore();
-  ctx.fillStyle = '#f4bd59';
-  ctx.beginPath();
-  ctx.moveTo(282, 301);
-  ctx.arc(282, 301, 54, -Math.PI / 2, Math.PI * 1.1);
-  ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = '#9d463d';
-  ctx.beginPath();
-  ctx.moveTo(282, 301);
-  ctx.arc(282, 301, 54, Math.PI * 1.1, Math.PI * 1.5);
-  ctx.closePath();
-  ctx.fill();
+  programWindow(ctx, title, title.screenshots[0], 55, 235, 270, 140, 0);
 }
 
-function calendarScene(ctx: Paint, accent: string): void {
+function calendarScene(ctx: Paint, title: SoftwareTitle): void {
   rect(ctx, '#344d61', 22, 157, 356, 265);
   rect(ctx, '#f8f3df', 52, 193, 296, 211);
-  rect(ctx, accent, 52, 193, 296, 35);
+  rect(ctx, title.palette.accent, 52, 193, 296, 35);
   for (let i = 0; i < 6; i += 1) {
     ctx.strokeStyle = '#193a4a';
     ctx.lineWidth = 5;
@@ -464,96 +370,13 @@ function calendarScene(ctx: Paint, accent: string): void {
   for (let i = 0; i < 15; i += 1)
     rect(
       ctx,
-      i % 3 ? '#4b8b9c' : accent,
+      i % 3 ? '#4b8b9c' : title.palette.accent,
       62 + (i % 7) * 42,
       241 + Math.floor(i / 7) * 70,
       24,
       12,
     );
-}
-
-function decoScene(ctx: Paint, accent: string): void {
-  rect(ctx, '#236d86', 22, 157, 356, 265);
-  ctx.strokeStyle = '#f8bc6b';
-  ctx.lineWidth = 3;
-  for (let i = 0; i < 17; i += 1) {
-    const angle = Math.PI + (i * Math.PI) / 16;
-    ctx.beginPath();
-    ctx.moveTo(200, 269);
-    ctx.lineTo(200 + Math.cos(angle) * 235, 269 + Math.sin(angle) * 235);
-    ctx.stroke();
-  }
-  ctx.strokeStyle = accent;
-  ctx.lineWidth = 4;
-  for (let i = 0; i < 5; i += 1) {
-    ctx.strokeRect(52 + i * 12, 183 + i * 10, 296 - i * 24, 215 - i * 20);
-  }
-  rect(ctx, '#f6d7a3', 85, 261, 230, 105);
-  rect(ctx, '#3899ad', 97, 278, 206, 77);
-  for (let i = 0; i < 7; i += 1) rect(ctx, '#faf1cc', 98, 285 + i * 10, 204, 2);
-  ctx.fillStyle = accent;
-  ctx.beginPath();
-  ctx.arc(200, 216, 24, Math.PI, 0);
-  ctx.fill();
-}
-
-function noirScene(ctx: Paint): void {
-  const sky = ctx.createLinearGradient(22, 160, 378, 420);
-  sky.addColorStop(0, '#050812');
-  sky.addColorStop(0.6, '#1d354a');
-  sky.addColorStop(1, '#080e19');
-  rect(ctx, sky, 22, 157, 356, 265);
-  ctx.fillStyle = '#d5d4b8';
-  ctx.globalAlpha = 0.65;
-  ctx.beginPath();
-  ctx.moveTo(76, 411);
-  ctx.lineTo(272, 210);
-  ctx.lineTo(363, 420);
-  ctx.closePath();
-  ctx.fill();
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = '#0a111d';
-  ctx.beginPath();
-  ctx.ellipse(271, 263, 58, 73, -0.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillRect(230, 320, 102, 100);
-  ctx.strokeStyle = '#d7dbcb';
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.moveTo(248, 277);
-  ctx.lineTo(260, 273);
-  ctx.moveTo(291, 271);
-  ctx.lineTo(302, 269);
-  ctx.stroke();
-  rect(ctx, '#b42e38', 22, 396, 356, 26);
-}
-
-function pulpScene(ctx: Paint, accent: string): void {
-  const g = ctx.createLinearGradient(0, 155, 350, 420);
-  g.addColorStop(0, '#b76a4d');
-  g.addColorStop(0.5, '#45304a');
-  g.addColorStop(1, '#151d32');
-  ctx.fillStyle = g;
-  ctx.fillRect(22, 157, 356, 265);
-  ctx.fillStyle = accent;
-  ctx.beginPath();
-  ctx.arc(260, 246, 72, 0, Math.PI * 2);
-  ctx.fill();
-  rect(ctx, '#273941', 89, 310, 220, 89);
-  ctx.fillStyle = '#f6d9ae';
-  ctx.beginPath();
-  ctx.arc(159, 259, 30, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = '#f6d9ae';
-  ctx.lineWidth = 19;
-  ctx.beginPath();
-  ctx.moveTo(153, 289);
-  ctx.lineTo(122, 359);
-  ctx.lineTo(198, 375);
-  ctx.stroke();
-  ctx.fillStyle = '#f7e5b2';
-  ctx.font = 'bold 19px Georgia, serif';
-  ctx.fillText('?', 264, 254);
+  programWindow(ctx, title, title.screenshots[0], 56, 235, 288, 143, 0);
 }
 
 function chemicalScene(ctx: Paint, style: BoxArtStyle, accent: string): void {
@@ -574,17 +397,25 @@ function chemicalScene(ctx: Paint, style: BoxArtStyle, accent: string): void {
     ctx.lineTo(378, 157);
     ctx.lineTo(22, 354);
     ctx.fill();
+    // The old European harmful/irritant symbol: an upright orange square, a black St Andrew's cross.
     ctx.save();
-    ctx.translate(200, 285);
-    ctx.rotate(Math.PI / 4);
-    rect(ctx, '#f39831', -65, -65, 130, 130);
-    ctx.strokeStyle = '#45342a';
-    ctx.lineWidth = 13;
+    ctx.translate(200, 290);
+    ctx.shadowColor = 'rgba(20, 40, 50, 0.4)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetX = 4;
+    ctx.shadowOffsetY = 4;
+    rect(ctx, '#f39831', -62, -62, 124, 124);
+    ctx.shadowColor = 'transparent';
+    ctx.strokeStyle = '#1d1a17';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(-56, -56, 112, 112);
+    ctx.lineWidth = 14;
+    ctx.lineCap = 'square';
     ctx.beginPath();
-    ctx.moveTo(-36, -36);
-    ctx.lineTo(36, 36);
-    ctx.moveTo(36, -36);
-    ctx.lineTo(-36, 36);
+    ctx.moveTo(-38, -38);
+    ctx.lineTo(38, 38);
+    ctx.moveTo(38, -38);
+    ctx.lineTo(-38, 38);
     ctx.stroke();
     ctx.restore();
   } else {
@@ -609,7 +440,18 @@ function chemicalScene(ctx: Paint, style: BoxArtStyle, accent: string): void {
     ctx.lineTo(220, 257);
     ctx.lineTo(220, 192);
     ctx.stroke();
-    rect(ctx, '#3d99aa', 135, 349, 130, 24);
+    const liquid = ctx.createLinearGradient(125, 265, 280, 390);
+    liquid.addColorStop(0, '#ecf9e4');
+    liquid.addColorStop(0.5, '#76c6c5');
+    liquid.addColorStop(1, '#1f758e');
+    rect(ctx, liquid, 135, 349, 130, 24);
+    ctx.strokeStyle = '#ffffffa8';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(177, 268);
+    ctx.lineTo(132, 357);
+    ctx.quadraticCurveTo(122, 385, 153, 385);
+    ctx.stroke();
     for (let i = 0; i < 3; i += 1) {
       rect(ctx, '#e7e5c9', 53 + i * 43, 268, 24, 87);
       rect(ctx, ['#edae40', '#7db75b', '#3f92b4'][i], 55 + i * 43, 310, 20, 43);
@@ -630,13 +472,20 @@ function chemicalScene(ctx: Paint, style: BoxArtStyle, accent: string): void {
 
 function coverScene(ctx: Paint, title: SoftwareTitle): void {
   const { style, palette } = title;
-  if (style === 'pool-diagram') poolScene(ctx, palette.accent);
-  else if (style === 'movie-noir') noirScene(ctx);
-  else if (style === 'spreadsheet') gridScene(ctx, palette.accent);
-  else if (style === 'calendar') calendarScene(ctx, palette.accent);
-  else if (style === 'art-deco') decoScene(ctx, palette.accent);
-  else if (style === 'pulp-painting') pulpScene(ctx, palette.accent);
+  if (style === 'spreadsheet') gridScene(ctx, title);
+  else if (style === 'calendar') calendarScene(ctx, title);
   else chemicalScene(ctx, style, palette.accent);
+}
+
+/** A vertical gold-foil gradient across a band: dark edges, a bright crease. */
+function goldFoil(ctx: Paint, top: number, height: number): CanvasGradient {
+  const foil = ctx.createLinearGradient(0, top, 0, top + height);
+  foil.addColorStop(0, '#6f5b1e');
+  foil.addColorStop(0.25, '#fff3a7');
+  foil.addColorStop(0.52, '#c59527');
+  foil.addColorStop(0.8, '#f9e698');
+  foil.addColorStop(1, '#755719');
+  return foil;
 }
 
 function front(ctx: Paint, title: SoftwareTitle): void {
@@ -653,26 +502,39 @@ function front(ctx: Paint, title: SoftwareTitle): void {
   ctx.shadowBlur = 0;
   ctx.shadowOffsetX = 0;
   ctx.shadowOffsetY = 0;
-  starburst(
-    ctx,
-    title.frontBadges[0] ?? '',
-    324,
-    383,
-    52,
-    title.palette.accent,
-  );
+  rect(ctx, '#f5e6bc', 260, 385, 120, 39);
+  ctx.strokeStyle = title.palette.accent;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(260, 385, 120, 39);
+  ctx.fillStyle = title.palette.ink;
+  ctx.textAlign = 'center';
+  fittedText(ctx, title.frontBadges[0] ?? '', 320, 409, 108, 11);
+  ctx.textAlign = 'left';
   if (title.frontBadges[1]) {
-    rect(ctx, title.palette.accent, 20, 433, 360, 23);
+    const gold = title.style === 'chemistry';
+    // DoseRight's gold edition gets a foil band, deeper than the others.
+    const top = gold ? 428 : 433;
+    const height = gold ? 30 : 23;
+    rect(
+      ctx,
+      gold ? goldFoil(ctx, top, height) : title.palette.accent,
+      20,
+      top,
+      360,
+      height,
+    );
     ctx.fillStyle = '#12242e';
+    if (gold) ctx.textAlign = 'center';
     fittedText(
       ctx,
-      title.frontBadges[1],
-      28,
-      449,
+      gold ? title.frontBadges[1].toUpperCase() : title.frontBadges[1],
+      gold ? 200 : 28,
+      top + height - 7,
       342,
-      14,
+      gold ? 22 : 14,
       'Arial Black, sans-serif',
     );
+    ctx.textAlign = 'left';
   }
   logo(ctx, title.publisherLogo, 20, 467, 38, title.palette.ink);
   ctx.fillStyle = title.palette.ink;
@@ -722,6 +584,67 @@ function barcode(
   ctx.textAlign = 'left';
 }
 
+function programWindow(
+  ctx: Paint,
+  title: SoftwareTitle,
+  caption: string,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  index: number,
+): void {
+  const ui = title.businessUi;
+  if (!ui) return;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(w / 300, h / 180);
+  rect(ctx, '#172b3d', 0, 0, 300, 180);
+  rect(ctx, '#c5c8c9', 4, 4, 292, 172);
+  rect(ctx, '#173b6a', 6, 6, 288, 21);
+  ctx.fillStyle = '#fff';
+  fittedText(ctx, caption, 12, 21, 210, 12);
+  for (let i = 0; i < 3; i += 1) {
+    rect(ctx, '#d7dadb', 247 + i * 15, 9, 12, 12);
+    rect(ctx, '#647481', 250 + i * 15, 18, 6, 1);
+  }
+  ctx.fillStyle = '#152d3a';
+  fittedText(ctx, ui.menu, 9, 39, 280, 10);
+  rect(ctx, '#adb9c0', 7, 43, 286, 20);
+  ctx.fillStyle = '#183b4d';
+  fittedText(ctx, ui.toolbar, 13, 57, 270, 10);
+  rect(ctx, '#f4f3e8', 8, 67, 284, 102);
+  rect(ctx, '#cbd9df', 9, 68, 282, 17);
+  const widths = [70, 185, 283];
+  let previous = 14;
+  ui.columns.forEach((column, i) => {
+    ctx.fillStyle = '#1c3c56';
+    fittedText(ctx, column, previous, 80, widths[i] - previous - 3, 10);
+    previous = widths[i];
+  });
+  ctx.strokeStyle = '#aebac0';
+  ctx.lineWidth = 1;
+  for (const row of [85, 101, 117, 133, 149, 165]) {
+    ctx.beginPath();
+    ctx.moveTo(9, row);
+    ctx.lineTo(291, row);
+    ctx.stroke();
+  }
+  for (const col of [74, 188]) {
+    ctx.beginPath();
+    ctx.moveTo(col, 68);
+    ctx.lineTo(col, 169);
+    ctx.stroke();
+  }
+  for (let row = 0; row < 5; row += 1) {
+    const yy = 89 + row * 16;
+    rect(ctx, row === index ? '#efdcab' : '#acc5ca', 13, yy, 34, 7);
+    rect(ctx, '#66889b', 81, yy, 45 + ((row + index) % 3) * 16, 7);
+    rect(ctx, row === index ? title.palette.accent : '#61899a', 203, yy, 47, 7);
+  }
+  ctx.restore();
+}
+
 function screenshot(
   ctx: Paint,
   title: SoftwareTitle,
@@ -730,6 +653,13 @@ function screenshot(
   y: number,
   index: number,
 ): void {
+  if (title.kind === 'business') {
+    programWindow(ctx, title, caption, x, y, 110, 66, index);
+    rect(ctx, '#132e3b', x, y + 65, 110, 14);
+    ctx.fillStyle = '#fff';
+    fittedText(ctx, caption, x + 4, y + 75, 102, 9);
+    return;
+  }
   rect(ctx, '#10191e', x, y, 110, 79);
   rect(ctx, index % 2 ? '#367486' : '#458f9d', x + 4, y + 4, 102, 57);
   ctx.strokeStyle = '#aed6c6';
@@ -740,10 +670,7 @@ function screenshot(
     ctx.lineTo(x + 101, y + 14 + i * 13);
     ctx.stroke();
   }
-  if (title.kind === 'business') {
-    for (let i = 0; i < 4; i += 1)
-      rect(ctx, title.palette.accent, x + 13 + i * 22, y + 25, 8, 20 + i * 4);
-  } else rect(ctx, title.palette.accent, x + 29 + index * 13, y + 31, 27, 12);
+  rect(ctx, title.palette.accent, x + 29 + index * 13, y + 31, 27, 12);
   ctx.fillStyle = '#fff';
   fittedText(ctx, caption, x + 4, y + 72, 102, 9, 'Verdana, sans-serif');
 }
@@ -782,9 +709,20 @@ function back(ctx: Paint, title: SoftwareTitle): void {
   ctx.fillStyle = '#1b303a';
   ctx.font = '12px Georgia, serif';
   let y = wrap(ctx, title.blurb, 18, 102, 364, 15, 6) + 7;
-  ctx.font = 'bold 11px Verdana, sans-serif';
-  for (const feature of title.features.slice(0, 5)) {
-    y = wrap(ctx, `• ${feature}`, 23, y, 350, 12, 2) + 1;
+  if (title.kind === 'business') {
+    const tableY = y - 10;
+    title.features.slice(0, 4).forEach((feature, index) => {
+      const rowY = tableY + index * 17;
+      rect(ctx, index % 2 ? '#e6e7df' : '#f3f1e8', 18, rowY, 364, 17);
+      rect(ctx, title.palette.accent, 18, rowY, 5, 17);
+      ctx.fillStyle = '#183949';
+      fittedText(ctx, feature, 30, rowY + 12, 342, 10);
+    });
+    y = tableY + 71;
+  } else {
+    ctx.font = 'bold 11px Verdana, sans-serif';
+    for (const feature of title.features.slice(0, 5))
+      y = wrap(ctx, `• ${feature}`, 23, y, 350, 12, 2) + 1;
   }
   const shotsY = Math.max(258, Math.min(279, y + 4));
   title.screenshots
@@ -848,7 +786,7 @@ function top(ctx: Paint, title: SoftwareTitle): void {
   rect(ctx, title.palette.accent, 0, 0, 400, 8);
   logo(ctx, title.publisherLogo, 13, 25, 52, title.palette.ink);
   ctx.fillStyle = title.palette.ink;
-  fittedText(ctx, title.title, 79, 65, 305, 31, 'Arial Black, sans-serif', 10);
+  fittedText(ctx, title.title, 88, 65, 294, 25, 'Arial Black, sans-serif', 10);
 }
 
 function bottom(ctx: Paint, title: SoftwareTitle): void {
@@ -890,7 +828,22 @@ export function drawBoxFace(
   const baseH = shallow ? 110 : 520;
   context.save();
   context.scale(width / baseW, height / baseH);
-  if (face === 'front') front(context, title);
+  if (title.questArt) {
+    drawQuestBoxFace(context, title, face, {
+      barcode: (ctx, item, x, y, w, h) =>
+        barcode(ctx, item.barcode, x, y, w, h),
+    });
+  } else if (title.gameArt || title.lidoArt || title.deepArt) {
+    const furniture = {
+      logo: (ctx, item, x, y, size, colour) =>
+        logo(ctx, item.publisherLogo, x, y, size, colour),
+      barcode: (ctx, item, x, y, w, h) =>
+        barcode(ctx, item.barcode, x, y, w, h),
+      requirements,
+    } satisfies GameBoxFurniture;
+    if (title.gameArt) drawGameBoxFace(context, title, face, furniture);
+    else drawPeriodBoxFace(context, title, face, furniture);
+  } else if (face === 'front') front(context, title);
   else if (face === 'back') back(context, title);
   else if (face === 'left' || face === 'right')
     spine(context, title, face === 'left');

@@ -12,11 +12,7 @@ export const BOX_FACES: readonly BoxFace[] = [
 ];
 
 /** The four cardboard formats used by this collection. */
-export type BoxSizeId =
-  | 'classic'
-  | 'sierra-tall'
-  | 'collector-flat'
-  | 'small-box';
+export type BoxSizeId = 'classic' | 'tall-box' | 'collector-flat' | 'small-box';
 
 /** A box's outside dimensions in metres. */
 export interface BoxSize {
@@ -40,8 +36,8 @@ export const BOX_SIZES: Record<BoxSizeId, BoxSize> = {
     source:
       '7 × 9 × 2 in; Wireframe, raspberrypi.com/news/big-box-games-the-history-of-pc-gamings-iconic-packaging/',
   },
-  'sierra-tall': {
-    id: 'sierra-tall',
+  'tall-box': {
+    id: 'tall-box',
     w: 0.229,
     h: 0.267,
     d: 0.044,
@@ -66,13 +62,13 @@ export const BOX_SIZES: Record<BoxSizeId, BoxSize> = {
   },
 };
 
-/** A compact scheme for procedurally painted cover art. */
+/** A compact scheme for procedurally painted cover art. The four game styles are painted from their title's own art spec (`gameArt`, `questArt`, `lidoArt`, `deepArt`); the business styles share one corporate layout. */
 export type BoxArtStyle =
-  | 'pool-diagram'
+  | 'simulation-airbrush'
   | 'spreadsheet'
-  | 'art-deco'
-  | 'pulp-painting'
-  | 'movie-noir'
+  | 'tycoon-airbrush'
+  | 'adventure-painting'
+  | 'fmv-poster'
   | 'calendar'
   | 'corporate-gradient'
   | 'chemistry';
@@ -88,6 +84,13 @@ export interface BoxPalette {
   background: string;
   ink: string;
   accent: string;
+}
+
+/** A fictional magazine's verdict, printed as a pull quote with its score. */
+export interface BoxReview {
+  quote: string;
+  magazine: string;
+  score: string;
 }
 
 /** Period PC requirements printed on a box back. */
@@ -118,11 +121,85 @@ export interface SoftwareTitle {
   blurb: string;
   features: readonly string[];
   screenshots: readonly string[];
+  /** The menu, toolbar and column headings of a business program's window in its screenshots. */
+  businessUi?: {
+    menu: string;
+    toolbar: string;
+    columns: readonly [string, string, string];
+  };
   requirements: BoxRequirements;
   barcode: string;
   price: { amount: string; label?: 'REDUCED' | 'SALE' };
   ageRating: '3+' | '7+' | '12+' | '15+' | null;
-  compatibility: 'Designed for PANES 95' | 'PANES 3.11 compatible';
+  compatibility:
+    | 'Designed for PANES 95'
+    | 'PANES 3.11 compatible'
+    | 'PC-DOZE 5.0 compatible';
+  /** Copy for the airbrushed simulation box (Macrosoft Pool Simulator 97). */
+  gameArt?: {
+    /** Main chrome lettering without the publisher name. */
+    hero: string;
+    /** Large numeric edition mark. */
+    edition: string;
+    /** Front ribbon claim. */
+    ribbon: string;
+    /** Two burst labels on the front. */
+    bursts: readonly [string, string];
+    /** Large promise across the back. */
+    headline: string;
+    /** Short promotional line below the back headline. */
+    backLead: string;
+    /** Fictional magazine reviews. */
+    reviews: readonly BoxReview[];
+  };
+  /** Copy for a painted adventure-series box (Chlorine Quest). */
+  questArt?: {
+    /** Series name, set in the series' own drawn lettering. */
+    series: string;
+    /** Volume number, as Roman numerals. */
+    volume: string;
+    /** The volume's own name, on a ribbon. */
+    subtitle: string;
+    /** Strapline across the back. */
+    headline: string;
+    /** Each EGA screenshot's status line and parser command. */
+    screenshots: readonly { status: string; command: string }[];
+    review: BoxReview;
+    copyright: string;
+    requirementLabels: readonly [
+      string,
+      string,
+      string,
+      string,
+      string,
+      string,
+      string,
+    ];
+  };
+  /** Copy for the airbrushed tycoon box (Lido Tycoon). */
+  lidoArt?: {
+    /** Toolbar labels in its management screenshots. */
+    interfaceLabels: readonly [string, string, string];
+    hero: string;
+    ribbon: string;
+    bursts: readonly [string, string];
+    headline: string;
+    backLead: string;
+    reviews: readonly BoxReview[];
+  };
+  /** Copy for the full-motion-video poster box (DEEP END). */
+  deepArt?: {
+    /** Labels on the back's filmstrip stills. */
+    discLabels: readonly [string, string, string];
+    hero: string;
+    critic: string;
+    criticSource: string;
+    billing: string;
+    badges: readonly [string, string];
+    headline: string;
+    discJoke: string;
+    reviews: readonly BoxReview[];
+  };
 }
 
 const standardRequirements: BoxRequirements = {
@@ -135,7 +212,7 @@ const standardRequirements: BoxRequirements = {
   drive: 'Double-speed CD-ROM drive',
 };
 
-/** Eight wholly fictional desk-bound relics of the late 1990s. */
+/** Eight wholly fictional desk-bound relics of the 1990s, from a 1991 adventure to 1999 workgroup software. */
 export const SOFTWARE_TITLES: readonly SoftwareTitle[] = [
   {
     id: 'macrosoft-pool-simulator-97',
@@ -146,9 +223,29 @@ export const SOFTWARE_TITLES: readonly SoftwareTitle[] = [
     year: 1997,
     media: 'CD-ROM',
     palette: { background: '#0b5470', ink: '#f4f4d9', accent: '#f2bb43' },
-    style: 'pool-diagram',
+    style: 'simulation-airbrush',
     publisherLogo: { shape: 'hexagon', letters: 'M' },
     frontBadges: ['NEW! 3D SVGA GRAPHICS', 'Over 200 lane configurations!'],
+    gameArt: {
+      hero: 'POOL SIMULATOR',
+      edition: '97',
+      ribbon: 'THE ULTIMATE AQUATIC SIMULATION',
+      bursts: ['3D!', 'SVGA'],
+      headline: 'FEEL EVERY RIPPLE.',
+      backLead: 'Every lane. Every splash. Every last second.',
+      reviews: [
+        {
+          quote: 'Water has never looked this wet.',
+          magazine: 'CD-ROM SPLASH!',
+          score: '94%',
+        },
+        {
+          quote: 'Dive in. Stay in.',
+          magazine: 'BIG SCREEN GAMER',
+          score: '9/10',
+        },
+      ],
+    },
     blurb:
       'At last, the civic pool rendered with uncompromising administrative realism. Set the lane ropes, manage the 4 pm school rush and discover what happens when the chlorine model is ignored.',
     features: [
@@ -157,7 +254,12 @@ export const SOFTWARE_TITLES: readonly SoftwareTitle[] = [
       'Queue simulation with damp socks',
       'Adjustable lane-rope tension',
     ],
-    screenshots: ['The early-bird lane', 'The 4 pm rush', 'Plant readings'],
+    screenshots: [
+      'Floodlit finals',
+      'Replay cam',
+      'The deep end',
+      'Plant room',
+    ],
     requirements: standardRequirements,
     barcode: '5000000000012',
     price: { amount: '£34.99' },
@@ -169,13 +271,18 @@ export const SOFTWARE_TITLES: readonly SoftwareTitle[] = [
     title: 'Beige Accounting: Leisure Centre Ledger 3.1',
     publisher: 'Beige Accounting',
     kind: 'business',
-    size: 'sierra-tall',
+    size: 'tall-box',
     year: 1996,
     media: '3 × 3.5" disks',
     palette: { background: '#c7b994', ink: '#27383b', accent: '#8d483d' },
     style: 'spreadsheet',
     publisherLogo: { shape: 'bars', letters: 'BA' },
-    frontBadges: ['NOW WITH VAT RETURNS', 'Multi-site memberships'],
+    frontBadges: ['NEW VERSION', 'Multi-site memberships'],
+    businessUi: {
+      menu: 'File  Edit  Ledger  Reports  Help',
+      toolbar: 'POST   FIND   PRINT',
+      columns: ['DATE', 'ACCOUNT', 'AMOUNT'],
+    },
     blurb:
       "The accounts package for the municipal leisure centre. Bank the day's takings from every till, keep the membership direct debits straight, and have the quarter's VAT return ready before the auditors ask for it.",
     features: [
@@ -205,9 +312,29 @@ export const SOFTWARE_TITLES: readonly SoftwareTitle[] = [
     year: 1998,
     media: 'CD-ROM',
     palette: { background: '#164c70', ink: '#fff0ca', accent: '#f2a55d' },
-    style: 'art-deco',
+    style: 'tycoon-airbrush',
     publisherLogo: { shape: 'arch', letters: 'HI' },
     frontBadges: ['BUILD YOUR SUMMER EMPIRE', 'Includes a rain forecast'],
+    lidoArt: {
+      interfaceLabels: ['£12,450', 'BUILD', 'STAFF'],
+      hero: 'LIDO TYCOON',
+      ribbon: 'BUILD YOUR SUMMER EMPIRE!',
+      bursts: ['OVER 100 ATTRACTIONS!', 'SVGA'],
+      headline: 'MAKE A SPLASH. MAKE A FORTUNE!',
+      backLead: 'The sun is shining. The tills are ringing. Your lido awaits.',
+      reviews: [
+        {
+          quote: 'Summer will never be the same.',
+          magazine: 'THE PC DECKCHAIR',
+          score: '96%',
+        },
+        {
+          quote: 'I missed my own holiday.',
+          magazine: 'GAMES & GAUGES',
+          score: '9/10',
+        },
+      ],
+    },
     blurb:
       'Raise a glorious outdoor bathing palace from an empty field. Commission diving boards, sell ices and persuade the council that August will be sunny this year.',
     features: [
@@ -216,7 +343,7 @@ export const SOFTWARE_TITLES: readonly SoftwareTitle[] = [
       'Survive bank holidays',
       'Balance sunshine against the budget',
     ],
-    screenshots: ['Grand opening', 'The sun terrace', 'An ambitious extension'],
+    screenshots: ['Grand opening', 'Profits soar', 'Rainy bank holiday'],
     requirements: {
       ...standardRequirements,
       ram: '16 MB RAM',
@@ -233,32 +360,78 @@ export const SOFTWARE_TITLES: readonly SoftwareTitle[] = [
     publisher: 'Cascade On-Line',
     kind: 'game',
     size: 'collector-flat',
-    year: 1996,
-    media: 'CD-ROM',
+    year: 1991,
+    media: '5.25" & 3.5" disks',
     palette: { background: '#32263d', ink: '#ffe4b0', accent: '#d36d47' },
-    style: 'pulp-painting',
+    style: 'adventure-painting',
     publisherLogo: { shape: 'diamond', letters: 'C' },
-    frontBadges: [
-      'Now with talkie voices on CD-ROM',
-      'A mystery of modest depth',
-    ],
+    frontBadges: ['3-D ANIMATED ADVENTURE', '16 COLOUR EGA / 256 COLOUR VGA'],
+    questArt: {
+      series: 'CHLORINE QUEST',
+      volume: 'II',
+      subtitle: 'The Shallow End',
+      headline: 'A mystery is bubbling beneath the surface.',
+      screenshots: [
+        {
+          status: 'Score: 12 of 250  CHLORINE QUEST II',
+          command: '> LOOK AT GAUGE',
+        },
+        {
+          status: 'Score: 24 of 250  CHLORINE QUEST II',
+          command: '> OPEN VALVE',
+        },
+        {
+          status: 'Score: 36 of 250  CHLORINE QUEST II',
+          command: '> TALK TO MANAGER',
+        },
+        {
+          status: 'Score: 48 of 250  CHLORINE QUEST II',
+          command: '> USE SPANNER ON FILTER',
+        },
+      ],
+      review: {
+        quote: 'A gripping tale of valves and valour.',
+        magazine: 'ADVENTURE DESK',
+        score: '91%',
+      },
+      copyright: 'Printed in the EU.',
+      requirementLabels: [
+        'CPU',
+        'RAM',
+        'DISK',
+        'VIDEO',
+        'SOUND',
+        'SYSTEM',
+        'DRIVE',
+      ],
+    },
     blurb:
-      'The caretaker has lost the key to the shallow end. Search the changing cubicles, question an unreliable vending machine and solve a puzzle involving three identical drain covers.',
+      'You are Sonny Bunting, shift engineer at Shallowbrook Leisure Centre. The filter pressure is climbing, the night manager has vanished and someone has locked the shallow end. Trust your test kit, follow the pipework and discover who turned the backwash valve.',
     features: [
-      'Point, click and cautiously wade',
-      'Fully voiced lost-property clerk',
-      'More than forty background tiles',
-      'Hint book sold separately',
+      'Explore the centre after closing time',
+      'Question suspects and solve plant-room puzzles',
+      'Type commands or guide Sonny with the mouse',
+      'Sixteen-colour scenes with 256-colour detail',
     ],
-    screenshots: ['The locked gate', 'A vital clue', 'The final drain'],
+    screenshots: [
+      'The filter room',
+      'The moonlit pool',
+      'Reception after hours',
+      'The locked valve',
+    ],
     requirements: {
-      ...standardRequirements,
-      disk: '45 MB free hard disk space',
+      cpu: '286 or better; 386 recommended',
+      ram: '640 KB conventional memory',
+      disk: '8 MB free hard disk space',
+      graphics: 'EGA 16 colours / VGA 256 colours',
+      sound: 'SoundBucket FM or compatible card',
+      os: 'PC-DOZE 5.0 or later',
+      drive: '5.25" or 3.5" disk drive',
     },
     barcode: '5000000000043',
     price: { amount: '£24.99', label: 'SALE' },
     ageRating: '7+',
-    compatibility: 'Designed for PANES 95',
+    compatibility: 'PC-DOZE 5.0 compatible',
   },
   {
     id: 'deep-end',
@@ -270,9 +443,32 @@ export const SOFTWARE_TITLES: readonly SoftwareTitle[] = [
     year: 1997,
     media: '4 CD-ROMs',
     palette: { background: '#101d2e', ink: '#e2e8dc', accent: '#b42e38' },
-    style: 'movie-noir',
+    style: 'fmv-poster',
     publisherLogo: { shape: 'circle', letters: 'VI' },
     frontBadges: ['FOUR DISCS. ONE SHIFT.', 'Full-motion video'],
+    deepArt: {
+      discLabels: ['DISC 1', 'DISC 2', 'DISC 3'],
+      hero: 'DEEP END',
+      critic: 'A TRIUMPH OF INTERACTIVE CINEMA',
+      criticSource: 'SCREEN BYTE',
+      billing:
+        'STARRING ELLA VALE · MARTIN DUSK · A VERRUCA INTERACTIVE PRODUCTION',
+      badges: ['FULL-MOTION VIDEO', 'OVER 90 MINUTES OF LIVE ACTION'],
+      headline: 'THE WATER IS DARK. THE CHOICE IS YOURS.',
+      discJoke: 'FOUR DISCS. FOUR CHANCES TO CHANGE YOUR MIND.',
+      reviews: [
+        {
+          quote: 'A chilling plunge into the unknown.',
+          magazine: 'CD-ROM REVIEW',
+          score: '95%',
+        },
+        {
+          quote: 'Worth every disc swap.',
+          magazine: 'FILM & FLOPPY',
+          score: '9/10',
+        },
+      ],
+    },
     blurb:
       'A lifeguard takes the late shift. The lights flicker. Someone has entered the deep end after closing. Choose where to point the torch in this lavishly compressed interactive thriller.',
     features: [
@@ -299,13 +495,18 @@ export const SOFTWARE_TITLES: readonly SoftwareTitle[] = [
     title: 'BookIt! Pro 4.0 for Workgroups',
     publisher: 'Turnstile Software',
     kind: 'business',
-    size: 'sierra-tall',
+    size: 'tall-box',
     year: 1999,
     media: 'CD-ROM',
     palette: { background: '#e4e1d6', ink: '#17364f', accent: '#bb6a22' },
     style: 'calendar',
     publisherLogo: { shape: 'hexagon', letters: 'TS' },
     frontBadges: ['YEAR 2000 READY', 'Multi-user booking diary'],
+    businessUi: {
+      menu: 'File  Edit  Bookings  View  Help',
+      toolbar: 'NEW   MOVE   PRINT',
+      columns: ['TIME', 'COURT', 'BOOKING'],
+    },
     blurb:
       'The booking desk finally has a system of its own. Reserve courts, lanes and aqua-aerobics; move block bookings without reaching for the correction fluid.',
     features: [
@@ -336,7 +537,12 @@ export const SOFTWARE_TITLES: readonly SoftwareTitle[] = [
     palette: { background: '#d9e4e5', ink: '#183b46', accent: '#e27a24' },
     style: 'corporate-gradient',
     publisherLogo: { shape: 'diamond', letters: 'HS' },
-    frontBadges: ['SAFETY DATA AT HAND', 'Printable registers'],
+    frontBadges: ['NEW VERSION', 'Printable registers'],
+    businessUi: {
+      menu: 'File  Edit  Register  Print  Help',
+      toolbar: 'NEW   FIND   PRINT',
+      columns: ['REF', 'CHEMICAL', 'REVIEW'],
+    },
     blurb:
       'Keep the chemical store in order. Record sodium hypochlorite, acids and cleaning agents, then print the safety sheets before the inspector asks.',
     features: [
@@ -376,7 +582,12 @@ export const SOFTWARE_TITLES: readonly SoftwareTitle[] = [
     palette: { background: '#e0e9d5', ink: '#174d59', accent: '#b39734' },
     style: 'chemistry',
     publisherLogo: { shape: 'circle', letters: 'LL' },
-    frontBadges: ['POOL WATER, EXPLAINED', 'Gold edition'],
+    frontBadges: ['UPGRADE', 'GOLD'],
+    businessUi: {
+      menu: 'File  Edit  Tests  Dose  Help',
+      toolbar: 'READ   CALC   PRINT',
+      columns: ['TEST', 'VALUE', 'DOSE'],
+    },
     blurb:
       'Take the guesswork out of the test kit. Enter free chlorine, combined chlorine and pH, calculate a sensible dose and check the saturation index before making the rounds.',
     features: [
