@@ -6,6 +6,7 @@ All notable changes to Pool Plant are recorded here. The format follows [Keep a 
 
 ### Changed
 
+- The engineer's office: a software box picked up is held in the hands, as anything carried is (it had been posed nine times too far away, the room passing a scaled group for the carrying's root); the Gateway 3000 carton no longer clips the wall, desk or cupboard.
 - The README opens with what The Pool is and how to play it, then how to build it and how to set up an AI agent to contribute (the owner, 2026-10-31).
 
 ## [0.8.0] - 2026-10-31
