@@ -9,7 +9,8 @@ import {
 } from './game-event';
 import type { GameEvent } from './game-event';
 import { describeAction } from './describe-action';
-import { WATCHER_COUNT, diffWorld } from './watchers';
+import { WATCHER_COUNT } from './watchers';
+import { diffWorld } from './event-sources';
 
 const line = (text: string, time = 0): GameEvent => ({
   time,

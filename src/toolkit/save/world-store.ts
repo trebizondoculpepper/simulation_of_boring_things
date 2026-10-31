@@ -11,8 +11,8 @@ import {
 import { clockStopped, paused } from '../controls/logic/paused';
 import { appendEvents } from '../../game/events/game-event';
 import type { GameEvent } from '../../game/events/game-event';
-import { describeAction } from '../../game/events/describe-action';
-import { diffWorld } from '../../game/events/watchers';
+import { actionEvents } from '../../game/events/describe-action';
+import { collectEvents } from '../../game/events/event-sources';
 
 /**
  * The world, kept and saved in the browser: one per save slot, shared by
@@ -153,9 +153,10 @@ export function createScenarioStore(start: World) {
     dispatch(action, by) {
       const before = world.value;
       world.value = applyAction(before, action);
-      events.value = appendEvents(events.value, [
-        describeAction(before, action, world.value, by),
-      ]);
+      events.value = appendEvents(
+        events.value,
+        actionEvents(before, action, world.value, by),
+      );
     },
     events,
     log(...more) {
@@ -259,7 +260,7 @@ function openWorldStore(slot: string): WorldStore {
     if (elapsed > 0) {
       const found: GameEvent[] = [];
       world.value = advance(world.value, elapsed, STEP, (before, after) =>
-        found.push(...diffWorld(before, after)),
+        collectEvents(before, after, undefined, found),
       );
       events.value = appendEvents(events.value, found);
     }
@@ -297,10 +298,10 @@ function openWorldStore(slot: string): WorldStore {
   const apply = (action: WorldAction, by?: 'you' | 'console') => {
     const before = world.value;
     world.value = applyAction(before, action);
-    events.value = appendEvents(events.value, [
-      describeAction(before, action, world.value, by),
-      ...diffWorld(before, world.value),
-    ]);
+    events.value = appendEvents(
+      events.value,
+      actionEvents(before, action, world.value, by),
+    );
     // Saved at once: an action is what a player would mind losing.
     save();
   };

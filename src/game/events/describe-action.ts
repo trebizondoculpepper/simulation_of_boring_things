@@ -6,6 +6,7 @@ import type { GameEvent } from './game-event';
 import { INSTALLED_VALVES } from '../plant/installed-valves';
 import { identifiedPart } from '../plant/identification';
 import { MOTORS } from '../plant/motor-starters';
+import { diffWorld } from './event-sources';
 
 /**
  * A line for an action done to the world (`doc/prompts/done/058-developer-console.md`):
@@ -527,4 +528,26 @@ export function describeAction(
     text: changed(before, after) ? s.text : `${s.text}: no change`,
     by,
   };
+}
+
+/**
+ * Every line an action gives the log: its own, then what every event
+ * source saw change (`event-sources.ts`), attributed to whoever did it.
+ * A valve worked by `plant/valve` is said once, by the valve's own line
+ * (its tag, its name, OPENED or CLOSED, and who), not again as an action.
+ */
+export function actionEvents(
+  before: World,
+  action: WorldAction,
+  after: World,
+  by: 'you' | 'console' = 'you',
+): GameEvent[] {
+  const seen = diffWorld(before, after, { by });
+  const own = describeAction(before, action, after, by);
+  if (
+    action.type === 'plant/valve' &&
+    seen.some((e) => e.subject === own.subject)
+  )
+    return seen;
+  return [own, ...seen];
 }

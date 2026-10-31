@@ -16,8 +16,12 @@ export interface GameEvent {
   /** What it happened to: a tag, an id or a room; '' for none. */
   subject: string;
   text: string;
-  /** Who did it, for actions: the player's hand, or the console. */
-  by?: 'you' | 'console';
+  /**
+   * Who did it, where the world knows: for actions the player's hand
+   * ('you') or the console; for the plant, what moved it ('AUTO,
+   * Wash-O-Tron wash', 'spring return, actuator unpowered').
+   */
+  by?: string;
 }
 
 /** The lines a log keeps, newest last. */

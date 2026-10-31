@@ -13,7 +13,7 @@ import type { ConsoleHost } from './commands';
 import { applyAction, newWorld } from '../../../game/world';
 import type { World, WorldAction } from '../../../game/world';
 import type { GameEvent } from '../../../game/events/game-event';
-import { describeAction } from '../../../game/events/describe-action';
+import { actionEvents } from '../../../game/events/describe-action';
 import { isConsoleKey } from '../../controls/logic/controls';
 
 /** A host on a world of its own, recording what the console asks of it. */
@@ -29,7 +29,7 @@ function fakeHost() {
     dispatch(action: WorldAction) {
       const before = world;
       world = applyAction(world, action);
-      events.push(describeAction(before, action, world, 'console'));
+      events.push(...actionEvents(before, action, world, 'console'));
     },
     events: () => events,
     log: (e) => events.push(e),

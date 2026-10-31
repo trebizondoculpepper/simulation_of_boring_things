@@ -1,5 +1,6 @@
 import type { World } from '../world';
-import type { GameEvent, GameEventSeverity } from './game-event';
+import type { GameEventSeverity } from './game-event';
+import type { EventSource } from './event-sources';
 import { MOTOR_TAGS, MOTORS } from '../plant/motor-starters';
 import { POOL_IDS } from '../plant/pools';
 import { GAS_ZONE_IDS } from '../plant/gas';
@@ -128,10 +129,8 @@ const WATCHERS: readonly Watcher<unknown>[] = [
 /** How many watchers there are, for tests. */
 export const WATCHER_COUNT = WATCHERS.length;
 
-/** What changed from `before` to `after`, a line each. */
-export function diffWorld(before: World, after: World): GameEvent[] {
-  if (before === after) return [];
-  const found: GameEvent[] = [];
+/** The watchers' source (`event-sources.ts`): a line for each change they see. */
+export const watcherEvents: EventSource = (before, after, _cause, found) => {
   for (const w of WATCHERS) {
     const was = w.pick(before);
     const now = w.pick(after);
@@ -145,5 +144,4 @@ export function diffWorld(before: World, after: World): GameEvent[] {
         ...said,
       });
   }
-  return found;
-}
+};
