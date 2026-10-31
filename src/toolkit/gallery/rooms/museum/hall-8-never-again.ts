@@ -1,16 +1,16 @@
-import { Group, Vector3 } from 'three';
-import type { Camera, Color, Material, Object3D } from 'three';
-import { signal } from '@preact/signals-core';
-import type { PanelKit } from '../../../components/core/views/eighties-controls';
-import { createMicroLabel } from '../../../components/core/views/eighties-controls';
-import { SANS, tools } from '../../../components/core/views/fitting-tools';
-import { mergeTree } from '../../../components/core/views/merge-static';
-import { markComponent } from '../../../components/core/views/component-identity';
-import { markFrontCentre } from '../../../components/core/audio/front-centre';
+import { Group, Vector3 } from "three";
+import type { Camera, Color, Material, Object3D } from "three";
+import { signal } from "@preact/signals-core";
+import type { PanelKit } from "../../../components/core/views/eighties-controls";
+import { createMicroLabel } from "../../../components/core/views/eighties-controls";
+import { SANS, tools } from "../../../components/core/views/fitting-tools";
+import { mergeTree } from "../../../components/core/views/merge-static";
+import { markComponent } from "../../../components/core/views/component-identity";
+import { markFrontCentre } from "../../../components/core/audio/front-centre";
 import {
   createPartSet,
   pushButton,
-} from '../../../components/core/parts/parts';
+} from "../../../components/core/parts/parts";
 import {
   CHAPTERS,
   CHAPTER_SECONDS,
@@ -25,17 +25,18 @@ import {
   shownChapter,
   pressNarration,
   stepNarration,
-} from '../../logic/museum-8-incident';
+} from "../../logic/museum-8-incident";
 import type {
   Chapter,
   Clipping,
   Narration,
-} from '../../logic/museum-8-incident';
-import { createWallPanel } from '../../views/museum-exhibit';
-import { createFillPointsCase, para } from '../../views/fill-points-case';
-import { showPhoto } from '../../views/photo-print';
-import type { Footprint } from '../../../controls/logic/walk-collision';
-import type { HallExhibit } from './exhibits';
+} from "../../logic/museum-8-incident";
+import { hallArches } from "../../logic/museum-plan";
+import { createWallPanel } from "../../views/museum-exhibit";
+import { createFillPointsCase, para } from "../../views/fill-points-case";
+import { showPhoto } from "../../views/photo-print";
+import type { Footprint } from "../../../controls/logic/walk-collision";
+import type { HallExhibit } from "./exhibits";
 
 /**
  * Hall 8, "Never again: putting safety first", sponsored by Chlorella
@@ -43,8 +44,8 @@ import type { HallExhibit } from './exhibits';
  * chapters. The visitor comes in from Hall 7 (east) and leaves west into
  * Hall 9. Chapters 1 to 3 hang on the street (south) wall, read left to
  * right, east to west; 4 to 6 on the courtyard (north) wall, read left to
- * right, west to east; the case of the two fill points in the middle,
- * between the columns; a lectern before each photograph, whose button
+ * right, west to east; the case of the two fill points in the middle of
+ * the floor; a lectern before each photograph, whose button
  * tells its chapter; the opening panel by the way in; Chlorella's panel and the lessons by the way out. Static but for
  * the narration. In the hall's frame, metres.
  *
@@ -54,17 +55,17 @@ import type { HallExhibit } from './exhibits';
  */
 
 const PHOTOS = import.meta.glob<string>(
-  '../../../../../resources/images/never-again/*.{jpg,png,webp}',
-  { eager: true, query: '?url', import: 'default' },
+  "../../../../../resources/images/never-again/*.{jpg,png,webp}",
+  { eager: true, query: "?url", import: "default" },
 );
 const CLIPS = import.meta.glob<string>(
-  '../../../../../resources/sound/voice/never-again/*.mp3',
-  { eager: true, query: '?url', import: 'default' },
+  "../../../../../resources/sound/voice/never-again/*.mp3",
+  { eager: true, query: "?url", import: "default" },
 );
 const byName = (files: Record<string, string>) =>
   new Map(
     Object.entries(files).map(([p, url]) => [
-      p.slice(p.lastIndexOf('/') + 1).replace(/\.[a-z0-9]+$/, ''),
+      p.slice(p.lastIndexOf("/") + 1).replace(/\.[a-z0-9]+$/, ""),
       url,
     ]),
   );
@@ -72,11 +73,11 @@ const PHOTO_URLS = byName(PHOTOS);
 /** Their low-resolution copies (`scripts/photo-lows.ts`). */
 const LOW_URLS = byName(
   import.meta.glob<string>(
-    '../../../../../resources/images/never-again/lo/*.jpg',
+    "../../../../../resources/images/never-again/lo/*.jpg",
     {
       eager: true,
-      query: '?url',
-      import: 'default',
+      query: "?url",
+      import: "default",
     },
   ),
 );
@@ -92,44 +93,44 @@ const SERIF = 'Georgia, "Times New Roman", serif';
 /** A photograph still to come: dark, its chapter's title and time. */
 function paintPlaceholder(ch: Chapter) {
   return (c: CanvasRenderingContext2D, w: number, h: number) => {
-    c.fillStyle = '#f2efe6';
+    c.fillStyle = "#f2efe6";
     c.fillRect(0, 0, w, h);
     const b = w * 0.04;
-    c.fillStyle = '#1c1e20';
+    c.fillStyle = "#1c1e20";
     c.fillRect(b, b, w - 2 * b, h - 2 * b - h * 0.08);
-    c.fillStyle = '#d9d4c6';
-    c.textAlign = 'center';
+    c.fillStyle = "#d9d4c6";
+    c.textAlign = "center";
     c.font = `bold ${h * 0.12}px ${SANS}`;
     c.fillText(ch.time, w / 2, h * 0.36);
     c.font = `${h * 0.09}px ${SANS}`;
     c.fillText(ch.title, w / 2, h * 0.5);
-    c.fillStyle = '#8a857a';
+    c.fillStyle = "#8a857a";
     c.font = `italic ${h * 0.05}px ${SANS}`;
-    c.fillText('photograph to come', w / 2, h * 0.64);
-    c.fillStyle = '#3a3b3c';
+    c.fillText("photograph to come", w / 2, h * 0.64);
+    c.fillStyle = "#3a3b3c";
     c.font = `italic ${h * 0.04}px ${SERIF}`;
     c.fillText(ch.caption, w / 2, h - h * 0.035, w - 2 * b);
-    c.textAlign = 'left';
+    c.textAlign = "left";
   };
 }
 
 /** A yellowed cutting from the fictional paper. */
 function paintClipping(cl: Clipping) {
   return (c: CanvasRenderingContext2D, w: number, h: number) => {
-    c.fillStyle = '#e6dab8';
+    c.fillStyle = "#e6dab8";
     c.fillRect(0, 0, w, h);
     const m = w * 0.06;
-    c.fillStyle = '#1d1a14';
-    c.textAlign = 'center';
+    c.fillStyle = "#1d1a14";
+    c.textAlign = "center";
     c.font = `bold ${w * 0.075}px ${SERIF}`;
     c.fillText(PAPER.name.toUpperCase(), w / 2, h * 0.07, w - 2 * m);
     c.fillRect(m, h * 0.085, w - 2 * m, h * 0.004);
     c.font = `${w * 0.032}px ${SERIF}`;
-    c.textAlign = 'left';
+    c.textAlign = "left";
     c.fillText(cl.date, m, h * 0.11);
-    c.textAlign = 'right';
+    c.textAlign = "right";
     c.fillText(`${cl.page} · ${PAPER.price}`, w - m, h * 0.11);
-    c.textAlign = 'left';
+    c.textAlign = "left";
     c.fillRect(m, h * 0.12, w - 2 * m, h * 0.002);
     let y = para(
       c,
@@ -151,9 +152,9 @@ function paintClipping(cl: Clipping) {
       `italic {} ${SERIF}`,
     );
     // A halftone box for its picture.
-    c.fillStyle = '#9d957f';
+    c.fillStyle = "#9d957f";
     c.fillRect(m, y, w - 2 * m, h * 0.18);
-    c.fillStyle = '#1d1a14';
+    c.fillStyle = "#1d1a14";
     y += h * 0.18 + w * 0.06;
     for (const p of cl.body)
       y = para(c, p, m, y, w - 2 * m, w * 0.038, `{} ${SERIF}`) + w * 0.015;
@@ -163,13 +164,13 @@ function paintClipping(cl: Clipping) {
 /** A chapter's plaque. */
 function paintPlaque(ch: Chapter) {
   return (c: CanvasRenderingContext2D, w: number, h: number) => {
-    c.fillStyle = '#18191b';
+    c.fillStyle = "#18191b";
     c.fillRect(0, 0, w, h);
     const m = w * 0.03;
-    c.fillStyle = '#e8b33a';
+    c.fillStyle = "#e8b33a";
     c.font = `bold ${h * 0.13}px ${SANS}`;
     c.fillText(`${ch.number} · ${ch.time} · ${ch.title}`, m, h * 0.17);
-    c.fillStyle = '#e9e6de';
+    c.fillStyle = "#e9e6de";
     const y = para(
       c,
       ch.wrong,
@@ -179,7 +180,7 @@ function paintPlaque(ch: Chapter) {
       h * 0.085,
       `{} ${SANS}`,
     );
-    c.fillStyle = '#9fd3a8';
+    c.fillStyle = "#9fd3a8";
     para(
       c,
       `Lesson: ${ch.lesson}`,
@@ -193,13 +194,13 @@ function paintPlaque(ch: Chapter) {
 }
 
 function paintOpening(c: CanvasRenderingContext2D, w: number, h: number) {
-  c.fillStyle = '#141517';
+  c.fillStyle = "#141517";
   c.fillRect(0, 0, w, h);
   const m = w * 0.06;
-  c.fillStyle = '#9b9488';
+  c.fillStyle = "#9b9488";
   c.font = `bold ${h * 0.03}px ${SANS}`;
-  c.fillText('HALL 8', m, h * 0.06);
-  c.fillStyle = '#f3efe4';
+  c.fillText("HALL 8", m, h * 0.06);
+  c.fillStyle = "#f3efe4";
   let y = para(
     c,
     OPENING.title,
@@ -219,7 +220,7 @@ function paintOpening(c: CanvasRenderingContext2D, w: number, h: number) {
     h * 0.034,
     `{} ${SANS}`,
   );
-  c.fillStyle = '#b8b2a5';
+  c.fillStyle = "#b8b2a5";
   y = para(
     c,
     OPENING.assumes,
@@ -229,7 +230,7 @@ function paintOpening(c: CanvasRenderingContext2D, w: number, h: number) {
     h * 0.027,
     `{} ${SANS}`,
   );
-  c.fillStyle = '#e8b33a';
+  c.fillStyle = "#e8b33a";
   y = para(
     c,
     OPENING.fact,
@@ -239,7 +240,7 @@ function paintOpening(c: CanvasRenderingContext2D, w: number, h: number) {
     h * 0.03,
     `bold {} ${SANS}`,
   );
-  c.fillStyle = '#f3efe4';
+  c.fillStyle = "#f3efe4";
   y = para(
     c,
     OPENING.ownVoice,
@@ -249,7 +250,7 @@ function paintOpening(c: CanvasRenderingContext2D, w: number, h: number) {
     h * 0.027,
     `{} ${SANS}`,
   );
-  c.fillStyle = '#9fd3a8';
+  c.fillStyle = "#9fd3a8";
   para(
     c,
     OPENING.tryIt,
@@ -259,7 +260,7 @@ function paintOpening(c: CanvasRenderingContext2D, w: number, h: number) {
     h * 0.027,
     `bold {} ${SANS}`,
   );
-  c.fillStyle = '#8a857a';
+  c.fillStyle = "#8a857a";
   para(
     c,
     `Sponsored by ${SPONSOR.maker}. ${DRAMATISATION}`,
@@ -272,17 +273,17 @@ function paintOpening(c: CanvasRenderingContext2D, w: number, h: number) {
 }
 
 function paintSponsor(c: CanvasRenderingContext2D, w: number, h: number) {
-  c.fillStyle = '#f4f2ea';
+  c.fillStyle = "#f4f2ea";
   c.fillRect(0, 0, w, h);
-  c.fillStyle = '#1f7a3a';
+  c.fillStyle = "#1f7a3a";
   c.fillRect(0, 0, w, h * 0.17);
   const m = w * 0.05;
-  c.fillStyle = '#ffffff';
+  c.fillStyle = "#ffffff";
   c.font = `bold ${h * 0.065}px ${SANS}`;
   c.fillText(SPONSOR.maker, m, h * 0.085);
   c.font = `italic ${h * 0.032}px ${SANS}`;
   c.fillText(`${SPONSOR.slogan} · ${SPONSOR.since}`, m, h * 0.135);
-  c.fillStyle = '#16232b';
+  c.fillStyle = "#16232b";
   let y = para(
     c,
     SPONSOR.headline,
@@ -294,15 +295,15 @@ function paintSponsor(c: CanvasRenderingContext2D, w: number, h: number) {
   );
   y =
     para(c, SPONSOR.pride, m, y, w - 2 * m, h * 0.03, `{} ${SANS}`) + h * 0.02;
-  c.fillStyle = '#1f7a3a';
+  c.fillStyle = "#1f7a3a";
   c.font = `bold ${h * 0.03}px ${SANS}`;
-  c.fillText('THE LESSONS', m, y);
+  c.fillText("THE LESSONS", m, y);
   y += h * 0.045;
   SPONSOR.lessons.forEach((l, k) => {
-    c.fillStyle = '#1f7a3a';
+    c.fillStyle = "#1f7a3a";
     c.font = `bold ${h * 0.03}px ${SANS}`;
     c.fillText(`${k + 1}`, m, y);
-    c.fillStyle = '#16232b';
+    c.fillStyle = "#16232b";
     y =
       para(
         c,
@@ -315,7 +316,7 @@ function paintSponsor(c: CanvasRenderingContext2D, w: number, h: number) {
       ) +
       h * 0.008;
   });
-  c.fillStyle = '#6a6f72';
+  c.fillStyle = "#6a6f72";
   para(
     c,
     DRAMATISATION,
@@ -336,15 +337,15 @@ const turnTo = (o: Object3D, x: number, y: number, z: number, yaw: number) => {
 export function buildHallExhibit(kit: PanelKit): HallExhibit {
   const t = tools(kit);
   const object = new Group();
-  object.name = 'Hall 8: Never again';
+  object.name = "Hall 8: Never again";
   const parts = createPartSet();
   const solids: Footprint[] = [];
   const still = (thing: Object3D) => {
     mergeTree(thing, (o) => o.userData.live === true);
     return thing;
   };
-  const frameMat = t.paint('#0e0f10', 0.6, 0.2);
-  const brass = t.paint('#a0803e', 0.35, 0.7);
+  const frameMat = t.paint("#0e0f10", 0.6, 0.2);
+  const brass = t.paint("#a0803e", 0.35, 0.7);
 
   // ---- The six chapters ----
   const photoMats: { color: Color }[] = [];
@@ -353,7 +354,9 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   const plaqueMats: { color: Color }[] = [];
   const lamps: { set(l: boolean | number): void }[] = [];
   const PLACES = [
-    { x: 4.9, z: SOUTH, yaw: Math.PI },
+    // Chapter 1 stands 0.5 m west of its mirror (chapter 6), so its
+    // lectern keeps out of the east archway's approach.
+    { x: 4.4, z: SOUTH, yaw: Math.PI },
     { x: 0.2, z: SOUTH, yaw: Math.PI },
     { x: -4.5, z: SOUTH, yaw: Math.PI },
     { x: -4.5, z: NORTH, yaw: 0 },
@@ -391,7 +394,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     // Its picture light above it.
     t.box(unit, brass, 0.9, 0.04, 0.05, px, 2.5, 0.2);
     t.box(unit, brass, 0.03, 0.03, 0.2, px, 2.5, 0.1);
-    const lamp = t.led(unit, '#ffe2a8', 0.02, px, 2.48, 0.2, 'y');
+    const lamp = t.led(unit, "#ffe2a8", 0.02, px, 2.48, 0.2, "y");
     lamp.mesh.scale.set(20, 1, 1);
     lamp.mesh.userData.live = true;
     lamps.push(lamp);
@@ -419,14 +422,27 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   });
 
   // ---- The opening panel, by the way in ----
-  const opening = createWallPanel(kit, 'Opening panel', 1.5, 1.7, paintOpening);
-  turnTo(opening, EAST, 1.55, 4.4, -Math.PI / 2);
+  const OPENING_W = 1.5;
+  const opening = createWallPanel(
+    kit,
+    "Opening panel",
+    OPENING_W,
+    1.7,
+    paintOpening,
+  );
+  // North of the east archway, clear of its jamb and trim, worked out from
+  // the arch itself so no layout can hang it in the opening.
+  const eastArch = hallArches("museum8").find((a) => a.frame.x > 0);
+  const openingZ = eastArch
+    ? eastArch.frame.z - eastArch.w / 2 - OPENING_W / 2 - 0.45
+    : 1.5;
+  turnTo(opening, EAST, 1.55, openingZ, -Math.PI / 2);
   object.add(still(opening));
 
   // ---- Chlorella's panel and the lessons, by the way out ----
   const sponsor = createWallPanel(
     kit,
-    'Chlorella’s sponsor panel',
+    "Chlorella’s sponsor panel",
     2.0,
     1.75,
     paintSponsor,
@@ -450,9 +466,9 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
   const playClip = (name: string): boolean => {
     stopAudio();
     const url = CLIP_URLS.get(name);
-    if (!url || typeof Audio === 'undefined') return false;
+    if (!url || typeof Audio === "undefined") return false;
     const clip = new Audio(new URL(url, import.meta.url).href);
-    clip.addEventListener('ended', () => {
+    clip.addEventListener("ended", () => {
       if (audio !== clip) return;
       audio = null;
       narration = NARRATION_OFF;
@@ -478,7 +494,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     } else stopAudio();
     show();
   };
-  const yellow = t.paint('#f2c418', 0.5);
+  const yellow = t.paint("#f2c418", 0.5);
   /** Out from the wall to the lectern, metres. */
   const OUT = 1.25;
   const LECTERNS = PLACES.map((at) => {
@@ -499,8 +515,8 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     t.box(top, yellow, 0.34, 0.26, 0.06, 0, 0, -0.03);
     const button = parts.add(
       pushButton(kit, {
-        colour: 'green',
-        head: 'illuminated',
+        colour: "green",
+        head: "illuminated",
         lamp: buttonLamps[k],
         name: `HEAR WHAT HAPPENED, chapter ${ch.number}`,
         action: () => press(k),
@@ -509,10 +525,10 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     button.object.scale.setScalar(3.2);
     button.object.position.set(0, -0.01, 0.002);
     top.add(button.object);
-    const legend = createMicroLabel(kit, 'HEAR WHAT HAPPENED', {
+    const legend = createMicroLabel(kit, "HEAR WHAT HAPPENED", {
       height: 0.03,
-      ink: '#ffffff',
-      plate: '#1f2a2e',
+      ink: "#ffffff",
+      plate: "#1f2a2e",
       maxWidth: 0.32,
     });
     legend.position.set(0, 0.1, 0.002);
@@ -520,7 +536,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     const push = createMicroLabel(
       kit,
       `CHAPTER ${ch.number} · PUSH · AGAIN TO STOP`,
-      { height: 0.022, ink: '#111111', plate: '#ffffff', maxWidth: 0.32 },
+      { height: 0.022, ink: "#111111", plate: "#ffffff", maxWidth: 0.32 },
     );
     push.position.set(0, -0.105, 0.002);
     top.add(push);
@@ -533,7 +549,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
         status: () =>
           narration.playing && narration.chapter === k
             ? `lit: chapter ${ch.number} is told`
-            : 'unlit',
+            : "unlit",
       }),
     );
     solids.push({
@@ -570,7 +586,7 @@ export function buildHallExhibit(kit: PanelKit): HallExhibit {
     status: () =>
       narration.playing
         ? `narrating chapter ${(litChapter(narration) ?? 0) + 1}`
-        : 'quiet',
+        : "quiet",
     solids: () => solids,
     reset() {
       narration = NARRATION_OFF;
