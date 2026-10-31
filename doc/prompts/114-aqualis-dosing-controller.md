@@ -7,7 +7,11 @@ The owner, 2026-10-31: the plant has long needed a visible chemical dosing compu
 An Aqualis dosing controller of the early 2000s: a white cabinet, mostly touch-screen controlled, with an LCD monitor, in the Windows Vista era's look. It is a real working component modelled on real pool controllers of the period, bound to its pool's model like every other machine; a touch screen is allowed under the period rule because it brings its own kind of interface, and the plant around it keeps its single-purpose instruments.
 
 - **The cabinet, as a block** (the owner, 2026-10-31): a white cabinet with a water inlet and a water outlet (the sampling loop's two ends) and a number of control ports, one for each dosing pump it drives, and an alarm output to the annunciator. On its front: the touch screen and the HAND · OFF · AUTO knob.
-- **It already half exists**: `src/game/plant/sampling.ts` holds the sampling bypass and a water-quality controller as blocks (the tapping, the booster, the flow cell and its probes, `WATER_QUALITY_CONTROLLER` with its own screens, and `WATER_QUALITY_PANEL` composing them), after ProMinent's DULCOMARIN, as `doc/plant-model.md` ("The sampling bypass and the water-quality controller") lays out; nothing outside its tests uses it yet. The Aqualis cabinet should be built on those blocks, extended (the knob, the full analyser, the advice), not written alongside them.
+- **Three models behind it** (the owner, 2026-10-31), each pure and tested on its own:
+  - **The water sampler**: given the water, it returns the indicative values, every reading the analyser has (below). It knows nothing of set points or pumps.
+  - **The water controller**: given the sampler's readings, its set points and the knob's position, it diagnoses the water, makes its recommendations (what should be added, and Show dose's amounts) and drives whatever dosing pumps are attached to its control ports.
+  - **The display model**: binds the other two together into the Aqualis machine's user interface (its cycling screens, Dr Aqualis's advice and moods, the pump status, the touches it takes). Only this one is Aqualis's; the sampler and controller could serve another maker's cabinet.
+- **The old controller is not the base**: `src/game/plant/sampling.ts` already holds a sampling bypass and a DULCOMARIN-style `WATER_QUALITY_CONTROLLER` as blocks, but little was done on it and nothing outside its tests uses it, so the owner does not expect much of it to be reused (2026-10-31). Borrow from it where it helps (the tapping, the flow cell's lag, the probes' drift and fouling); do not shape the new models around it. Whether it is then retired, and `doc/plant-model.md`'s section on it rewritten, is for the plan to propose.
 - **Sampling loop**: it draws water from its pool's circulation through a sampling loop and returns it to a re-injection point downstream; both are connections in the room's schematic, routed by the plumber like any other pipe.
 - **Analysis (deliberate science fiction)**: until the chemical test kits exist as items, the controller's analyser measures every reading itself: free, combined and total chlorine, pH, total alkalinity, calcium hardness, the balance index (LSI), TDS, sulphate and temperature. This is a stated exception to the no-peeking rule (`overlay-no-peeking`): do not "fix" it by making the analyser blind to readings real probes cannot measure. When test kits arrive, the owner will decide whether it keeps this power.
 - **Dosing it controls**: only sodium hypochlorite and acid. In the game world these are the only chemicals dosed automatically; it drives those two dosing pumps. Every other chemical (sodium bicarbonate, soda ash, calcium chloride, thiosulphate, dilution with fresh water and the rest) is dosed by hand.
@@ -34,14 +38,14 @@ Later, a separate mission: the player picks up containers of chemicals into an i
 ## Order of work
 
 1. A plan, critiqued (as mission 113 did, `doc/plans/113/`), with the owner asked one question at a time about anything not settled here.
-2. Pure, tested logic: the controller's state, AUTO control of chlorine and pH, HAND and OFF, the diagnosis rules and their advice texts, the Show dose amounts, the alarm conditions.
+2. Pure, tested logic, in the three models above: the sampler's readings; the controller's state, AUTO control of chlorine and pH, HAND and OFF, the diagnosis rules and their advice texts, the Show dose amounts, the alarm conditions; the display model's screens and their cycle.
 3. The cabinet and its screens in a development room, with Dr Aqualis and his animations; benchmarked (`bench.html?bench=components`) and within budget.
 4. The sampling loop, the re-injection point and the two dosing pumps in the room's schematic, plumbed; the alarms on the mimic, the annunciator and both control rooms.
 5. Installed for the Olympic pool and the Lounge pool.
 
 ## Open questions for the owner
 
-- Whether the Aqualis cabinet is the dosing room's touch-screen controller that `doc/plant-model.md` already plans (after DULCOMARIN, in the dosing room beside its pumps), now given its maker, or a second controller beside it (the first assumed).
+- Whether the Aqualis cabinet replaces the dosing room's touch-screen controller that `doc/plant-model.md` plans (after DULCOMARIN, in the dosing room beside its pumps), or stands beside it (replacing it assumed).
 - Which pool "the lazy pool" is (the Lounge pool assumed).
 - Which acid the automatic acid pump uses (hydrochloric acid, sodium bisulphate solution, or CO₂ where a pool has it).
 - The set points and dead bands for AUTO, and how fast it doses.
