@@ -49,7 +49,15 @@ Later, a separate mission: the player picks up containers of chemicals into an i
 
 1. A plan, critiqued (as mission 113 did, `doc/plans/113/`), with the owner asked one question at a time about anything not settled here.
 2. Pure, tested logic, in the three models above: the sampler's readings; the controller's state, AUTO control of chlorine and pH, HAND and OFF, the diagnosis rules and their advice texts, the Show dose amounts, the alarm conditions; the display model's screens and their cycle.
-3. The cabinet and its screens in a development room, with Dr Aqualis and his animations; benchmarked (`bench.html?bench=components`) and within budget.
+3. **A new dosing dev room** (the owner, 2026-10-31), the next free number (dev58 at the time of writing; dev57 is Hall 4's dosing console), all about dosing, where the cabinet is proved in a simplified world before it meets the real plant:
+   - an **ideal pool**, which can be given different water-condition scenarios (chlorine low, pH high, alkalinity low, combined chlorine high and the rest);
+   - a **very simple loop**: a pump, a simple filter and one injection point, with the cabinet's sampling tapping and return on it;
+   - **ideal sources** of hypochlorite, hydrochloric acid and CO₂, that never run dry;
+   - the **dosing pumps** for hypochlorite and acid and the **CO₂ valve controller**, each with its own controls, so a channel can be switched off or put in manual and seen going OFFLINE;
+   - and the **Aqualis cabinet** on them, its screens and Dr Aqualis with his animations, shown working in AUTO, HAND and OFF; benchmarked (`bench.html?bench=components`) and within budget.
+
+   Its model is its own small schematic, built and plumbed the way a plant room's is.
+
 4. The sampling loop, the re-injection point and the hypochlorite and hydrochloric acid dosing systems in the room's schematic, plumbed; the alarms on the mimic, the annunciator and both control rooms.
 5. Installed for the Olympic pool and the Lounge pool.
 
