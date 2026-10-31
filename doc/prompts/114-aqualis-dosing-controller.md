@@ -53,3 +53,5 @@ Later, a separate mission: the player picks up containers of chemicals into an i
 5. Installed for the Olympic pool and the Lounge pool.
 
 ## Open questions for the owner
+
+None left: the owner settled the last of them on 2026-10-31. The plan raises anything new, one question at a time.
