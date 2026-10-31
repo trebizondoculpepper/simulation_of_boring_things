@@ -32,6 +32,14 @@ export interface SkimmerCausticsOptions {
   colour?: string;
   /** Seeded randomness for the shafts' heights, widths and phases. */
   random: () => number;
+  /**
+   * Where the deck is, in the mesh's own height, when the shafts stand
+   * below it (the inner ring, from the basket's rim): the shafts are then
+   * drawn twice from one geometry, above the deck as usual and below it
+   * by `beneath`, which paints a mesh inside the well's opening
+   * (`skimmer-well.ts`'s `insideWell`).
+   */
+  deck?: { at: number; beneath: (mesh: Mesh) => void };
 }
 
 const vertexShader = /* glsl */ `
@@ -40,6 +48,7 @@ uniform float time;
 uniform float rise;
 varying vec2 vUv;
 varying float vPhase;
+varying float vY;
 void main() {
   vUv = uv;
   vPhase = phase;
@@ -47,6 +56,7 @@ void main() {
   float h = rise * (0.82 + 0.18 * sin(time * 1.7 + phase * 6.2832));
   vec3 p = position;
   p.y *= h;
+  vY = p.y;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
 }
 `;
@@ -55,9 +65,14 @@ const fragmentShader = /* glsl */ `
 uniform float time;
 uniform float glow;
 uniform vec3 colour;
+uniform float cut;
+uniform float keep;
 varying vec2 vUv;
 varying float vPhase;
+varying float vY;
 void main() {
+  // Split at the deck: only the part above (keep 1) or below (keep -1).
+  if (keep * (vY - cut) < 0.0) discard;
   // Brightest at the rim, gone at the tip; soft at the shaft's edges.
   // Clamped: under multisampling a varying is read a little outside its
   // triangle (past the tip, vUv.y > 1), and pow of a negative is NaN,
@@ -83,6 +98,7 @@ export function createSkimmerCaustics(options: SkimmerCausticsOptions) {
     width = 0.07,
     colour = '#ffc44a',
     random,
+    deck,
   } = options;
   const positions: number[] = [];
   const uvs: number[] = [];
@@ -134,6 +150,8 @@ export function createSkimmerCaustics(options: SkimmerCausticsOptions) {
       rise: { value: 0 },
       glow: { value: 0 },
       colour: { value: new Color(colour) },
+      cut: { value: deck?.at ?? 0 },
+      keep: { value: deck ? 1 : 0 },
     },
     vertexShader,
     fragmentShader,
@@ -155,18 +173,34 @@ export function createSkimmerCaustics(options: SkimmerCausticsOptions) {
   mesh.visible = false;
   // Light, not a surface: no ambient occlusion from it.
   mesh.userData.noAmbientOcclusion = true;
+  // Below the deck: the same geometry, seen only inside the opening.
+  const lower = deck ? material.clone() : null;
+  const below = lower ? new Mesh(geometry, lower) : null;
+  if (lower && below && deck) {
+    lower.uniforms.keep.value = -1;
+    below.name = 'Skimmer caustics (in the well)';
+    below.frustumCulled = false;
+    below.visible = false;
+    below.userData.noAmbientOcclusion = true;
+    deck.beneath(below);
+    mesh.add(below);
+  }
+  const materials = lower ? [material, lower] : [material];
   return {
     mesh,
     /** The shafts at `time` seconds, risen `rise` (0–1), `glow` bright (0–1). */
     update(time: number, rise: number, glow: number) {
       mesh.visible = glow > 0 && rise > 0;
-      material.uniforms.time.value = time;
-      material.uniforms.rise.value = rise;
-      material.uniforms.glow.value = glow;
+      if (below) below.visible = mesh.visible;
+      for (const m of materials) {
+        m.uniforms.time.value = time;
+        m.uniforms.rise.value = rise;
+        m.uniforms.glow.value = glow;
+      }
     },
     dispose() {
       geometry.dispose();
-      material.dispose();
+      for (const m of materials) m.dispose();
     },
   };
 }

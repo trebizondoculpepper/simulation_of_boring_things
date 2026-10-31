@@ -66,8 +66,16 @@ import type {
   FilmStyle,
   Pose,
 } from '../../logic/skimmer-cinematic';
-import { createSkimmerWell, drawOver } from '../../views/skimmer-well';
+import {
+  createSkimmerWell,
+  drawOver,
+  insideWell,
+} from '../../views/skimmer-well';
 import { createSkimmerCaustics } from '../../views/skimmer-caustics';
+import {
+  CAUSTIC_LAYERS,
+  causticLayerFrame,
+} from '../../logic/skimmer-caustic-layers';
 import {
   BAY,
   BAY_HANG,
@@ -657,8 +665,32 @@ export function buildHallExhibit(kit: PanelKit): CarryingExhibit {
   // Shut: only its collar and lid, a white circle (and so from afar).
   well.open(false);
   skimmerGroup.add(well.group);
-  const caustics = createSkimmerCaustics({ radius: 0.135, random: grime });
-  skimmerGroup.add(caustics.mesh);
+  // Two layers (the owner, 2026-10-31): the outer from the skimmer's rim,
+  // the inner from the basket's, down in the well.
+  const causticLayers = CAUSTIC_LAYERS.map((layer) => {
+    const c = createSkimmerCaustics({
+      ...layer,
+      random: grime,
+      deck:
+        layer.base < 0
+          ? { at: -layer.base, beneath: (m) => insideWell(m) }
+          : undefined,
+    });
+    c.mesh.position.y = layer.base;
+    skimmerGroup.add(c.mesh);
+    return { layer, c };
+  });
+  const caustics = {
+    update(t: number, rise: number, glow: number) {
+      for (const { layer, c } of causticLayers) {
+        const f = causticLayerFrame(layer, t, rise, glow);
+        c.update(f.time, f.rise, f.glow);
+      }
+    },
+    dispose() {
+      for (const { c } of causticLayers) c.dispose();
+    },
+  };
   object.add(
     markComponent(skimmerGroup, {
       name: `${SKIMMER_TAGS.skimmer} wall skimmer (Certikind; dry, its suction capped)`,

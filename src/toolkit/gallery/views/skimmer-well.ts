@@ -58,6 +58,8 @@ const GLOW = 4.15;
 const BASKET_NEAR = 4.2;
 const BASKET_RIM = 4.3;
 const BASKET_MARK = 4.35;
+/** Caustics rising from the basket's rim, over the basket. */
+export const WELL_CAUSTICS = 4.4;
 /** What comes after the inside: the lid. */
 export const OVER_WELL = 6;
 
@@ -239,6 +241,11 @@ function paintGrime(
  * by default anywhere in it, the throat's mouth included; `only` the
  * opening's own stencil value (`EqualStencilFunc`), or the mouth's.
  */
+export function insideWell(mesh: Mesh, order = WELL_CAUSTICS) {
+  for (const m of [mesh.material].flat()) inside(m, order, mesh);
+  return mesh;
+}
+
 function inside(
   material: Material,
   order: number,
